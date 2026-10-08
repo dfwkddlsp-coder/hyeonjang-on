@@ -507,24 +507,28 @@ function closeModal(){$('#modal').classList.add('hidden');$('#mBody').innerHTML=
 $('#mClose').onclick=closeModal;
 $('#modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal()});
 
-function sigPad(host,label){
-  host.innerHTML=`<div class="sig"><div class="sig-h"><span>${h(label)}</span><button type="button" class="btn sm ghost">지우기</button></div><canvas></canvas></div>`;
+function sigPad(host,label,preset){
+  host.innerHTML=`<div class="sig"><div class="sig-h"><span>${h(label)}<small class="muted sig-auto" style="font-weight:500"></small></span><button type="button" class="btn sm ghost">지우기</button></div><canvas></canvas></div>`;
   const cv=$('canvas',host),ctx=cv.getContext('2d');let empty=true,drawing=false,last=null;
-  const setup=()=>{const r=cv.getBoundingClientRect();if(!r.width)return;const d=window.devicePixelRatio||1;cv.width=r.width*d;cv.height=r.height*d;ctx.setTransform(d,0,0,d,0,0);ctx.lineWidth=2.6;ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle='#111';empty=true};
+  const tag=t=>{$('.sig-auto',host).textContent=t?' · '+t:''};
+  const drawImg=src=>{const im=new Image();im.onload=()=>{const r=cv.getBoundingClientRect();const sc=Math.min(r.width/im.width,r.height/im.height)*.9;const w=im.width*sc,hh=im.height*sc;ctx.drawImage(im,(r.width-w)/2,(r.height-hh)/2,w,hh);empty=false;tag('내 서명 자동 입력')};im.src=src};
+  const setup=()=>{const r=cv.getBoundingClientRect();if(!r.width)return;const d=window.devicePixelRatio||1;cv.width=r.width*d;cv.height=r.height*d;ctx.setTransform(d,0,0,d,0,0);ctx.lineWidth=2.6;ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle='#111';empty=true;if(preset)drawImg(preset)};
   requestAnimationFrame(setup);
   const pos=e=>{const r=cv.getBoundingClientRect();return [e.clientX-r.left,e.clientY-r.top]};
   cv.addEventListener('pointerdown',e=>{if(!cv.width)setup();drawing=true;cv.setPointerCapture(e.pointerId);last=pos(e);ctx.beginPath();ctx.arc(last[0],last[1],1.2,0,7);ctx.fillStyle='#111';ctx.fill();empty=false;e.preventDefault()});
   cv.addEventListener('pointermove',e=>{if(!drawing)return;const p=pos(e);ctx.beginPath();ctx.moveTo(last[0],last[1]);ctx.lineTo(p[0],p[1]);ctx.stroke();last=p;e.preventDefault()});
   ['pointerup','pointercancel','pointerleave'].forEach(t=>cv.addEventListener(t,()=>drawing=false));
-  $('button',host).onclick=()=>{ctx.clearRect(0,0,cv.width,cv.height);empty=true};
-  return {isEmpty:()=>empty,data:()=>empty?'':cv.toDataURL('image/png')};
+  const clear=()=>{ctx.clearRect(0,0,cv.width,cv.height);empty=true;tag('')};
+  $('button',host).onclick=clear;
+  cv.addEventListener('pointerdown',()=>tag(''),{capture:true});
+  return {isEmpty:()=>empty,data:()=>empty?'':cv.toDataURL('image/png'),clear,useMine:()=>{clear();if(S.mySig)drawImg(S.mySig)}};
 }
 function compressImg(file,max=1280,q=.72){return new Promise((res,rej)=>{const img=new Image(),url=URL.createObjectURL(file);
   img.onload=()=>{const s=Math.min(1,max/Math.max(img.width,img.height));const c=document.createElement('canvas');c.width=Math.round(img.width*s);c.height=Math.round(img.height*s);c.getContext('2d').drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(url);res(c.toDataURL('image/jpeg',q))};
   img.onerror=rej;img.src=url})}
 
 function personPicker(host,onPick,opts={}){
-  host.innerHTML=`<input class="inp big" type="search" placeholder="${opts.ph||'이름·업체·안전모·차량번호'}" autocomplete="off"><div class="pick-res"></div>`;
+  host.innerHTML=`<input class="inp big" type="search" name="q_${Date.now()}" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" placeholder="${opts.ph||'이름·업체·안전모·차량번호'}" autocomplete="off"><div class="pick-res"></div>`;
   const inp=$('input',host),res=$('.pick-res',host);
   const draw=()=>{const q=norm(inp.value);if(!q){res.innerHTML='';return}
     const ws=W.filter(w=>norm([w.name,w.company,w.job,w.helmet,w.phone].join(' ')).includes(q)).slice(0,8)
@@ -551,6 +555,17 @@ function manualPerson(name,onPick){
 function companyDatalist(){const set=new Set([...W.map(w=>w.company),...E.map(e=>e.company)].filter(Boolean));return `<datalist id="companyList">${[...set].map(c=>`<option value="${h(c)}">`).join('')}</datalist>`}
 const lvDot=l=>`<span class="dot d${l}">${l}차</span>`;
 const stickerHtml=(l,date)=>{const c=['','var(--l1)','var(--l2)','var(--l3)'][l];return `<div class="sticker" style="background:${c};color:${l===1?'#4a3900':'#fff'}"><div class="a">${l}차 위반</div><div class="b">${date.slice(2).replace(/-/g,'.')}</div></div>`};
+
+/* 갤러리 사진 사용 동의 (기기당 1회, 설정에서 철회 가능) */
+function withGalleryConsent(go){
+  if(S.galleryConsent)return go();
+  openModal('갤러리 사진 사용 동의',`<div class="card"><p style="margin-top:0">현장 사진을 휴대폰·태블릿 <b>갤러리(사진첩)</b>에서 불러오려면 동의가 필요합니다.</p>
+   <ul class="small" style="padding-left:18px;line-height:1.7;margin:0"><li>직접 고른 사진만 불러오며, 다른 사진에는 접근하지 않습니다.</li><li>불러온 사진은 적발 기록에 첨부되어 <b>이 기기 안에만</b> 저장되고 외부로 전송되지 않습니다.</li><li>처음 한 번은 기기에서 사진 접근 허용을 물어볼 수 있습니다.</li><li>동의는 설정 화면에서 언제든 철회할 수 있습니다.</li></ul></div>
+   <div class="grid g2"><button class="btn xl" id="gcOk">동의하고 사진 선택</button><button class="btn xl line" id="gcNo">동의 안 함</button></div>`,b=>{
+    $('#gcNo',b).onclick=closeModal;
+    $('#gcOk',b).onclick=()=>{S.galleryConsent={at:nowLocal()};saveSettings();closeModal();go()};
+  });
+}
 
 /* ---------- printing ---------- */
 /* 각 장을 A4 한 장(인쇄 영역 190x277mm)에 맞게 자동 축소 */
@@ -610,7 +625,7 @@ function docAlcoholList(ds){
 }
 
 /* ---------- views ---------- */
-const APP_VER='2026.10.08-3';
+const APP_VER='2026.10.08-4';
 const VIEWS=[['home','홈'],['strike','삼진아웃'],['alcohol','음주측정'],['vuln','취약근로자'],['workers','근로자'],['equip','장비'],['records','기록'],['settings','설정']];
 let cur='home';
 function go(v,arg){cur=v;document.body.classList.toggle('is-home',v==='home');$$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));window.scrollTo(0,0);R[v](arg);try{sessionStorage.setItem('v',v)}catch(e){}}
@@ -629,10 +644,10 @@ R.home=()=>{
   const d=new Date();const ds=`${d.getFullYear()}.${pad(d.getMonth()+1)}.${pad(d.getDate())} (${WD[d.getDay()]})`;
   const tile=(n,view,nm,en,side,stat,ml,dark,wide)=>`<button class="tile${dark?' dark':''}${wide?' wide':''}" data-go="${view}"><span class="tic"><i class="i i-${view}"></i></span>
     <div><div class="nm">${nm}</div><div class="en">${en}</div></div>
-    <div class="meta">${stat===null?'':`<span class="dotr${stat?'':' zero'}">${stat}</span>`}<div class="ml">${ml}</div></div><span class="no">${n}.</span></button>`;
+    <div class="meta">${stat===null?'':`<span class="dotr${stat?'':' zero'}">${stat}</span>`}<div class="ml">${ml}</div></div></button>`;
   V$().innerHTML=`<div class="hm-head"><div><div class="hm-kicker">${ds} · 현장 안전관리 · field safety board</div><h1 class="hm-title"><img class="hm-logo" src="icon.svg" alt="">현장ON.</h1><p class="hm-motto">습관이 된 노력을 실력이라 한다.</p></div>
    <div class="hm-site"><b>${h(S.site||'현장명 미설정')}</b><br>${h([S.inspectorOrg,S.inspector].filter(Boolean).join(' ')||'점검자 미설정')}</div></div>
-  ${!S.site?`<div class="hint" style="margin-bottom:16px">처음이면 <a href="#" id="toSet">설정</a>에서 현장명과 점검자 이름을 입력하세요.</div>`:''}
+  ${!S.site||!S.inspector?`<div class="hint" style="margin-bottom:16px"><a href="#" id="toSet">설정</a>에서 ${!S.inspector?'<b>내 정보</b>(이름·서명)':''}${!S.site&&!S.inspector?'와 ':''}${!S.site?'현장명':''}을 등록하세요. 점검자 이름·서명이 자동으로 들어갑니다.</div>`:''}
   <div class="hm-grid">
    ${tile(1,'strike','삼진아웃','three strikes out','warning · education · exit',vt.length,`오늘 적발 <b>${vt.length}</b>건<br>퇴출 <b>${banned.size}</b> · 교육 미이수 <b>${eduPend.length}</b>`,false,true)}
    ${tile(2,'alcohol','음주측정','alcohol check','breath test',atBad.length,`오늘 측정 <b>${at.length}</b>명 · 적발 <b>${atBad.length}</b><br>${noNotice.length?`통지서 미작성 <b>${noNotice.length}</b>`:'통지서 모두 작성됨'}`)}
@@ -683,7 +698,7 @@ function strikeForm(preset){
   <div class="card"><label class="f">2. 위반 내용</label><div class="chips" id="vt">${S.vtypes.map(t=>`<button type="button" class="chip" data-t="${h(t)}">${h(t)}</button>`).join('')}</div>
    <label class="f">상세 내용</label><textarea class="inp" id="detail" placeholder="예) 3층 슬래브 단부 작업 중 안전대 미체결"></textarea>
    <div class="grid g2"><div><label class="f">적발 장소</label><input class="inp" id="place" placeholder="예) 101동 5층"></div><div><label class="f">적발 일시</label><input class="inp" type="datetime-local" id="at" value="${nowLocal()}"></div></div>
-   <label class="f">현장 사진</label><div class="photos" id="phs"></div><label class="btn ghost" style="margin-top:8px"><i class="i i-camera"></i> 사진 촬영 / 추가<input type="file" accept="image/*" capture="environment" multiple hidden id="phIn"></label></div>
+   <label class="f">현장 사진</label><div class="photos" id="phs"></div><div class="row" style="margin-top:8px"><label class="btn ghost"><i class="i i-camera"></i> 사진 촬영<input type="file" accept="image/*" capture="environment" hidden id="phIn"></label><button type="button" class="btn ghost" id="phGal"><i class="i i-folder"></i> 갤러리에서 선택</button><input type="file" accept="image/*" multiple hidden id="phInG"></div></div>
   <div class="card"><label class="f">3. 조치사항</label><textarea class="inp" id="action" style="min-height:100px"></textarea></div>
   <div class="card"><label class="f">4. 확인 서명</label>
    <div class="grid g2"><div><label class="f">점검자 소속</label><input class="inp" id="iOrg" value="${h(S.inspectorOrg)}"></div><div><label class="f">점검자 성명 *</label><input class="inp" id="iName" value="${h(S.inspector)}"></div></div>
@@ -692,7 +707,7 @@ function strikeForm(preset){
    <div id="witBox" style="display:none"><label class="f">입회자 (소속/성명)</label><input class="inp" id="witness"></div></div>
   <button class="btn xl" id="saveV">저장</button>`;
   $('#back').onclick=()=>go('strike');
-  const sv=sigPad($('#sigV'),'위반자 확인 서명'),si=sigPad($('#sigI'),'점검자 서명');
+  const sv=sigPad($('#sigV'),'위반자 확인 서명'),si=sigPad($('#sigI'),'점검자 서명',S.mySig);{const _i=$('#iName');if(_i)_i.addEventListener('change',()=>{_i.value.trim()===S.inspector?si.useMine():si.clear()})};
   $('#refuse').onchange=e=>$('#witBox').style.display=e.target.checked?'block':'none';
   const setLevel=()=>{const L=st.level;$('#lvCard').style.display='block';const lv=S.levels[L-1];
     $('#lvCard').innerHTML=`<div class="level-box">${stickerHtml(L,($('#at').value||nowLocal()).slice(0,10))}<div style="flex:1;min-width:200px"><div style="font-size:22px;font-weight:800">${h(lv.name)} <span class="badge b${L}">${h(lv.sticker)} 스티커</span></div>
@@ -713,7 +728,9 @@ function strikeForm(preset){
   personPicker($('#pp'),pick,{focus:!preset});if(preset)pick(preset);
   $$('#vt .chip').forEach(b=>b.onclick=()=>{$$('#vt .chip').forEach(x=>x.classList.remove('on'));b.classList.add('on');st.type=b.dataset.t});
   const drawPh=()=>{$('#phs').innerHTML=st.photos.map((p,i)=>`<div class="ph"><img src="${p}"><button data-i="${i}"><i class="i i-x"></i></button></div>`).join('');$$('#phs button').forEach(b=>b.onclick=()=>{st.photos.splice(+b.dataset.i,1);drawPh()})};
-  $('#phIn').onchange=async e=>{for(const f of e.target.files){try{st.photos.push(await compressImg(f))}catch(x){toast('사진 처리 실패')}}e.target.value='';drawPh()};
+  const addPh=async e=>{for(const f of e.target.files){try{st.photos.push(await compressImg(f))}catch(x){toast('사진 처리 실패')}}e.target.value='';drawPh()};
+  $('#phIn').onchange=addPh;$('#phInG').onchange=addPh;
+  $('#phGal').onclick=()=>withGalleryConsent(()=>$('#phInG').click());
   $('#at').onchange=()=>st.person&&setLevel();
   $('#saveV').onclick=async()=>{
     if(!st.person)return toast('위반자를 선택하세요');if(!st.type)return toast('위반 내용을 선택하세요');
@@ -823,7 +840,7 @@ function alcNotice(id){
    <label class="row" style="margin-top:10px"><input type="checkbox" id="nR" style="width:22px;height:22px"> 근로자 서명 거부</label><div id="nWb" style="display:none"><label class="f">입회자</label><input class="inp" id="nWi"></div>
    <label class="row" style="margin-top:10px"><input type="checkbox" id="nV" ${a.linkedViolation?'disabled':''} style="width:22px;height:22px"> 삼진아웃 위반으로도 등록 ${a.linkedViolation?'(등록됨)':''}</label>
    <div class="grid g2" style="margin-top:12px"><button class="btn xl" id="nS">저장 후 출력</button><button class="btn xl line" id="nMsg"><i class="i i-share"></i> 적발 알림 문구 공유</button></div>`,b=>{
-    const sw=sigPad($('#sW',b),'근로자 서명'),sm=sigPad($('#sM',b),`측정자 서명 (${a.measurer})`);
+    const sw=sigPad($('#sW',b),'근로자 서명'),sm=sigPad($('#sM',b),`측정자 서명 (${a.measurer})`,a.measurer===S.inspector?S.mySig:'');
     $('#nR',b).onchange=e=>$('#nWb').style.display=e.target.checked?'block':'none';
     $('#nMsg',b).onclick=()=>shareAlcMessage(a);
     $('#nS',b).onclick=async()=>{
@@ -978,8 +995,12 @@ R.records=()=>{
 /* --- 설정 --- */
 R.settings=()=>{
   V$().innerHTML=`<h1>설정</h1>
-  <div class="card"><label class="f">현장명</label><input class="inp" id="sS" value="${h(S.site)}" placeholder="현장명을 직접 입력하세요">
-  <div class="grid g2"><div><label class="f">기본 점검자/측정인 소속</label><input class="inp" id="sO" value="${h(S.inspectorOrg)}" placeholder="예) 안전팀"></div><div><label class="f">기본 점검자/측정인 성명</label><input class="inp" id="sI" value="${h(S.inspector)}"></div></div></div>
+  <div class="card" id="myCard"><b>내 정보</b> <span class="small muted">— 등록하면 점검자·측정인·상담자 이름과 서명이 자동으로 들어갑니다</span>
+   <div class="grid g2"><div><label class="f">소속</label><input class="inp" id="sO" value="${h(S.inspectorOrg)}" placeholder="예) OO건설 안전팀"></div><div><label class="f">성명</label><input class="inp" id="sI" value="${h(S.inspector)}" placeholder="이름"></div>
+   <div><label class="f">직책</label><input class="inp" id="sRole" value="${h(S.myRole||'')}" placeholder="예) 안전관리자"></div><div></div></div>
+   <label class="f">내 서명</label><div id="mySigBox"></div>
+   <button class="btn" id="mySave" style="width:100%;margin-top:12px">내 정보 저장</button></div>
+  <div class="card"><label class="f">현장명</label><input class="inp" id="sS" value="${h(S.site)}" placeholder="현장명을 직접 입력하세요"></div>
   <div class="card"><b>삼진아웃 기준</b>
    <label class="f">누적 기간</label><select class="inp" id="sP">${[[0,'공사 기간 전체 누적'],[3,'최근 3개월'],[6,'최근 6개월'],[12,'최근 12개월']].map(([v,t])=>`<option value="${v}" ${S.periodMonths==v?'selected':''}>${t}</option>`).join('')}</select>
    ${S.levels.map((l,i)=>`<div style="border-left:6px solid var(--l${i+1});padding-left:10px;margin-top:12px"><div class="grid g2"><div><label class="f">${i+1}차 명칭</label><input class="inp" data-ln="${i}" value="${h(l.name)}"></div><div><label class="f">스티커 색</label><input class="inp" data-ls="${i}" value="${h(l.sticker)}"></div></div><label class="f">조치사항 (줄바꿈 구분)</label><textarea class="inp" data-la="${i}">${h(l.act)}</textarea></div>`).join('')}
@@ -993,21 +1014,32 @@ R.settings=()=>{
   <div class="card"><b>취약근로자 기준</b>
    <div class="grid g2"><div><label class="f">고령 분류 연령 (세 이상)</label><input class="inp" id="sVa" inputmode="numeric" value="${S.vulnAge}"></div><div></div>
    <div><label class="f">혈압 주의 (수축기/이완기 이상)</label><input class="inp" id="sBw" value="${S.bp.warn.join('/')}"></div><div><label class="f">혈압 위험 (수축기/이완기 이상)</label><input class="inp" id="sBs" value="${S.bp.stop.join('/')}"></div></div></div>
+  <div class="card"><b>갤러리 사진 사용</b><div class="row" style="margin-top:8px"><span class="grow small">${S.galleryConsent?`동의함 (${fmtDT(S.galleryConsent.at)})`:'동의 안 함 — 갤러리에서 선택할 때 동의를 묻습니다'}</span>${S.galleryConsent?'<button class="btn sm line" id="gcOff">동의 철회</button>':''}</div></div>
   <div class="card"><b>잠금</b><label class="f">PIN (숫자 4~6자리, 비우면 잠금 없음)</label><input class="inp" id="sN" inputmode="numeric" maxlength="6" value="${h(S.pin)}">
    <div class="small muted" style="margin-top:6px">지침 10.3: 기록 열람은 현장소장 및 안전관리책임자로 제한.</div></div>
   <button class="btn xl" id="sSave">설정 저장</button>
   <h2>데이터</h2><div class="card"><div class="small muted">근로자 ${W.length} · 장비 ${E.length} · 삼진아웃 ${V.length} · 음주측정 ${A.length}</div>
   <div class="row" style="margin-top:10px"><button class="btn line" id="dW">근로자 대장 비우기</button><button class="btn line" id="dE">장비 대장 비우기</button></div></div>
   <p class="small muted">앱 설치: 크롬/사파리 메뉴 → "홈 화면에 추가". 인터넷 없이도 동작합니다.<br>버전 ${APP_VER} · 인터넷에 연결되어 있으면 새 버전을 자동으로 받습니다.</p>`;
+  /* 내 서명: 저장된 서명이 있으면 보여주고, 다시 그리면 교체 */
+  const drawMine=()=>{$('#mySigBox').innerHTML=S.mySig?`<div class="sig" style="padding:8px;text-align:center;background:#fff"><img src="${S.mySig}" style="max-width:100%;height:110px;object-fit:contain"></div><div class="row" style="margin-top:8px"><button class="btn sm line" id="myRe">다시 등록</button><button class="btn sm line" id="myDel">서명 삭제</button></div>`:'<div id="myPad"></div>';
+    if(!S.mySig)window._myPad=sigPad($('#myPad'),'여기에 서명');else{window._myPad=null;$('#myRe').onclick=()=>{S._reSig=true;$('#mySigBox').innerHTML='<div id="myPad"></div>';window._myPad=sigPad($('#myPad'),'여기에 새 서명')};$('#myDel').onclick=async()=>{if(!confirm('저장된 내 서명을 삭제할까요?'))return;S.mySig='';await saveSettings();drawMine()}}};
+  drawMine();
+  const saveMine=async()=>{const nm=$('#sI').value.trim();if(!nm){toast('성명을 입력하세요');$('#sI').focus();return false}
+    Object.assign(S,{inspectorOrg:$('#sO').value.trim(),inspector:nm,myRole:$('#sRole').value.trim()});
+    if(window._myPad&&!window._myPad.isEmpty())S.mySig=window._myPad.data();delete S._reSig;await saveSettings();return true};
+  $('#mySave').onclick=async()=>{if(await saveMine()){toast(S.mySig?'내 정보·서명 저장됨':'내 정보 저장됨 (서명은 아직 없음)');drawMine()}};
+  const gco=$('#gcOff');if(gco)gco.onclick=async()=>{S.galleryConsent=null;await saveSettings();toast('갤러리 사용 동의 철회됨');R.settings()};
   $('#sSave').onclick=async()=>{
     const r=parseFloat($('#sR').value),t=parseFloat($('#sT').value),dt=parseFloat($('#sDt').value),dy=parseFloat($('#sDy').value),oc=parseInt($('#sOc').value);if(!(r>0&&t>r&&dt>0&&dy>dt&&oc>=1))return toast('음주 기준값을 확인하세요');
     const bpP=v=>{const m=String(v).match(/(\d{2,3})\s*\/\s*(\d{2,3})/);return m?[+m[1],+m[2]]:null};const bw=bpP($('#sBw').value),bs=bpP($('#sBs').value),va=parseInt($('#sVa').value);
     if(!bw||!bs||!(va>0))return toast('취약근로자 기준값을 확인하세요 (예: 140/90)');S.bp={warn:bw,stop:bs};S.vulnAge=va;
     const pin=$('#sN').value.trim();if(pin&&!/^\d{4,6}$/.test(pin))return toast('PIN은 숫자 4~6자리');
-    Object.assign(S,{site:$('#sS').value.trim(),inspectorOrg:$('#sO').value.trim(),inspector:$('#sI').value.trim(),periodMonths:+$('#sP').value,pin,alc:{retest:r,stop:t,detect:dt,day:dy,outCount:oc},alcMode:$('#sAm').value,alcMsg:$('#sMsg').value,
+    if($('#sI').value.trim()&&!(await saveMine()))return;
+    Object.assign(S,{site:$('#sS').value.trim(),periodMonths:+$('#sP').value,pin,alc:{retest:r,stop:t,detect:dt,day:dy,outCount:oc},alcMode:$('#sAm').value,alcMsg:$('#sMsg').value,
       vtypes:$('#sV').value.split('\n').map(s=>s.trim()).filter(Boolean),
       levels:S.levels.map((l,i)=>({name:$(`[data-ln="${i}"]`).value.trim()||l.name,sticker:$(`[data-ls="${i}"]`).value.trim(),act:$(`[data-la="${i}"]`).value.trim()}))});
-    await saveSettings();$('#siteName').textContent=S.site;toast('저장됨')};
+    await saveSettings();$('#siteName').textContent=S.site;toast('저장됨');drawMine()};
   $('#dW').onclick=async()=>{if(!confirm('근로자 대장을 모두 지웁니다. (적발·측정 기록은 유지) 계속할까요?'))return;await DB.putMany('workers',[],true);W=[];R.settings()};
   $('#dE').onclick=async()=>{if(!confirm('장비 대장을 모두 지웁니다. 계속할까요?'))return;await DB.putMany('equipment',[],true);E=[];R.settings()};
 };
@@ -1146,7 +1178,7 @@ function vulnConsult(id){
    <div class="hint" style="margin-bottom:10px">서약: 위의 건강검진 결과에 대해 안내 받았으며, 결과에 따른 현장 조치사항에 성실히 임할 것을 서약합니다.</div>
    <div class="grid g2"><div id="cSw"></div><div id="cSc"></div></div>
    <button class="btn xl" id="cSv" style="margin-top:12px">저장 후 출력</button>`,b=>{
-    bindBP(b);const sw=sigPad($('#cSw',b),'서약자(근로자) 서명'),sc=sigPad($('#cSc',b),'상담 실시자 서명');
+    bindBP(b);const sw=sigPad($('#cSw',b),'서약자(근로자) 서명'),sc=sigPad($('#cSc',b),'상담 실시자 서명',S.mySig);{const _i=$('#cBy');if(_i)_i.addEventListener('change',()=>{_i.value.trim()===S.inspector?sc.useMine():sc.clear()})};
     $('#cSv',b).onclick=async()=>{if(sw.isEmpty())return toast('근로자 서명이 필요합니다');if(sc.isEmpty())return toast('상담 실시자 서명이 필요합니다');
       const sy=+$('#bS').value||0,di=+$('#bD').value||0;if((sy||di)&&!(sy>50&&di>30))return toast('혈압 값을 확인하세요');
       const c={id:uid(),date:$('#cDt').value||today(),counselor:$('#cBy').value.trim(),fitGen:$('#cFg').value,fitSpe:$('#cFs').value,xray:$('#cX').value.trim(),cvd:$('#cCv').value,
