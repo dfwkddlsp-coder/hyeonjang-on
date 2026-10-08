@@ -11,16 +11,18 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Chiron+GoRound+TC:wght@200..900&family=Noto+Sans+KR:wght@300..900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Chiron+GoRound+TC:wght@200..900&display=swap" rel="stylesheet">
 <script src="vendor/xlsx.full.min.js"></script>
 <style>
+/* 한글은 모두 Pretendard 한 글꼴로 통일 (영문·숫자는 Chiron GoRound TC) */
+@font-face{font-family:"HyeonjangKR";src:url("vendor/fonts/PretendardVariable.woff2") format("woff2-variations"),url("vendor/fonts/PretendardVariable.woff2") format("woff2");font-weight:45 920;font-style:normal;font-display:swap;unicode-range:U+1100-11FF,U+3130-318F,U+A960-A97F,U+AC00-D7A3,U+D7B0-D7FF}
 :root{
   --bg:#f4f2ee;--card:#fff;--ink:#1c1c1a;--sub:#6e6b64;--line:#e3dfd7;--pri:#1c1c1a;--pri2:#55524c;
   --ok:#2e7d4f;--warn:#a86a12;--bad:#b4362a;--l1:#f2c230;--l2:#e9853a;--l3:#c8402f;--chip:#ece9e2;
   --r:14px;--sh:0 1px 2px rgba(0,0,0,.06),0 2px 8px rgba(0,0,0,.05);
 }
 *{box-sizing:border-box}
-html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 "Chiron GoRound TC","Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;-webkit-text-size-adjust:100%}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 "HyeonjangKR","Chiron GoRound TC","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;-webkit-text-size-adjust:100%}
 button,input,select,textarea{font:inherit;color:inherit}
 .top{position:sticky;top:0;z-index:20;background:var(--card);color:var(--ink);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;padding:10px 16px;padding-top:max(10px,env(safe-area-inset-top))}
 .top .brand{font-weight:800;font-size:18px;white-space:nowrap}
@@ -608,6 +610,7 @@ function docAlcoholList(ds){
 }
 
 /* ---------- views ---------- */
+const APP_VER='2026.10.08-3';
 const VIEWS=[['home','홈'],['strike','삼진아웃'],['alcohol','음주측정'],['vuln','취약근로자'],['workers','근로자'],['equip','장비'],['records','기록'],['settings','설정']];
 let cur='home';
 function go(v,arg){cur=v;document.body.classList.toggle('is-home',v==='home');$$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));window.scrollTo(0,0);R[v](arg);try{sessionStorage.setItem('v',v)}catch(e){}}
@@ -995,7 +998,7 @@ R.settings=()=>{
   <button class="btn xl" id="sSave">설정 저장</button>
   <h2>데이터</h2><div class="card"><div class="small muted">근로자 ${W.length} · 장비 ${E.length} · 삼진아웃 ${V.length} · 음주측정 ${A.length}</div>
   <div class="row" style="margin-top:10px"><button class="btn line" id="dW">근로자 대장 비우기</button><button class="btn line" id="dE">장비 대장 비우기</button></div></div>
-  <p class="small muted">앱 설치: 크롬/사파리 메뉴 → "홈 화면에 추가". 인터넷 없이도 동작합니다.</p>`;
+  <p class="small muted">앱 설치: 크롬/사파리 메뉴 → "홈 화면에 추가". 인터넷 없이도 동작합니다.<br>버전 ${APP_VER} · 인터넷에 연결되어 있으면 새 버전을 자동으로 받습니다.</p>`;
   $('#sSave').onclick=async()=>{
     const r=parseFloat($('#sR').value),t=parseFloat($('#sT').value),dt=parseFloat($('#sDt').value),dy=parseFloat($('#sDy').value),oc=parseInt($('#sOc').value);if(!(r>0&&t>r&&dt>0&&dy>dt&&oc>=1))return toast('음주 기준값을 확인하세요');
     const bpP=v=>{const m=String(v).match(/(\d{2,3})\s*\/\s*(\d{2,3})/);return m?[+m[1],+m[2]]:null};const bw=bpP($('#sBw').value),bs=bpP($('#sBs').value),va=parseInt($('#sVa').value);
@@ -1180,7 +1183,20 @@ function net(){$('#netBadge').textContent=navigator.onLine?'온라인':'오프�
   await loadSettings();await loadAll();await lockScreen();
   $('#siteName').textContent=S.site;renderNav();net();addEventListener('online',net);addEventListener('offline',net);
   let v='home';try{v=sessionStorage.getItem('v')||'home'}catch(e){}go(R[v]?v:'home');
-  if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});
+  if('serviceWorker' in navigator&&location.protocol.startsWith('http')){
+    /* 새 버전 자동 적용: 열 때·다시 볼 때 확인. 입력 중이면 끊지 않고 상단에 '업데이트' 버튼만 띄움 */
+    const hadCtl=!!navigator.serviceWorker.controller;
+    navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>{
+      const chk=()=>reg.update().catch(()=>{});chk();
+      document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')chk()});
+    }).catch(()=>{});
+    navigator.serviceWorker.addEventListener('controllerchange',()=>{
+      if(!hadCtl)return;
+      const busy=!$('#modal').classList.contains('hidden')||(cur!=='home'&&$('canvas',V$()));
+      if(!busy)return location.reload();
+      if($('#updBtn'))return;const b=document.createElement('button');b.id='updBtn';b.className='btn sm';b.textContent='새 버전 적용';b.onclick=()=>location.reload();$('.top .sp').after(b);
+    });
+  }
   if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(()=>{});
 })();
 </script>

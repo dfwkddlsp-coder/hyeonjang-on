@@ -22,6 +22,9 @@ Open http://localhost:8765.
 Settings → Pages → Source: `Deploy from a branch`, Branch: `main` / `(root)`.
 Open the Pages URL on a tablet or phone and use "홈 화면에 추가" to install.
 
+## Fonts
+Hangul: Pretendard (vendor/fonts, SIL OFL 1.1). Latin/digits: Chiron GoRound TC (Google Fonts).
+
 ## Data
 All records are stored only on each device (IndexedDB) — nothing is sent to a server. Use 기록 → 전체 백업 regularly.
 Planned: shared server with admin-registered users and admin-only delete.
