@@ -120,7 +120,7 @@ table.t tr.click:hover td{background:#f8fafc}
 .kv dt{color:var(--sub);font-weight:600}.kv dd{margin:0;word-break:break-all}
 .lock{position:fixed;inset:0;background:#1c1c1a;z-index:100;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;color:#fff}
 .lock input{font-size:28px;text-align:center;letter-spacing:10px;width:220px}
-.hint{background:#f1efea;border-left:3px solid var(--ink);padding:10px 12px;border-radius:8px;font-size:14px}
+.hint{background:rgba(255,255,255,.62);padding:12px 14px;border-radius:12px;font-size:14px;color:#4c4942}
 #print{display:none}
 /* --- line icons --- */
 .i{display:inline-block;width:1.15em;height:1.15em;flex:none;vertical-align:-.2em;background:currentColor;-webkit-mask:var(--m) center/contain no-repeat;mask:var(--m) center/contain no-repeat}
@@ -200,8 +200,7 @@ body.is-home #netBadge{background:rgba(0,0,0,.05)!important;color:var(--sub)!imp
 .hm-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:2px 0 14px}
 .hm-title{font-size:clamp(30px,5vw,48px);line-height:1;font-weight:900;color:var(--red);letter-spacing:-.03em;margin:0}
 .hm-kicker{font-size:11px;letter-spacing:.08em;color:#6b675e;margin-bottom:6px}
-.hm-motto{margin:8px 0 0;font-size:14px;font-weight:500;color:#5b574f;letter-spacing:-.01em;display:flex;align-items:center;gap:8px}
-.hm-motto::before{content:"";width:22px;height:2px;background:var(--red);flex:none}
+.hm-motto{margin:8px 0 0;font-size:14px;font-weight:500;color:#5b574f;letter-spacing:-.01em}
 .hm-site{font-size:12px;color:#6b675e;text-align:right;line-height:1.5;border-left:1px solid rgba(0,0,0,.18);padding-left:12px}
 .hm-site b{color:var(--ink2);font-size:14px}
 /* 한 화면에 6개: 휴대폰·세로 태블릿 2열x3행, 가로 태블릿·PC 3열x2행 */
@@ -625,7 +624,7 @@ function docAlcoholList(ds){
 }
 
 /* ---------- views ---------- */
-const APP_VER='2026.10.08-4';
+const APP_VER='2026.10.08-5';
 const VIEWS=[['home','홈'],['strike','삼진아웃'],['alcohol','음주측정'],['vuln','취약근로자'],['workers','근로자'],['equip','장비'],['records','기록'],['settings','설정']];
 let cur='home';
 function go(v,arg){cur=v;document.body.classList.toggle('is-home',v==='home');$$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));window.scrollTo(0,0);R[v](arg);try{sessionStorage.setItem('v',v)}catch(e){}}
