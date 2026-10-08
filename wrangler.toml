@@ -11,7 +11,7 @@ not_found_handling = "single-page-application"
 [[d1_databases]]
 binding = "DB"
 database_name = "hyeonjang-on-db"
-database_id = "LOCAL-ONLY"
+database_id = "d162e0f7-aeb4-48f3-8fec-06616d22c6cc"
 migrations_dir = "migrations"
 
 [observability]
