@@ -941,7 +941,7 @@ R.records=()=>{
 /* --- 설정 --- */
 R.settings=()=>{
   V$().innerHTML=`<h1>설정</h1>
-  <div class="card"><label class="f">현장명</label><input class="inp" id="sS" value="${h(S.site)}" placeholder="예) OO지구 공동주택 신축공사">
+  <div class="card"><label class="f">현장명</label><input class="inp" id="sS" value="${h(S.site)}" placeholder="현장명을 직접 입력하세요">
   <div class="grid g2"><div><label class="f">기본 점검자/측정인 소속</label><input class="inp" id="sO" value="${h(S.inspectorOrg)}" placeholder="예) 안전팀"></div><div><label class="f">기본 점검자/측정인 성명</label><input class="inp" id="sI" value="${h(S.inspector)}"></div></div></div>
   <div class="card"><b>삼진아웃 기준</b>
    <label class="f">누적 기간</label><select class="inp" id="sP">${[[0,'공사 기간 전체 누적'],[3,'최근 3개월'],[6,'최근 6개월'],[12,'최근 12개월']].map(([v,t])=>`<option value="${v}" ${S.periodMonths==v?'selected':''}>${t}</option>`).join('')}</select>
