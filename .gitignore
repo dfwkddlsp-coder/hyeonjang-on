@@ -4,7 +4,12 @@
 *.csv
 *.json
 !manifest.webmanifest
+!package.json
+!package-lock.json
 
 # Local tooling
 .claude/
 Thumbs.db
+node_modules/
+.wrangler/
+.dev.vars

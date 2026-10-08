@@ -122,6 +122,9 @@ table.t tr.click:hover td{background:#f8fafc}
 .lock input{font-size:28px;text-align:center;letter-spacing:10px;width:220px}
 .hint{background:rgba(255,255,255,.62);padding:12px 14px;border-radius:12px;font-size:14px;color:#4c4942}
 #print{display:none}
+.auth-box{background:var(--card);color:var(--ink);width:min(380px,92vw);max-height:92vh;overflow:auto;border-radius:20px;padding:22px;box-shadow:0 20px 50px rgba(0,0,0,.35)}
+.auth-err{color:var(--bad);font-size:14px;min-height:20px;margin-top:8px}
+.lock{overflow:auto}
 /* --- line icons --- */
 .i{display:inline-block;width:1.15em;height:1.15em;flex:none;vertical-align:-.2em;background:currentColor;-webkit-mask:var(--m) center/contain no-repeat;mask:var(--m) center/contain no-repeat}
 .i-home{--m:url("data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M3%2010.5%2012%203l9%207.5V20a1%201%200%200%201-1%201h-5v-6H9v6H4a1%201%200%200%201-1-1z%22%2F%3E%3C%2Fsvg%3E")}
@@ -304,8 +307,8 @@ function expCell(s){const st=expState(s);if(!s)return '';return `<span class="${
 
 /* ---------- storage ---------- */
 const DB={db:null,
-  open(){return new Promise((res,rej)=>{const r=indexedDB.open('fieldsafety',2);
-    r.onupgradeneeded=()=>{const d=r.result;['workers','equipment','violations','alcohol','vuln'].forEach(s=>{if(!d.objectStoreNames.contains(s))d.createObjectStore(s,{keyPath:'id'})});if(!d.objectStoreNames.contains('kv'))d.createObjectStore('kv',{keyPath:'k'})};
+  open(){return new Promise((res,rej)=>{const r=indexedDB.open('fieldsafety',3);
+    r.onupgradeneeded=()=>{const d=r.result;['workers','equipment','violations','alcohol','vuln'].forEach(s=>{if(!d.objectStoreNames.contains(s))d.createObjectStore(s,{keyPath:'id'})});if(!d.objectStoreNames.contains('kv'))d.createObjectStore('kv',{keyPath:'k'});if(!d.objectStoreNames.contains('outbox'))d.createObjectStore('outbox',{keyPath:'k'})};
     r.onsuccess=()=>{this.db=r.result;res()};r.onerror=()=>rej(r.error)})},
   req(r){return new Promise((res,rej)=>{r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})},
   st(s,m){return this.db.transaction(s,m).objectStore(s)},
@@ -316,8 +319,11 @@ const DB={db:null,
 };
 let W=[],E=[],V=[],A=[],VU=[];
 const STORE={workers:()=>W,equipment:()=>E,violations:()=>V,alcohol:()=>A,vuln:()=>VU};
-async function save(store,obj){await DB.put(store,obj);const arr=STORE[store]();const i=arr.findIndex(x=>x.id===obj.id);if(i>=0)arr[i]=obj;else arr.push(obj)}
-async function remove(store,id){await DB.del(store,id);const arr=STORE[store]();const i=arr.findIndex(x=>x.id===id);if(i>=0)arr.splice(i,1)}
+function memPut(store,obj){const arr=STORE[store]();const i=arr.findIndex(x=>x.id===obj.id);if(i>=0)arr[i]=obj;else arr.push(obj)}
+function memDel(store,id){const arr=STORE[store]();const i=arr.findIndex(x=>x.id===id);if(i>=0)arr.splice(i,1)}
+/* 서버 모드: 기기에 먼저 저장 → 전송 대기함(outbox) → 연결되면 서버로. 인터넷이 없어도 입력은 계속 됩니다 */
+async function save(store,obj){await DB.put(store,obj);memPut(store,obj);if(SERVER){await DB.put('outbox',{k:store+'|'+obj.id,store,id:obj.id,data:obj,ts:Date.now()});Sync.soon()}}
+async function remove(store,id){if(SERVER){if(!navigator.onLine){toast('삭제는 인터넷 연결이 필요합니다');throw new Error('offline')}await api('docs/delete',{store,id})}await DB.del(store,id);memDel(store,id)}
 
 const DEF={
   site:'',inspectorOrg:'',inspector:'',periodMonths:0,pin:'',
@@ -413,7 +419,7 @@ const wKey=w=>norm(w.name)+'|'+(norm(w.birth)||norm(w.company));
 
 async function importFiles(kind,files,replace){
   if(kind==='vuln')return importVuln(files,replace);
-  const isW=kind==='workers';const FIELDS=isW?WORKER_FIELDS:EQUIP_FIELDS;let added=0,updated=0,skipped=0;const msgs=[];
+  const isW=kind==='workers';const FIELDS=isW?WORKER_FIELDS:EQUIP_FIELDS;let added=0,updated=0,skipped=0;const msgs=[];const touched=new Set();
   const cur=replace?[]:[...(isW?W:E)];const idx=new Map(cur.map(x=>[isW?wKey(x):eqKey(x),x]));
   for(const f of files){
     let res;try{res=parseWorkbook(await readFile(f),FIELDS,isW?2:3)}catch(e){msgs.push(`${f.name}: 읽기 실패`);continue}
@@ -423,13 +429,14 @@ async function importFiles(kind,files,replace){
       if(isW&&/^(성명|이름)$/.test(o.name)){continue}
       if(isW){if(!o.inDate&&o.hireY&&o.hireM)o.inDate=`${o.hireY}-${pad(o.hireM)}-${pad(o.hireD||1)}`;if(o.eduY||o.eduN)o.eduBasic=o.eduY?'이수':'미이수';['hireY','hireM','hireD','eduY','eduN'].forEach(k=>delete o[k])}
       const k=isW?wKey(o):eqKey(o);const ex=idx.get(k);
-      if(ex){for(const f2 in o)if(o[f2])ex[f2]=o[f2];ex.src=f.name;ex.updated=nowLocal();updated++}
-      else{const n={id:uid(),...o,src:f.name,created:nowLocal()};cur.push(n);idx.set(k,n);added++}
+      if(ex){for(const f2 in o)if(o[f2])ex[f2]=o[f2];ex.src=f.name;ex.updated=nowLocal();updated++;touched.add(ex.id)}
+      else{const n={id:uid(),...o,src:f.name,created:nowLocal()};cur.push(n);idx.set(k,n);added++;touched.add(n.id)}
     }
     msgs.push(`${f.name} [${res.sheet}] 인식 완료`);
   }
-  await DB.putMany(isW?'workers':'equipment',cur,replace);
-  if(isW)W=cur;else E=cur;
+  const store=isW?'workers':'equipment';
+  if(SERVER)await pushImport(store,replace?cur:cur.filter(x=>touched.has(x.id)),replace);
+  else{await DB.putMany(store,cur,replace);if(isW)W=cur;else E=cur}
   return {added,updated,skipped,msgs};
 }
 
@@ -624,7 +631,7 @@ function docAlcoholList(ds){
 }
 
 /* ---------- views ---------- */
-const APP_VER='2026.10.08-5';
+const APP_VER='2026.10.09-1';
 const VIEWS=[['home','홈'],['strike','삼진아웃'],['alcohol','음주측정'],['vuln','취약근로자'],['workers','근로자'],['equip','장비'],['records','기록'],['settings','설정']];
 let cur='home';
 function go(v,arg){cur=v;document.body.classList.toggle('is-home',v==='home');$$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));window.scrollTo(0,0);R[v](arg);try{sessionStorage.setItem('v',v)}catch(e){}}
@@ -759,7 +766,7 @@ function showViolation(id){
    ${v.photos&&v.photos.length?`<div class="photos" style="margin-bottom:12px">${v.photos.map(p=>`<div class="ph"><img src="${p}"></div>`).join('')}</div>`:''}
    <div class="grid g2" style="margin-bottom:12px">${v.sigViolator?`<div class="card"><div class="small muted">위반자 서명</div><img src="${v.sigViolator}" style="max-width:100%;height:90px"></div>`:''}<div class="card"><div class="small muted">점검자 서명</div><img src="${v.sigInspector}" style="max-width:100%;height:90px"></div></div>
    ${v.level===2&&!v.void?`<div class="card">${v.edu&&v.edu.done?`<b style="color:var(--ok)"><i class="i i-check"></i> 교육 이수</b> ${fmtDT(v.edu.at)} · 교육자 ${h(v.edu.by)}`:`<b style="color:var(--warn)">교육 미이수</b><div class="row" style="margin-top:8px"><input class="inp grow" id="eduBy" placeholder="교육 실시자" value="${h(S.inspector)}"><button class="btn ok" id="eduOk">교육 이수 처리</button></div>`}</div>`:''}
-   <div class="row"><button class="btn" id="pv"><i class="i i-print"></i> 확인서 출력 / PDF</button>${!v.void?'<button class="btn line" id="vd">무효 처리</button>':''}<button class="btn line" id="wh">근로자 이력</button></div>`,b=>{
+   <div class="row"><button class="btn" id="pv"><i class="i i-print"></i> 확인서 출력 / PDF</button>${!v.void&&isAdmin()?'<button class="btn line" id="vd">무효 처리</button>':''}<button class="btn line" id="wh">근로자 이력</button></div>`,b=>{
     $('#pv',b).onclick=()=>printPages([docViolation(v)]);
     const wh=$('#wh',b);wh.onclick=()=>{closeModal();showPersonHistory(v.pkey,v.name,v.company)};
     const eo=$('#eduOk',b);if(eo)eo.onclick=async()=>{v.edu={done:true,at:nowLocal(),by:$('#eduBy').value.trim()};await save('violations',v);toast('교육 이수 처리됨');showViolation(v.id);R[cur]()};
@@ -863,7 +870,7 @@ function showAlcohol(id){
    ${isAlcBad(a)&&!a.void?`<button class="btn bad" id="nt"><i class="i i-pen"></i> ${a.notice?'통지서 다시 작성':'측정결과 통지서 작성'}</button>${a.notice?'<button class="btn" id="np"><i class="i i-print"></i> 통지서 출력</button>':''}<button class="btn line" id="ms"><i class="i i-share"></i> 알림 문구</button>`:''}
    ${a.judge!=='정상'&&!ch&&!a.void?'<button class="btn line" id="rt">재측정 입력</button>':''}
    <button class="btn line" id="fm">사후조치 메모</button>
-   ${!a.void?'<button class="btn line" id="vd">무효 처리</button>':''}</div>`,b=>{
+   ${!a.void&&isAdmin()?'<button class="btn line" id="vd">무효 처리</button>':''}</div>`,b=>{
     const rt=$('#rt',b);if(rt)rt.onclick=()=>{closeModal();go('alcohol');alcForm({name:a.name,company:a.company,job:a.job,workerId:a.workerId,equip:a.equip,plate:a.plate},a)};
     const nt=$('#nt',b);if(nt)nt.onclick=()=>alcNotice(a.id);
     const np=$('#np',b);if(np)np.onclick=()=>printPages([docAlcohol(a)]);
@@ -878,21 +885,21 @@ R.workers=()=>{
   const q=R.workers.q||'',co=R.workers.co||'';const comps=[...new Set(W.map(w=>w.company).filter(Boolean))].sort();
   const list=W.filter(w=>(!co||w.company===co)&&(!q||norm([w.name,w.company,w.job,w.helmet,w.phone,w.birth].join(' ')).includes(norm(q)))).sort((a,b)=>(a.company||'').localeCompare(b.company||'')||a.name.localeCompare(b.name));
   V$().innerHTML=`<h1>근로자 관리대장 <span class="badge">${W.length}명</span></h1>
-  <div class="card"><div class="row"><label class="btn"><i class="i i-import"></i> 엑셀 불러오기<input type="file" accept=".xls,.xlsx,.csv" multiple hidden id="wf"></label><button class="btn ghost" id="wt">양식 다운로드</button><button class="btn ghost" id="wa"><i class="i i-plus"></i> 직접 추가</button><button class="btn line" id="wx">엑셀 저장</button></div>
+  <div class="card"><div class="row">${isAdmin()?'<label class="btn"><i class="i i-import"></i> 엑셀 불러오기<input type="file" accept=".xls,.xlsx,.csv" multiple hidden id="wf"></label>':''}<button class="btn ghost" id="wt">양식 다운로드</button><button class="btn ghost" id="wa"><i class="i i-plus"></i> 직접 추가</button><button class="btn line" id="wx">엑셀 저장</button></div>
   <div class="small muted" style="margin-top:8px">업체별 작성 양식을 여러 개 한 번에 올려도 됩니다. 같은 성명+생년월일은 자동 병합.</div></div>
   <div class="row" style="margin-bottom:10px"><input class="inp grow" id="wq" type="search" placeholder="성명 · 업체 · 직종 · 안전모번호" value="${h(q)}"><select class="inp" id="wc" style="width:auto;max-width:220px"><option value="">전체 업체</option>${comps.map(c=>`<option ${c===co?'selected':''}>${h(c)}</option>`).join('')}</select></div>
   <div class="card list">${list.length?list.slice(0,400).map(w=>{const k=pkey(w.name,w.company);const n=strikesOf(k).length;const ban=isBanned(k);return `<div class="it" data-wid="${w.id}"><span class="dot ${ban?'d3':n?'d'+Math.min(n,3):'d0'}">${ban?'퇴출':n?n+'회':'—'}</span><div class="m"><b>${h(w.name)}</b> <span class="muted">${h(w.company||'')}</span>${vulnOf(w.name,w.company)?' <span class="badge bbad"><i class="i i-heart"></i> 취약</span>':''}<div class="small muted ell">${h(w.job||'')}${w.helmet?' · 안전모 '+h(w.helmet):''}${w.phone?' · '+h(w.phone):''}</div></div></div>`}).join('')+(list.length>400?`<div class="empty">${list.length-400}명 더 있음 — 검색으로 좁히세요</div>`:''):'<div class="empty">근로자 없음. 양식을 내려받아 작성 후 불러오세요.</div>'}</div>`;
   $('#wq').oninput=e=>{R.workers.q=e.target.value;clearTimeout(R.workers.t);R.workers.t=setTimeout(()=>{R.workers();const i=$('#wq');i.focus();i.setSelectionRange(i.value.length,i.value.length)},250)};
   $('#wc').onchange=e=>{R.workers.co=e.target.value;R.workers()};
   $('#wt').onclick=tplWorkers;$('#wx').onclick=()=>exportWorkers(list);$('#wa').onclick=()=>editWorker();
-  $('#wf').onchange=e=>importDialog('workers',[...e.target.files]);bindItems();
+  if($('#wf'))$('#wf').onchange=e=>importDialog('workers',[...e.target.files]);bindItems();
 };
 function importDialog(kind,files){
   if(!files.length)return;const has=(kind==='workers'?W:kind==='vuln'?VU:E).length;
   openModal('엑셀 불러오기',`<p>${files.map(f=>'<i class="i i-file"></i> '+h(f.name)).join('<br>')}</p>
    <div class="grid g2"><button class="btn" id="im">병합 (같은 ${kind==='equipment'?'차량번호':'사람'} 갱신, 새 항목 추가)</button>${has?'<button class="btn line" id="ir">전체 교체 (기존 대장 지우고 새로)</button>':''}</div><div id="ires" style="margin-top:12px"></div>`,b=>{
     const run=async rep=>{if(rep&&!confirm('기존 대장을 모두 지우고 새 파일로 바꿉니다. 계속할까요?'))return;$('#ires').textContent='처리 중...';
-      const r=await importFiles(kind,files,rep);$('#ires').innerHTML=`<div class="hint">추가 <b>${r.added}</b> · 갱신 <b>${r.updated}</b><br>${r.msgs.map(h).join('<br>')}</div><button class="btn" style="margin-top:10px;width:100%" id="idone">확인</button>`;
+      let r;try{r=await importFiles(kind,files,rep)}catch(x){$('#ires').innerHTML=`<div class="hint" style="color:var(--bad)">${h(x.message)}</div>`;return}$('#ires').innerHTML=`<div class="hint">추가 <b>${r.added}</b> · 갱신 <b>${r.updated}</b><br>${r.msgs.map(h).join('<br>')}</div><button class="btn" style="margin-top:10px;width:100%" id="idone">확인</button>`;
       $('#idone').onclick=()=>{closeModal();R[cur]()}};
     $('#im',b).onclick=()=>run(false);const ir=$('#ir',b);if(ir)ir.onclick=()=>run(true);
   });
@@ -900,7 +907,7 @@ function importDialog(kind,files){
 function editWorker(id){
   const w=id?W.find(x=>x.id===id):{};
   openModal(id?'근로자 수정':'근로자 추가',Object.entries(WORKER_LABEL).map(([k,l])=>`<label class="f">${l}${k==='name'||k==='company'?' *':''}</label><input class="inp" data-k="${k}" value="${h(w[k]||'')}" ${k==='company'?'list="companyList"':''}>`).join('')+companyDatalist()+
-   `${id?`<label class="row" style="margin-top:12px"><input type="checkbox" id="wb" ${w.banned?'checked':''} style="width:22px;height:22px"> 퇴출 상태</label>`:''}<div class="row" style="margin-top:14px"><button class="btn" id="ws" style="flex:1">저장</button>${id?'<button class="btn bad" id="wd">삭제</button>':''}</div>`,b=>{
+   `${id?`<label class="row" style="margin-top:12px"><input type="checkbox" id="wb" ${w.banned?'checked':''} style="width:22px;height:22px"> 퇴출 상태</label>`:''}<div class="row" style="margin-top:14px"><button class="btn" id="ws" style="flex:1">저장</button>${id&&isAdmin()?'<button class="btn bad" id="wd">삭제</button>':''}</div>`,b=>{
     $('#ws',b).onclick=async()=>{const o={...w,id:w.id||uid()};$$('[data-k]',b).forEach(i=>o[i.dataset.k]=i.value.trim());if(!o.name||!o.company)return toast('성명과 소속업체는 필수');if(id)o.banned=$('#wb').checked;if(!id)o.created=nowLocal();await save('workers',o);closeModal();R[cur]()};
     const wd=$('#wd',b);if(wd)wd.onclick=async()=>{if(!confirm(`${w.name} 근로자를 대장에서 삭제할까요? (적발·측정 기록은 유지)`))return;await remove('workers',id);closeModal();R[cur]()};
   });
@@ -929,7 +936,7 @@ R.equip=()=>{
   const list=E.filter(e=>(!cat||eqCat(e.type)===cat)&&(!q||norm(Object.values(e).join(' ')).includes(norm(q)))&&
     (!f||(f==='exp'?['bad','warn'].includes(expState(e.inspect))||['bad','warn'].includes(expState(e.insurance)):f==='in'?!e.outDate:!!e.outDate))).sort((a,b)=>(+a.no||999)-(+b.no||999));
   V$().innerHTML=`<h1>장비 관리대장 <span class="badge">${E.length}대</span></h1>
-  <div class="card"><div class="row"><label class="btn"><i class="i i-import"></i> 엑셀 불러오기<input type="file" accept=".xls,.xlsx" multiple hidden id="ef"></label><button class="btn ghost" id="et">양식 다운로드</button><button class="btn ghost" id="ea"><i class="i i-plus"></i> 직접 추가</button><button class="btn line" id="ex">엑셀 저장</button></div>
+  <div class="card"><div class="row">${isAdmin()?'<label class="btn"><i class="i i-import"></i> 엑셀 불러오기<input type="file" accept=".xls,.xlsx" multiple hidden id="ef"></label>':''}<button class="btn ghost" id="et">양식 다운로드</button><button class="btn ghost" id="ea"><i class="i i-plus"></i> 직접 추가</button><button class="btn line" id="ex">엑셀 저장</button></div>
   <div class="small muted" style="margin-top:8px">"장비 전담 관리자 지정서" 양식 그대로 올리면 됩니다. 같은 차량번호+운전원은 최신 내용으로 갱신.</div></div>
   <input class="inp big" id="eq" type="search" placeholder="차량번호 · 장비명 · 운전원 · 업체 · 전담관리자" value="${h(q)}" style="margin-bottom:10px">
   <div class="chips scroll" style="margin-bottom:8px"><button class="chip ${!cat?'on':''}" data-c="">전체</button>${cats.map(c=>`<button class="chip ${c===cat?'on':''}" data-c="${h(c)}">${h(c)} ${E.filter(e=>eqCat(e.type)===c).length}</button>`).join('')}</div>
@@ -941,7 +948,7 @@ R.equip=()=>{
   $$('[data-c]').forEach(b=>b.onclick=()=>{R.equip.cat=b.dataset.c;R.equip()});
   $$('[data-f]').forEach(b=>b.onclick=()=>{R.equip.f=b.dataset.f;R.equip()});
   $('#et').onclick=tplEquip;$('#ex').onclick=()=>exportEquip(list);$('#ea').onclick=()=>editEquip();
-  $('#ef').onchange=e=>importDialog('equipment',[...e.target.files]);bindItems();
+  if($('#ef'))$('#ef').onchange=e=>importDialog('equipment',[...e.target.files]);bindItems();
 };
 function showEquip(id){
   const e=E.find(x=>x.id===id);if(!e)return;
@@ -957,7 +964,7 @@ function showEquip(id){
 function editEquip(id){
   const e=id?E.find(x=>x.id===id):{};
   openModal(id?'장비 수정':'장비 추가',`<div class="grid g2">${Object.entries(EQUIP_LABEL).map(([k,l])=>`<div><label class="f">${l}</label><input class="inp" data-k="${k}" value="${h(e[k]||'')}" ${k==='company'?'list="companyList"':''}></div>`).join('')}</div>${companyDatalist()}
-   <div class="row" style="margin-top:14px"><button class="btn" id="qs" style="flex:1">저장</button>${id?'<button class="btn bad" id="qd">삭제</button>':''}</div>`,b=>{
+   <div class="row" style="margin-top:14px"><button class="btn" id="qs" style="flex:1">저장</button>${id&&isAdmin()?'<button class="btn bad" id="qd">삭제</button>':''}</div>`,b=>{
     $('#qs',b).onclick=async()=>{const o={...e,id:e.id||uid()};$$('[data-k]',b).forEach(i=>o[i.dataset.k]=i.value.trim());if(!o.type&&!o.plate)return toast('장비명 또는 차량번호 입력');if(!id){o.created=nowLocal();o.src='직접입력'}else o.updated=nowLocal();await save('equipment',o);closeModal();R[cur]()};
     const qd=$('#qd',b);if(qd)qd.onclick=async()=>{if(!confirm('이 장비를 대장에서 삭제할까요?'))return;await remove('equipment',id);closeModal();R[cur]()};
   });
@@ -974,7 +981,7 @@ R.records=()=>{
   <div class="row" style="margin-top:12px"><button class="btn" id="rx"><i class="i i-sheet"></i> 기간 엑셀 저장</button><button class="btn line" id="rp"><i class="i i-print"></i> 확인서 일괄 출력</button></div></div>
   <div class="card list">${items.length?items.map(i=>i.html).join(''):'<div class="empty">기간 내 기록 없음</div>'}</div>
   <h2>백업</h2><div class="card"><div class="small muted" style="margin-bottom:10px">기록은 이 기기 브라우저에만 저장됩니다. 주기적으로 백업 파일을 저장해 두세요. (지침: 관련 기록 3년 보관)</div>
-  <div class="row"><button class="btn ghost" id="bk"><i class="i i-save"></i> 전체 백업 저장</button><label class="btn line"><i class="i i-folder"></i> 백업 복원<input type="file" accept=".json" hidden id="rs"></label></div></div>`;
+  <div class="row">${isAdmin()?'<button class="btn ghost" id="bk"><i class="i i-save"></i> 전체 백업 저장</button><label class="btn line"><i class="i i-folder"></i> 백업 복원<input type="file" accept=".json" hidden id="rs"></label>':'<span class="small muted">백업·복원은 운영자만 할 수 있습니다.</span>'}</div></div>`;
   $('#rf').onchange=e=>{R.records.from=e.target.value;R.records()};$('#rt').onchange=e=>{R.records.to=e.target.value;R.records()};
   $$('[data-ty]').forEach(b=>b.onclick=()=>{R.records.ty=b.dataset.ty;R.records()});
   $('#rx').onclick=()=>{
@@ -984,21 +991,27 @@ R.records=()=>{
     XLSX.utils.book_append_sheet(wb,sheet([[`음주측정 기록 (${from} ~ ${to})`],['현장명 :',S.site],ah,...as.sort((a,b)=>a.at.localeCompare(b.at)).map((a,i)=>[i+1,fmtDT(a.at),a.company,a.job,a.name+(a.retestOf?' (재측정)':''),a.equip,a.plate,a.refused?'거부':a.value.toFixed(3),a.judge,a.action,a.measurer,a.follow||'',a.notice?'작성':'',a.void?'무효: '+a.void.reason:''])],[5,16,16,10,12,14,12,10,9,22,10,24,7,14],['A1:N1']),'음주측정');
     download(wb,`안전관리기록_${from}_${to}.xlsx`)};
   $('#rp').onclick=()=>{const pages=[...vs.filter(v=>!v.void).map(docViolation),...as.filter(a=>a.notice&&!a.void).map(docAlcohol)];if(!pages.length)return toast('출력할 확인서 없음');printPages(pages)};
-  $('#bk').onclick=()=>{const blob=new Blob([JSON.stringify({app:'fieldsafety',v:1,at:nowLocal(),settings:S,workers:W,equipment:E,violations:V,alcohol:A,vuln:VU})],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`현장ON_백업_${today()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};
-  $('#rs').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const d=JSON.parse(await f.text());if(d.app!=='fieldsafety')throw 0;
+  if($('#bk'))$('#bk').onclick=()=>{const blob=new Blob([JSON.stringify({app:'fieldsafety',v:1,at:nowLocal(),settings:S,workers:W,equipment:E,violations:V,alcohol:A,vuln:VU})],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`현장ON_백업_${today()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};
+  if($('#rs'))$('#rs').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const d=JSON.parse(await f.text());if(d.app!=='fieldsafety')throw 0;
     if(!confirm(`백업(${d.at})을 복원합니다.\n같은 ID 기록은 덮어쓰고, 없는 기록은 추가합니다. 계속할까요?`))return;
-    for(const s of ['workers','equipment','violations','alcohol','vuln'])await DB.putMany(s,d[s]||[]);if(d.settings){S=Object.assign(S,d.settings);await saveSettings()}await loadAll();toast('복원 완료');R.records()}catch(x){toast('백업 파일이 아닙니다')}};
+    if(SERVER){for(const s of ['workers','equipment','violations','alcohol','vuln'])if((d[s]||[]).length)await pushImport(s,d[s],false)}
+    else{for(const s of ['workers','equipment','violations','alcohol','vuln'])await DB.putMany(s,d[s]||[]);if(d.settings){S=Object.assign(S,d.settings);await saveSettings()}await loadAll()}
+    toast('복원 완료');R.records()}catch(x){toast(x.message&&x.message!=='0'?x.message:'백업 파일이 아닙니다')}};
   bindItems();
 };
 
 /* --- 설정 --- */
 R.settings=()=>{
+  const adm=isAdmin();
   V$().innerHTML=`<h1>설정</h1>
+  ${SERVER?`<div class="card"><div class="row"><div class="grow"><b>${h(ME.name)}</b> <span class="muted small">${h(ME.loginId)}</span> ${ME.role==='admin'?'<span class="badge">운영자</span>':'<span class="badge bgray">사용자</span>'}</div><button class="btn sm line" id="pwBtn">비밀번호 변경</button><button class="btn sm line" id="outBtn">로그아웃</button></div></div>`:''}
+  ${SERVER&&adm?`<div class="card"><div class="row"><b class="grow">사용자 관리</b><button class="btn sm" id="uAdd"><i class="i i-plus"></i> 사용자 등록</button></div><div class="small muted" style="margin-top:4px">등록한 사람만 로그인할 수 있습니다. 첫 로그인 때 비밀번호를 직접 바꾸게 됩니다.</div><div class="list" id="usersBox" style="margin-top:6px"><div class="empty">불러오는 중…</div></div></div>`:''}
   <div class="card" id="myCard"><b>내 정보</b> <span class="small muted">— 등록하면 점검자·측정인·상담자 이름과 서명이 자동으로 들어갑니다</span>
    <div class="grid g2"><div><label class="f">소속</label><input class="inp" id="sO" value="${h(S.inspectorOrg)}" placeholder="예) OO건설 안전팀"></div><div><label class="f">성명</label><input class="inp" id="sI" value="${h(S.inspector)}" placeholder="이름"></div>
    <div><label class="f">직책</label><input class="inp" id="sRole" value="${h(S.myRole||'')}" placeholder="예) 안전관리자"></div><div></div></div>
    <label class="f">내 서명</label><div id="mySigBox"></div>
    <button class="btn" id="mySave" style="width:100%;margin-top:12px">내 정보 저장</button></div>
+  ${adm?'':'<div class="hint" style="margin-bottom:12px">현장명·삼진아웃·음주 기준은 운영자가 관리합니다.</div><div hidden>'}
   <div class="card"><label class="f">현장명</label><input class="inp" id="sS" value="${h(S.site)}" placeholder="현장명을 직접 입력하세요"></div>
   <div class="card"><b>삼진아웃 기준</b>
    <label class="f">누적 기간</label><select class="inp" id="sP">${[[0,'공사 기간 전체 누적'],[3,'최근 3개월'],[6,'최근 6개월'],[12,'최근 12개월']].map(([v,t])=>`<option value="${v}" ${S.periodMonths==v?'selected':''}>${t}</option>`).join('')}</select>
@@ -1013,23 +1026,27 @@ R.settings=()=>{
   <div class="card"><b>취약근로자 기준</b>
    <div class="grid g2"><div><label class="f">고령 분류 연령 (세 이상)</label><input class="inp" id="sVa" inputmode="numeric" value="${S.vulnAge}"></div><div></div>
    <div><label class="f">혈압 주의 (수축기/이완기 이상)</label><input class="inp" id="sBw" value="${S.bp.warn.join('/')}"></div><div><label class="f">혈압 위험 (수축기/이완기 이상)</label><input class="inp" id="sBs" value="${S.bp.stop.join('/')}"></div></div></div>
+  ${adm?'':'</div>'}
   <div class="card"><b>갤러리 사진 사용</b><div class="row" style="margin-top:8px"><span class="grow small">${S.galleryConsent?`동의함 (${fmtDT(S.galleryConsent.at)})`:'동의 안 함 — 갤러리에서 선택할 때 동의를 묻습니다'}</span>${S.galleryConsent?'<button class="btn sm line" id="gcOff">동의 철회</button>':''}</div></div>
   <div class="card"><b>잠금</b><label class="f">PIN (숫자 4~6자리, 비우면 잠금 없음)</label><input class="inp" id="sN" inputmode="numeric" maxlength="6" value="${h(S.pin)}">
    <div class="small muted" style="margin-top:6px">지침 10.3: 기록 열람은 현장소장 및 안전관리책임자로 제한.</div></div>
-  <button class="btn xl" id="sSave">설정 저장</button>
-  <h2>데이터</h2><div class="card"><div class="small muted">근로자 ${W.length} · 장비 ${E.length} · 삼진아웃 ${V.length} · 음주측정 ${A.length}</div>
-  <div class="row" style="margin-top:10px"><button class="btn line" id="dW">근로자 대장 비우기</button><button class="btn line" id="dE">장비 대장 비우기</button></div></div>
+  <button class="btn xl" id="sSave">${adm?'설정 저장':'저장'}</button>
+  <h2>데이터</h2><div class="card"><div class="small muted">근로자 ${W.length} · 장비 ${E.length} · 삼진아웃 ${V.length} · 음주측정 ${A.length} · 취약근로자 ${VU.length}</div>
+  ${adm?'<div class="row" style="margin-top:10px"><button class="btn line" id="dW">근로자 대장 비우기</button><button class="btn line" id="dE">장비 대장 비우기</button></div>':''}${SERVER?'<button class="btn sm line" id="syncNow" style="margin-top:10px">지금 동기화</button>':''}</div>
   <p class="small muted">앱 설치: 크롬/사파리 메뉴 → "홈 화면에 추가". 인터넷 없이도 동작합니다.<br>버전 ${APP_VER} · 인터넷에 연결되어 있으면 새 버전을 자동으로 받습니다.</p>`;
   /* 내 서명: 저장된 서명이 있으면 보여주고, 다시 그리면 교체 */
   const drawMine=()=>{$('#mySigBox').innerHTML=S.mySig?`<div class="sig" style="padding:8px;text-align:center;background:#fff"><img src="${S.mySig}" style="max-width:100%;height:110px;object-fit:contain"></div><div class="row" style="margin-top:8px"><button class="btn sm line" id="myRe">다시 등록</button><button class="btn sm line" id="myDel">서명 삭제</button></div>`:'<div id="myPad"></div>';
-    if(!S.mySig)window._myPad=sigPad($('#myPad'),'여기에 서명');else{window._myPad=null;$('#myRe').onclick=()=>{S._reSig=true;$('#mySigBox').innerHTML='<div id="myPad"></div>';window._myPad=sigPad($('#myPad'),'여기에 새 서명')};$('#myDel').onclick=async()=>{if(!confirm('저장된 내 서명을 삭제할까요?'))return;S.mySig='';await saveSettings();drawMine()}}};
+    if(!S.mySig)window._myPad=sigPad($('#myPad'),'여기에 서명');else{window._myPad=null;$('#myRe').onclick=()=>{S._reSig=true;$('#mySigBox').innerHTML='<div id="myPad"></div>';window._myPad=sigPad($('#myPad'),'여기에 새 서명')};$('#myDel').onclick=async()=>{if(!confirm('저장된 내 서명을 삭제할까요?'))return;if(SERVER){try{const r=await api('me',{sig:''});await kvSet('me',r.user);applyMe(r.user)}catch(x){return toast(x.message)}}S.mySig='';await saveSettings();drawMine()}}};
   drawMine();
   const saveMine=async()=>{const nm=$('#sI').value.trim();if(!nm){toast('성명을 입력하세요');$('#sI').focus();return false}
-    Object.assign(S,{inspectorOrg:$('#sO').value.trim(),inspector:nm,myRole:$('#sRole').value.trim()});
-    if(window._myPad&&!window._myPad.isEmpty())S.mySig=window._myPad.data();delete S._reSig;await saveSettings();return true};
+    const newSig=window._myPad&&!window._myPad.isEmpty()?window._myPad.data():null;
+    if(SERVER){try{const r=await api('me',{name:nm,org:$('#sO').value.trim(),title:$('#sRole').value.trim(),...(newSig?{sig:newSig}:{})});await kvSet('me',r.user);applyMe(r.user)}catch(x){toast(x.status?x.message:'내 정보 저장은 인터넷 연결이 필요합니다');return false}}
+    else{Object.assign(S,{inspectorOrg:$('#sO').value.trim(),inspector:nm,myRole:$('#sRole').value.trim()});if(newSig)S.mySig=newSig}
+    delete S._reSig;await saveSettings();return true};
   $('#mySave').onclick=async()=>{if(await saveMine()){toast(S.mySig?'내 정보·서명 저장됨':'내 정보 저장됨 (서명은 아직 없음)');drawMine()}};
   const gco=$('#gcOff');if(gco)gco.onclick=async()=>{S.galleryConsent=null;await saveSettings();toast('갤러리 사용 동의 철회됨');R.settings()};
   $('#sSave').onclick=async()=>{
+    if(!adm){if(await saveMine()){await saveSettings();toast('저장됨')}return}
     const r=parseFloat($('#sR').value),t=parseFloat($('#sT').value),dt=parseFloat($('#sDt').value),dy=parseFloat($('#sDy').value),oc=parseInt($('#sOc').value);if(!(r>0&&t>r&&dt>0&&dy>dt&&oc>=1))return toast('음주 기준값을 확인하세요');
     const bpP=v=>{const m=String(v).match(/(\d{2,3})\s*\/\s*(\d{2,3})/);return m?[+m[1],+m[2]]:null};const bw=bpP($('#sBw').value),bs=bpP($('#sBs').value),va=parseInt($('#sVa').value);
     if(!bw||!bs||!(va>0))return toast('취약근로자 기준값을 확인하세요 (예: 140/90)');S.bp={warn:bw,stop:bs};S.vulnAge=va;
@@ -1038,9 +1055,14 @@ R.settings=()=>{
     Object.assign(S,{site:$('#sS').value.trim(),periodMonths:+$('#sP').value,pin,alc:{retest:r,stop:t,detect:dt,day:dy,outCount:oc},alcMode:$('#sAm').value,alcMsg:$('#sMsg').value,
       vtypes:$('#sV').value.split('\n').map(s=>s.trim()).filter(Boolean),
       levels:S.levels.map((l,i)=>({name:$(`[data-ln="${i}"]`).value.trim()||l.name,sticker:$(`[data-ls="${i}"]`).value.trim(),act:$(`[data-la="${i}"]`).value.trim()}))});
-    await saveSettings();$('#siteName').textContent=S.site;toast('저장됨');drawMine()};
-  $('#dW').onclick=async()=>{if(!confirm('근로자 대장을 모두 지웁니다. (적발·측정 기록은 유지) 계속할까요?'))return;await DB.putMany('workers',[],true);W=[];R.settings()};
-  $('#dE').onclick=async()=>{if(!confirm('장비 대장을 모두 지웁니다. 계속할까요?'))return;await DB.putMany('equipment',[],true);E=[];R.settings()};
+    await saveSettings();if(SERVER)await queueShared();$('#siteName').textContent=S.site;toast(SERVER?'저장됨 — 모든 사용자에게 적용됩니다':'저장됨');drawMine()};
+  const clearReg=async(store,msg)=>{if(!confirm(msg))return;try{if(SERVER)await pushImport(store,[],true);else{await DB.putMany(store,[],true);if(store==='workers')W=[];else E=[]}R.settings()}catch(x){toast(x.message)}};
+  if($('#dW'))$('#dW').onclick=()=>clearReg('workers','근로자 대장을 모두 지웁니다. (적발·측정 기록은 유지) 계속할까요?');
+  if($('#dE'))$('#dE').onclick=()=>clearReg('equipment','장비 대장을 모두 지웁니다. 계속할까요?');
+  if($('#syncNow'))$('#syncNow').onclick=async()=>{await Sync.run();toast(Sync.state==='ok'?'동기화 완료':'서버에 연결할 수 없습니다');R.settings()};
+  if($('#pwBtn'))$('#pwBtn').onclick=async()=>{const u=await authScreen('pw');await kvSet('me',u);applyMe(u);toast('비밀번호 변경됨')};
+  if($('#outBtn'))$('#outBtn').onclick=()=>{if(confirm('로그아웃할까요?'))logout()};
+  if(SERVER&&adm){$('#uAdd').onclick=()=>editUser();loadUsers()}
 };
 
 /* ---------- 취약근로자 ---------- */
@@ -1085,7 +1107,9 @@ async function importVuln(files,replace){
     if(!found)msgs.push(`${f.name}: 머리글(성명/검진명) 행을 찾지 못함`);
   }
   cur.forEach(p=>{p.retired=!!p.retiredManual||(p.items||[]).some(i=>/퇴사/.test(i.note))});
-  await DB.putMany('vuln',cur,replace);VU=cur;return {added,updated,skipped:0,msgs};
+  if(SERVER)await pushImport('vuln',replace?cur:cur.filter(p=>seen.has(p.id)),replace);
+  else{await DB.putMany('vuln',cur,replace);VU=cur}
+  return {added,updated,skipped:0,msgs};
 }
 function tplVuln(){
   const wb=XLSX.utils.book_new();const hd=['순번','성명','업체명','공종명','연령','검진명','건강구분1','검진소견1','사후관리소견1','사후관리소견2','비고'];
@@ -1112,7 +1136,7 @@ R.vuln=()=>{
   const list=(tag==='미상담'?noC:base.filter(p=>!tag||T.get(p.id).includes(tag))).filter(p=>!q||norm([p.name,p.company,p.job,...(p.items||[]).map(i=>i.exam+i.finding+i.follow1)].join(' ')).includes(norm(q)))
     .sort((a,b)=>(a.company||'').localeCompare(b.company||'')||a.name.localeCompare(b.name));
   V$().innerHTML=`<h1>취약근로자 <span class="badge">${base.length}명</span></h1>
-  <div class="card"><div class="row"><label class="btn"><i class="i i-import"></i> 엑셀 불러오기<input type="file" accept=".xls,.xlsx" multiple hidden id="uf"></label><button class="btn ghost" id="ut">양식 다운로드</button><button class="btn ghost" id="ua"><i class="i i-plus"></i> 직접 추가</button><button class="btn line" id="ux">엑셀 저장</button></div>
+  <div class="card"><div class="row">${isAdmin()?'<label class="btn"><i class="i i-import"></i> 엑셀 불러오기<input type="file" accept=".xls,.xlsx" multiple hidden id="uf"></label>':''}<button class="btn ghost" id="ut">양식 다운로드</button><button class="btn ghost" id="ua"><i class="i i-plus"></i> 직접 추가</button><button class="btn line" id="ux">엑셀 저장</button></div>
   <div class="small muted" style="margin-top:8px">"유소견자 사후관리 명단" 엑셀을 그대로 올리면 됩니다. 업체별 시트가 여러 개여도 모두 읽고, 성명 없는 아랫줄은 같은 사람의 검진 항목으로 묶습니다.</div></div>
   <input class="inp big" id="uq" type="search" placeholder="성명 · 업체 · 공종 · 소견" value="${h(q)}" style="margin-bottom:10px">
   <div class="chips scroll" style="margin-bottom:12px"><button class="chip ${!tag?'on':''}" data-t="">전체 ${base.length}</button><button class="chip ${tag==='미상담'?'on':''}" data-t="미상담">사후상담 미실시 ${noC.length}</button>${tags.map(t=>`<button class="chip ${t===tag?'on':''}" data-t="${t}">${t} ${base.filter(p=>T.get(p.id).includes(t)).length}</button>`).join('')}<button class="chip ${ret?'on':''}" id="uret">퇴사자 포함</button></div>
@@ -1120,7 +1144,7 @@ R.vuln=()=>{
   $('#uq').oninput=e=>{R.vuln.q=e.target.value;clearTimeout(R.vuln.t);R.vuln.t=setTimeout(()=>{R.vuln();const i=$('#uq');i.focus();i.setSelectionRange(i.value.length,i.value.length)},250)};
   $$('[data-t]').forEach(b=>b.onclick=()=>{R.vuln.tag=b.dataset.t;R.vuln()});$('#uret').onclick=()=>{R.vuln.ret=!ret;R.vuln()};
   $('#ut').onclick=tplVuln;$('#ux').onclick=()=>exportVuln(list);$('#ua').onclick=()=>editVuln();
-  $('#uf').onchange=e=>importDialog('vuln',[...e.target.files]);bindItems();
+  if($('#uf'))$('#uf').onchange=e=>importDialog('vuln',[...e.target.files]);bindItems();
 };
 function showVuln(id){
   const p=VU.find(x=>x.id===id);if(!p)return;const w=W.find(x=>norm(x.name)===norm(p.name)&&compNorm(x.company)===compNorm(p.company));const cs=(p.consults||[]).slice().reverse(),bs=(p.bp||[]).slice().reverse();
@@ -1143,7 +1167,7 @@ function editVuln(id){
   openModal(id?'취약근로자 수정':'취약근로자 추가',`<div class="grid g2">${[['name','성명 *'],['company','업체명 *'],['job','공종'],['age','연령']].map(([k,l])=>`<div><label class="f">${l}</label><input class="inp" data-k="${k}" value="${h(p[k]||'')}" ${k==='company'?'list="companyList"':''}${k==='age'?' inputmode="numeric"':''}></div>`).join('')}</div>${companyDatalist()}
    <label class="f">메모</label><textarea class="inp" data-k="note">${h(p.note||'')}</textarea>
    <h2>검진 항목</h2><div id="irows">${its.map(row).join('')}</div><button class="btn ghost sm" id="iadd"><i class="i i-plus"></i> 항목 추가</button>
-   <div class="row" style="margin-top:14px"><button class="btn" id="us" style="flex:1">저장</button>${id?'<button class="btn bad" id="ud">삭제</button>':''}</div>`,b=>{
+   <div class="row" style="margin-top:14px"><button class="btn" id="us" style="flex:1">저장</button>${id&&isAdmin()?'<button class="btn bad" id="ud">삭제</button>':''}</div>`,b=>{
     $('#iadd',b).onclick=()=>$('#irows',b).insertAdjacentHTML('beforeend',row({},$$('[data-row]',b).length));
     $('#us',b).onclick=async()=>{const o={...p,id:p.id||uid(),consults:p.consults||[],bp:p.bp||[]};$$('[data-k]',b).forEach(i=>o[i.dataset.k]=i.value.trim());
       if(!o.name||!o.company)return toast('성명과 업체명은 필수');o.age=String(o.age).replace(/\D/g,'');
@@ -1205,14 +1229,125 @@ function docVulnConsult(p,c){
   <table><tr><th>상담 실시자</th><td>${h(S.inspectorOrg||'')} &nbsp; ${h(c.counselor)} &nbsp;·&nbsp; ${c.date}</td><td style="width:65mm;text-align:center">${c.sigC?`<img class="sigimg" src="${c.sigC}">`:'(서명)'}</td></tr></table></div>`;
 }
 
+/* ---------- 서버 연결 (Cloudflare Worker + D1) ---------- */
+async function loadUsers(){const box=$('#usersBox');if(!box)return;
+  try{const r=await api('users');box.innerHTML=r.users.map(u=>`<div class="it" data-u="${u.id}"><span class="dot d0">${h(u.name.slice(0,1))}</span><div class="m"><b>${h(u.name)}</b> <span class="muted small">${h(u.loginId)}</span> ${u.role==='admin'?'<span class="badge">운영자</span>':''}${!u.active?' <span class="badge bgray">사용 정지</span>':''}${u.mustChange?' <span class="badge bwarn">첫 로그인 전</span>':''}<div class="small muted ell">${h([u.org,u.title].filter(Boolean).join(' · ')||'-')}</div></div></div>`).join('')||'<div class="empty">없음</div>';
+    $$('[data-u]',box).forEach(el=>el.onclick=()=>editUser(r.users.find(u=>u.id===el.dataset.u)))}
+  catch(x){box.innerHTML=`<div class="empty">${h(x.status?x.message:'인터넷 연결이 필요합니다')}</div>`}}
+function editUser(u){const nu=!u;u=u||{};
+  openModal(nu?'사용자 등록':'사용자 정보',`<div class="grid g2">
+   <div><label class="f">아이디 ${nu?'*':''}</label><input class="inp" id="euL" value="${h(u.loginId||'')}" ${nu?'':'disabled'} autocapitalize="off" autocorrect="off" placeholder="예) 01012345678"></div>
+   <div><label class="f">이름 *</label><input class="inp" id="euN" value="${h(u.name||'')}"></div>
+   <div><label class="f">소속</label><input class="inp" id="euO" value="${h(u.org||'')}" list="companyList"></div>
+   <div><label class="f">직책</label><input class="inp" id="euT" value="${h(u.title||'')}" placeholder="예) 관리감독자"></div>
+   <div><label class="f">권한</label><select class="inp" id="euR"><option value="user" ${u.role!=='admin'?'selected':''}>사용자 (등록·열람)</option><option value="admin" ${u.role==='admin'?'selected':''}>운영자 (삭제·대장·설정·사용자 관리)</option></select></div>
+   <div><label class="f">${nu?'초기 비밀번호 * (6자 이상)':'비밀번호 초기화 (입력할 때만)'}</label><input class="inp" id="euP" type="text" autocomplete="off" autocapitalize="off"></div></div>
+   ${nu?'':`<label class="row" style="margin-top:12px"><input type="checkbox" id="euA" ${u.active?'checked':''} style="width:22px;height:22px"> 사용 가능 (해제하면 바로 로그아웃·로그인 불가)</label>`}
+   <div class="small muted" style="margin-top:8px">초기 비밀번호는 본인에게 직접 전달하세요. 첫 로그인 때 새 비밀번호로 바꾸게 됩니다.</div>
+   ${companyDatalist()}<button class="btn xl" id="euS" style="margin-top:12px">${nu?'등록':'저장'}</button>`,b=>{
+    $('#euS',b).onclick=async()=>{const body={name:$('#euN').value.trim(),org:$('#euO').value.trim(),title:$('#euT').value.trim(),role:$('#euR').value};const pw=$('#euP').value.trim();if(pw)body.password=pw;
+      try{if(nu){body.loginId=$('#euL').value.trim();await api('users',body)}else{body.active=$('#euA').checked;await api('users/'+u.id,body)}
+        closeModal();toast(nu?'사용자 등록됨':'저장됨');loadUsers()}catch(x){toast(x.status?x.message:'인터넷 연결이 필요합니다')}};
+  })}
+let SERVER=false,ME=null;
+const isAdmin=()=>!SERVER||(ME&&ME.role==='admin');
+const SHARED_KEYS=['site','periodMonths','vtypes','levels','alcMode','alc','alcMsg','vulnAge','bp'];
+async function api(path,body){
+  const r=await fetch('/api/'+path,{method:body!==undefined?'POST':'GET',credentials:'same-origin',headers:body!==undefined?{'content-type':'application/json'}:{},body:body!==undefined?JSON.stringify(body):undefined});
+  let j=null;try{j=await r.json()}catch(e){}
+  if(!r.ok||!j){const e=new Error((j&&j.error)||('HTTP '+r.status));e.status=r.status;throw e}
+  return j;
+}
+const kvGet=async k=>{const r=await DB.req(DB.st('kv','readonly').get(k));return r?r.v:undefined};
+const kvSet=(k,v)=>DB.put('kv',{k,v});
+function applyMe(u){ME=u;Object.assign(S,{inspector:u.name,inspectorOrg:u.org||'',myRole:u.title||'',mySig:u.sig||''})}
+function applyShared(d){for(const k of SHARED_KEYS)if(d[k]!==undefined)S[k]=k==='alc'?Object.assign({},DEF.alc,d[k]):d[k];$('#siteName').textContent=S.site||''}
+function sharedDoc(){const o={id:'shared'};for(const k of SHARED_KEYS)o[k]=S[k];return o}
+async function queueShared(){await DB.put('outbox',{k:'settings|shared',store:'settings',id:'shared',data:sharedDoc(),ts:Date.now()});Sync.soon()}
+async function applyDoc(d){
+  if(d.store==='settings'){if(!d.deleted&&d.data){applyShared(d.data);await saveSettings()}return true}
+  if(!STORE[d.store])return false;
+  const pend=await DB.req(DB.st('outbox','readonly').get(d.store+'|'+d.id));if(pend)return false; // 내 기기에 더 새 수정이 있음
+  if(d.deleted){await DB.del(d.store,d.id);memDel(d.store,d.id)}else{const o={...d.data,id:d.id};await DB.put(d.store,o);memPut(d.store,o)}
+  return true}
+function softRerender(){const ae=document.activeElement;if(!$('#modal').classList.contains('hidden')||(ae&&/INPUT|TEXTAREA|SELECT/.test(ae.tagName))||$('canvas',V$()))return;R[cur]()}
+const Sync={busy:false,again:false,t:null,state:'',
+  soon(){clearTimeout(this.t);this.t=setTimeout(()=>this.run(),400)},
+  async run(){if(!SERVER)return;if(this.busy){this.again=true;return}this.busy=true;let changed=false;
+    try{const a=await this.push(),b=await this.pull();changed=a||b;this.state='ok'}
+    catch(e){if(e.status===401){await kvSet('me',null);location.reload();return}this.state='off'}
+    finally{this.busy=false;if(this.again){this.again=false;this.soon()}}
+    if(changed)softRerender();badge()},
+  async push(){const all=await DB.all('outbox');if(!all.length)return false;let i=0;
+    while(i<all.length){const chunk=[];let size=0;while(i<all.length&&chunk.length<20){const n=JSON.stringify(all[i].data).length;if(chunk.length&&size+n>3e6)break;chunk.push(all[i]);size+=n;i++}
+      const r=await api('docs',{docs:chunk.map(o=>({store:o.store,id:o.id,data:o.data}))});
+      for(const o of chunk){const now=await DB.req(DB.st('outbox','readonly').get(o.k));if(now&&now.ts===o.ts)await DB.del('outbox',o.k)}
+      for(const d of r.saved)await applyDoc(d)}
+    return true},
+  async pull(){let since=(await kvGet('lastSync'))||0,changed=false,more=true;
+    while(more){const r=await api('sync?since='+since);for(const d of r.docs)if(await applyDoc(d))changed=true;since=r.cursor;more=r.more}
+    await kvSet('lastSync',since);return changed}
+};
+async function badge(){const el=$('#netBadge');if(!SERVER){el.textContent=navigator.onLine?'온라인':'오프라인 · 기기 저장';return}
+  const n=(await DB.all('outbox')).length;el.textContent=!navigator.onLine||Sync.state==='off'?(n?`오프라인 · 전송 대기 ${n}`:'오프라인'):(n?`전송 대기 ${n}`:'동기화됨')}
+/* 운영자 대장 업로드: 200건씩 서버로 */
+async function pushImport(store,docs,replace){
+  if(!navigator.onLine)throw new Error('대장 업로드는 인터넷 연결이 필요합니다');
+  for(let i=0;i===0||i<docs.length;i+=200){
+    const r=await api('docs',{import:true,replaceStores:replace&&i===0?[store]:[],docs:docs.slice(i,i+200).map(o=>({store,id:o.id,data:o}))});
+    for(const d of r.saved)await applyDoc(d)}
+  await Sync.run()}
+
+/* 로그인·최초 운영자 등록·비밀번호 변경 화면 */
+function authScreen(kind){return new Promise(res=>{
+  const K={setup:{t:'운영자 계정 만들기',sub:'처음 한 번만 합니다. 이 계정으로 현장 사용자를 등록하고 관리합니다.',f:[['loginId','아이디 (영문·숫자, 휴대폰번호 가능)','text','username'],['name','이름','text','name'],['org','소속','text','organization'],['title','직책','text','organization-title'],['password','비밀번호 (6자 이상)','password','new-password'],['password2','비밀번호 확인','password','new-password']],b:'운영자 계정 만들기'},
+    login:{t:'로그인',sub:'운영자에게 받은 아이디와 비밀번호를 입력하세요.',f:[['loginId','아이디','text','username'],['password','비밀번호','password','current-password']],b:'로그인'},
+    pw:{t:'비밀번호 변경',sub:'처음 로그인했습니다. 본인만 아는 비밀번호로 바꿔주세요.',f:[['current','받은 비밀번호','password','current-password'],['next','새 비밀번호 (6자 이상)','password','new-password'],['next2','새 비밀번호 확인','password','new-password']],b:'변경하고 시작'}}[kind];
+  const d=document.createElement('div');d.className='lock';
+  d.innerHTML=`<form class="auth-box" autocomplete="on"><div class="row" style="gap:10px;margin-bottom:6px"><img src="icon.svg" alt="" style="width:40px;height:40px;border-radius:10px"><b style="font-size:22px">현장ON</b></div>
+    <h2 style="margin:10px 0 2px">${K.t}</h2><p class="small muted" style="margin:0 0 6px">${K.sub}</p>
+    ${K.f.map(([n,l,t,ac])=>`<label class="f">${l}</label><input class="inp" name="${n}" type="${t}" autocomplete="${ac}" ${t==='text'?'autocapitalize="off" autocorrect="off" spellcheck="false"':''}>`).join('')}
+    <div class="auth-err"></div><button class="btn xl" type="submit" style="margin-top:12px">${K.b}</button>
+    <p class="small muted" style="text-align:center;margin:10px 0 0">습관이 된 노력을 실력이라 한다.</p></form>`;
+  document.body.appendChild(d);const fm=$('form',d);setTimeout(()=>fm.elements[0].focus(),50);
+  fm.onsubmit=async e=>{e.preventDefault();const v=Object.fromEntries(new FormData(fm));const err=$('.auth-err',d);err.textContent='';
+    if(kind==='setup'&&v.password!==v.password2)return err.textContent='비밀번호 확인이 다릅니다';
+    if(kind==='pw'&&v.next!==v.next2)return err.textContent='새 비밀번호 확인이 다릅니다';
+    const btn=$('button',fm);btn.disabled=true;
+    try{const r=kind==='setup'?await api('setup',v):kind==='login'?await api('login',v):await api('me/password',{current:v.current,next:v.next});d.remove();res(r.user)}
+    catch(x){err.textContent=x.status?x.message:'인터넷 연결을 확인하세요'}finally{btn.disabled=false}};
+})}
+async function authGate(){
+  let st;
+  try{st=await api('status')}
+  catch(e){
+    if(e.status&&e.status!==503)return false; // 서버 없음 (파일로 열거나 예전 주소) → 기기 저장 모드
+    const cached=await kvGet('me');if(cached&&cached.id){SERVER=true;applyMe(cached);return false} // 오프라인: 마지막 로그인으로 계속
+    await new Promise(()=>{V$().innerHTML='<div class="card">처음 로그인은 인터넷 연결이 필요합니다. 연결 후 다시 열어주세요.</div>'});
+  }
+  SERVER=true;
+  let u=st.user;
+  if(st.setupNeeded)u=await authScreen('setup');
+  else if(!u)u=await authScreen('login');
+  if(u.mustChange)u=await authScreen('pw');
+  const prev=await kvGet('me');let reset=false;
+  if(!prev||prev.id!==u.id){for(const s of ['workers','equipment','violations','alcohol','vuln','outbox'])await DB.putMany(s,[],true);await kvSet('lastSync',0);reset=true}
+  await kvSet('me',u);applyMe(u);return reset;
+}
+async function logout(){try{await api('logout',{})}catch(e){}await kvSet('me',null);location.reload()}
+
 /* ---------- boot ---------- */
 async function loadAll(){[W,E,V,A,VU]=await Promise.all(['workers','equipment','violations','alcohol','vuln'].map(s=>DB.all(s)))}
 function lockScreen(){return new Promise(res=>{if(!S.pin)return res();const d=document.createElement('div');d.className='lock';d.innerHTML=`<img src="icon.svg" alt="" style="width:84px;height:84px;border-radius:20px;box-shadow:0 0 0 3px rgba(255,255,255,.25)"><div style="font-size:28px;font-weight:900">현장ON</div><div style="opacity:.8;font-size:14px;margin-top:-6px">습관이 된 노력을 실력이라 한다.</div><div style="margin-top:10px">PIN 입력</div><input class="inp" type="password" inputmode="numeric" maxlength="6" autofocus>`;document.body.appendChild(d);const i=$('input',d);i.focus();i.oninput=()=>{if(i.value===S.pin){d.remove();res()}else if(i.value.length>=S.pin.length){i.value='';i.style.outline='3px solid #f66'}}})}
-function net(){$('#netBadge').textContent=navigator.onLine?'온라인':'오프라인 · 기기 저장'}
+
 (async()=>{
   try{await DB.open()}catch(e){V$().innerHTML='<div class="card">이 브라우저에서 저장소를 열 수 없습니다. 시크릿 모드가 아닌 일반 창에서 열어주세요.</div>';return}
-  await loadSettings();await loadAll();await lockScreen();
-  $('#siteName').textContent=S.site;renderNav();net();addEventListener('online',net);addEventListener('offline',net);
+  await loadSettings();await loadAll();
+  if(location.protocol.startsWith('http')&&await authGate())await loadAll();
+  await lockScreen();
+  $('#siteName').textContent=S.site;renderNav();badge();
+  addEventListener('online',()=>{badge();Sync.run()});addEventListener('offline',badge);
+  if(SERVER){Sync.run();setInterval(()=>{if(document.visibilityState==='visible')Sync.run()},30000);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')Sync.run()})}
   let v='home';try{v=sessionStorage.getItem('v')||'home'}catch(e){}go(R[v]?v:'home');
   if('serviceWorker' in navigator&&location.protocol.startsWith('http')){
     /* 새 버전 자동 적용: 열 때·다시 볼 때 확인. 입력 중이면 끊지 않고 상단에 '업데이트' 버튼만 띄움 */

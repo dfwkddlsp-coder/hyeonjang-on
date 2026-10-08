@@ -1,0 +1,13 @@
+{
+  "name": "hyeonjang-on",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev --port 8787",
+    "db:local": "wrangler d1 execute hyeonjang-on-db --local --file schema.sql",
+    "db:remote": "wrangler d1 execute hyeonjang-on-db --remote --file schema.sql",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^4"
+  }
+}
