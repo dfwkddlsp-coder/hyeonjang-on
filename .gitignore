@@ -1,0 +1,10 @@
+# Never commit real site data (worker/equipment registers, backups)
+*.xls
+*.xlsx
+*.csv
+*.json
+!manifest.webmanifest
+
+# Local tooling
+.claude/
+Thumbs.db

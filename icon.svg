@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- 현장ON: red tile, power-symbol "O" + "N" (shapes only, no font dependency) -->
+  <rect width="512" height="512" rx="112" fill="#d8432c"/>
+  <g fill="none" stroke="#fff" stroke-width="40" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M224.2 187.2 A84 84 0 1 1 127.8 187.2"/>
+    <path d="M176 150 V236"/>
+    <path d="M316 336 V176 L416 336 V176"/>
+  </g>
+  <circle cx="416" cy="404" r="14" fill="#e8e4da"/>
+</svg>

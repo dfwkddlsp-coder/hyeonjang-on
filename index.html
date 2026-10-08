@@ -1,0 +1,1154 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cut">
+<title>현장ON</title>
+<meta name="description" content="삼진아웃·음주측정·근로자·장비 관리대장 현장용 앱">
+<meta name="theme-color" content="#d8432c">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chiron+GoRound+TC:wght@200..900&display=swap" rel="stylesheet">
+<script src="vendor/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#f3f5f8;--card:#fff;--ink:#16202c;--sub:#5b6878;--line:#d9dfe7;--pri:#1f3a5f;--pri2:#2d5b94;
+  --ok:#1f8a4c;--warn:#e08a00;--bad:#d7262e;--l1:#f5c400;--l2:#f28c28;--l3:#d7262e;--chip:#e9eef5;
+  --r:14px;--sh:0 1px 2px rgba(0,0,0,.06),0 2px 8px rgba(0,0,0,.05);
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 "Chiron GoRound TC","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;-webkit-text-size-adjust:100%}
+button,input,select,textarea{font:inherit;color:inherit}
+.top{position:sticky;top:0;z-index:20;background:var(--pri);color:#fff;display:flex;align-items:center;gap:12px;padding:10px 16px;padding-top:max(10px,env(safe-area-inset-top))}
+.top .brand{font-weight:800;font-size:18px;white-space:nowrap}
+.top small{font-weight:500;opacity:.8;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.top .sp{flex:1}
+.layout{display:flex;min-height:calc(100vh - 52px)}
+nav#nav{background:#fff;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:4px;padding:10px 8px;width:96px;flex:none;position:sticky;top:52px;height:calc(100vh - 52px)}
+nav#nav button{border:0;background:none;border-radius:12px;padding:10px 4px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:13px;color:var(--sub);cursor:pointer}
+nav#nav button .i{font-size:24px;line-height:1}
+nav#nav button.on{background:var(--chip);color:var(--pri);font-weight:700}
+main{flex:1;min-width:0;padding:16px;padding-bottom:96px;max-width:1200px}
+@media (max-width:760px){
+  nav#nav{position:fixed;bottom:0;top:auto;left:0;right:0;height:auto;width:auto;flex-direction:row;justify-content:space-around;gap:0;border-right:0;border-top:1px solid var(--line);padding:4px 0;padding-bottom:max(4px,env(safe-area-inset-bottom));z-index:30}
+  nav#nav button{flex:1;min-width:0;padding:6px 0;font-size:10px;letter-spacing:-.04em;white-space:nowrap}
+  nav#nav button .i{font-size:20px}
+  main{padding:12px 12px 90px}
+}
+h1{font-size:22px;margin:4px 0 14px}
+h2{font-size:18px;margin:18px 0 10px}
+.card{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);padding:16px;margin-bottom:12px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.row>.grow{flex:1;min-width:180px}
+.grid{display:grid;gap:12px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.btn{border:0;border-radius:12px;padding:12px 18px;background:var(--pri);color:#fff;font-weight:700;cursor:pointer;min-height:48px;display:inline-flex;align-items:center;justify-content:center;gap:6px;text-decoration:none}
+.btn:active{transform:translateY(1px)}
+.btn.ghost{background:var(--chip);color:var(--pri)}
+.btn.line{background:#fff;color:var(--pri);border:1.5px solid var(--line)}
+.btn.bad{background:var(--bad)}
+.btn.ok{background:var(--ok)}
+.btn.sm{min-height:36px;padding:6px 12px;font-size:14px;border-radius:10px}
+.btn.xl{min-height:72px;font-size:20px;border-radius:16px;width:100%}
+.btn:disabled{opacity:.45}
+label.f{display:block;font-size:13px;color:var(--sub);font-weight:600;margin:10px 0 4px}
+.inp,select.inp,textarea.inp{width:100%;border:1.5px solid var(--line);border-radius:12px;padding:12px;background:#fff;min-height:48px}
+.inp:focus{outline:2px solid var(--pri2);border-color:transparent}
+.inp.big{font-size:20px;padding:14px}
+textarea.inp{min-height:84px;resize:vertical}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:9px 14px;cursor:pointer;font-size:15px}
+.chip.on{background:var(--pri);border-color:var(--pri);color:#fff;font-weight:700}
+.muted{color:var(--sub)}
+.small{font-size:13px}
+.stat{background:#fff;border-radius:var(--r);box-shadow:var(--sh);padding:14px 16px}
+.stat .n{font-size:30px;font-weight:800;line-height:1.1}
+.stat .t{font-size:13px;color:var(--sub);font-weight:600}
+.badge{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:3px 10px;font-size:13px;font-weight:700;background:var(--chip);color:var(--pri);white-space:nowrap}
+.b1{background:#fff3c2;color:#7a5d00}.b2{background:#ffe1c7;color:#8a4300}.b3{background:#ffd5d7;color:#a0141b}
+.bok{background:#d8f2e2;color:#14653a}.bwarn{background:#fff0cc;color:#8a5a00}.bbad{background:#ffd5d7;color:#a0141b}.bgray{background:#eceff3;color:#5b6878}
+.list .it{display:flex;gap:12px;align-items:center;padding:12px 4px;border-bottom:1px solid var(--line);cursor:pointer}
+.list .it:last-child{border-bottom:0}
+.list .it .m{flex:1;min-width:0}
+.list .it .m b{font-size:16px}
+.ell{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dot{width:44px;height:44px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:14px}
+.d1{background:var(--l1);color:#5a4500}.d2{background:var(--l2)}.d3{background:var(--l3)}.d0{background:#c3cbd6}
+.pick-res{margin-top:6px;border-radius:12px;overflow:hidden;border:1px solid var(--line);background:#fff}
+.pick-res:empty{display:none}
+.pick-res button{display:flex;width:100%;text-align:left;gap:10px;align-items:center;border:0;border-bottom:1px solid var(--line);background:#fff;padding:12px;cursor:pointer}
+.pick-res button:last-child{border-bottom:0}
+.pick-res button:active{background:var(--chip)}
+.who{display:flex;gap:14px;align-items:center;padding:14px;border-radius:14px;background:var(--chip)}
+.who .nm{font-size:22px;font-weight:800}
+.sig{border:1.5px dashed #9aa7b7;border-radius:12px;background:#fff;overflow:hidden}
+.sig-h{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:#f7f9fb;border-bottom:1px solid var(--line);font-weight:700;font-size:14px}
+.sig canvas{display:block;width:100%;height:170px;touch-action:none;background:#fff}
+.photos{display:flex;gap:8px;flex-wrap:wrap}
+.photos .ph{position:relative;width:96px;height:96px;border-radius:10px;overflow:hidden;background:#ddd}
+.photos .ph img{width:100%;height:100%;object-fit:cover}
+.photos .ph button{position:absolute;top:2px;right:2px;border:0;border-radius:50%;width:26px;height:26px;background:rgba(0,0,0,.6);color:#fff;cursor:pointer}
+.sticker{width:132px;height:132px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:800;box-shadow:inset 0 0 0 6px rgba(255,255,255,.55);text-align:center;flex:none}
+.sticker .a{font-size:24px}.sticker .b{font-size:14px;font-weight:600}
+.level-box{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.tbl-wrap{overflow:auto;border-radius:12px;border:1px solid var(--line);background:#fff}
+table.t{border-collapse:collapse;width:100%;font-size:14px}
+table.t th,table.t td{border-bottom:1px solid var(--line);padding:9px 10px;text-align:left;white-space:nowrap}
+table.t th{background:#f1f4f8;font-size:13px;color:var(--sub);position:sticky;top:0}
+table.t tr.click{cursor:pointer}
+table.t tr.click:hover td{background:#f8fafc}
+.exp-bad{color:var(--bad);font-weight:700}.exp-warn{color:var(--warn);font-weight:700}
+.modal{position:fixed;inset:0;background:rgba(10,20,30,.45);z-index:50;display:flex;align-items:flex-end;justify-content:center}
+.modal.hidden{display:none}
+.sheet{background:var(--bg);width:100%;max-width:820px;max-height:94vh;overflow:auto;border-radius:18px 18px 0 0;padding:0 16px 24px}
+@media (min-width:761px){.modal{align-items:center}.sheet{border-radius:18px}}
+.sheet-h{position:sticky;top:0;background:var(--bg);display:flex;justify-content:space-between;align-items:center;padding:14px 0;z-index:2;font-size:18px}
+.x{border:0;background:var(--chip);width:40px;height:40px;border-radius:50%;font-size:18px;cursor:pointer}
+#toast{position:fixed;left:50%;bottom:100px;transform:translateX(-50%);background:#16202c;color:#fff;padding:12px 18px;border-radius:12px;z-index:90;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90vw}
+#toast.on{opacity:1}
+.empty{padding:28px;text-align:center;color:var(--sub)}
+.judge{font-size:26px;font-weight:800;padding:10px 16px;border-radius:12px;text-align:center}
+.kv{display:grid;grid-template-columns:120px 1fr;gap:6px 12px;font-size:15px}
+.kv dt{color:var(--sub);font-weight:600}.kv dd{margin:0;word-break:break-all}
+.lock{position:fixed;inset:0;background:var(--pri);z-index:100;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;color:#fff}
+.lock input{font-size:28px;text-align:center;letter-spacing:10px;width:220px}
+.hint{background:#eef4ff;border-left:4px solid var(--pri2);padding:10px 12px;border-radius:8px;font-size:14px}
+#print{display:none}
+/* --- smartphone --- */
+.ph-only{display:none}
+.top .brand{display:flex;align-items:center;gap:8px}
+.top .logo{width:28px;height:28px;border-radius:7px;flex:none}
+.hm-title{display:flex;align-items:center;gap:.22em}
+.hm-logo{height:.92em;width:.92em;border-radius:.22em;flex:none;box-shadow:0 6px 14px -8px rgba(120,30,10,.6)}
+.who>div{min-width:0}
+.badge.wrap{white-space:normal;max-width:100%;line-height:1.35}
+nav#nav{overflow-y:auto}
+@media (max-width:600px){
+  .ph-only{display:block}.pc-only{display:none!important}
+  .top{padding:8px 12px;padding-top:max(8px,env(safe-area-inset-top))}
+  h1{font-size:20px;margin:2px 0 10px}
+  h2{font-size:17px;margin:14px 0 8px}
+  .card{padding:12px;border-radius:12px;margin-bottom:10px}
+  .kv{grid-template-columns:84px 1fr;font-size:14px}
+  .sheet{height:100dvh;max-height:100dvh;border-radius:0;padding:0 12px calc(20px + env(safe-area-inset-bottom))}
+  .sheet-h{padding:10px 0;font-size:17px}
+  .x{width:44px;height:44px}
+  .chips.scroll{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin-left:-12px;margin-right:-12px;padding:0 12px 2px}
+  .chips.scroll::-webkit-scrollbar{display:none}
+  .chips.scroll .chip{flex:none}
+  .row>.btn{flex:1 1 auto}
+  .btn.xl{min-height:60px;font-size:18px}
+  .stat{padding:10px 12px}.stat .n{font-size:24px}
+  .who{padding:12px;gap:10px}.who .nm{font-size:19px}
+  .sticker{width:96px;height:96px}.sticker .a{font-size:18px}.sticker .b{font-size:12px}
+  .list .it{padding:10px 2px;gap:10px}
+  .dot{width:38px;height:38px;font-size:12px}
+  .judge{font-size:19px;padding:8px 12px}
+  .inp.big{font-size:18px;padding:12px}
+  .sig canvas{height:150px}
+  .pick-res button{padding:12px 10px}
+  .grid.g4{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+  .stat .t{font-size:11px}.stat .n{font-size:22px}.stat .small{font-size:11px}
+  .list .it>.badge{font-size:11px;padding:3px 7px;max-width:76px;white-space:normal;text-align:center;line-height:1.25}
+}
+
+/* --- home (reference: beige paper, red accent, big lowercase heads) --- */
+body.is-home{--paper:#e8e4da;--tile:#f3f0e9;--red:#d8432c;--ink2:#1d1d1b;background:var(--paper);min-height:100vh}
+html:has(body.is-home){background:#e8e4da}
+body.is-home nav#nav{display:none}
+body.is-home main{max-width:1280px;margin:0 auto;padding-top:12px;padding-bottom:40px}
+body.is-home .top{background:var(--paper);color:var(--ink2);box-shadow:inset 0 -1px 0 rgba(0,0,0,.08)}
+body.is-home #netBadge{background:rgba(0,0,0,.06)!important;color:var(--ink2)!important}
+.hm-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:2px 0 14px}
+.hm-title{font-size:clamp(30px,5vw,48px);line-height:1;font-weight:900;color:var(--red);letter-spacing:-.03em;margin:0}
+.hm-kicker{font-size:11px;letter-spacing:.08em;color:#6b675e;margin-bottom:6px}
+.hm-motto{margin:8px 0 0;font-size:14px;font-weight:500;color:#5b574f;letter-spacing:-.01em;display:flex;align-items:center;gap:8px}
+.hm-motto::before{content:"";width:22px;height:2px;background:var(--red);flex:none}
+.hm-site{font-size:12px;color:#6b675e;text-align:right;line-height:1.5;border-left:1px solid rgba(0,0,0,.18);padding-left:12px}
+.hm-site b{color:var(--ink2);font-size:14px}
+/* 한 화면에 6개: 휴대폰·세로 태블릿 2열x3행, 가로 태블릿·PC 3열x2행 */
+/* 7개: 휴대폰·세로 태블릿 2열x4행, 가로 태블릿·PC 4열x2행 (1번 타일은 2칸) */
+.hm-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.tile.wide{grid-column:span 2}
+@media (min-width:900px) and (orientation:landscape),(min-width:1100px){.hm-grid{grid-template-columns:repeat(4,1fr)}}
+.tile{position:relative;overflow:hidden;border:0;text-align:left;cursor:pointer;background:var(--tile);border-radius:20px;padding:14px 16px;height:clamp(104px,calc((100dvh - 250px)/4),160px);
+  box-shadow:0 1px 0 rgba(0,0,0,.05),0 8px 18px -12px rgba(60,40,20,.35);display:flex;flex-direction:column;justify-content:space-between;color:var(--ink2);transition:transform .15s,box-shadow .15s}
+@media (min-width:900px) and (orientation:landscape),(min-width:1100px){.tile{height:clamp(130px,calc((100dvh - 210px)/2),190px)}}
+.tile:active{transform:scale(.98)}
+@media (hover:hover){.tile:hover{transform:translateY(-2px);box-shadow:0 1px 0 rgba(0,0,0,.05),0 14px 24px -14px rgba(60,40,20,.45)}}
+.tile .no{position:absolute;right:14px;bottom:8px;font-size:clamp(34px,5vw,46px);font-weight:900;color:var(--red);line-height:1;letter-spacing:-.04em}
+.tile .nm{font-size:clamp(22px,3.4vw,30px);font-weight:900;color:var(--red);line-height:1;letter-spacing:-.03em}
+.tile .en{font-size:11px;letter-spacing:.05em;color:#7a766c;margin-top:4px}
+.tile .side{position:absolute;right:12px;top:14px;writing-mode:vertical-rl;font-size:10px;letter-spacing:.1em;color:#9a958a;max-height:45%;overflow:hidden}
+.tile .meta{display:flex;align-items:center;gap:8px;max-width:calc(100% - 52px)}
+.tile .dotr{width:40px;height:40px;border-radius:50%;background:var(--red);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:17px;flex:none}
+.tile .dotr.zero{background:transparent;color:var(--red);box-shadow:inset 0 0 0 2px var(--red)}
+.tile .ml{font-size:12px;color:#4c4942;line-height:1.4}
+.tile .ml b{color:var(--ink2)}
+@media (max-width:480px){.hm-kicker{display:none}.hm-head{margin-bottom:10px;gap:6px}.hm-motto{font-size:12px;margin-top:4px}.hm-site{text-align:left;border-left:0;padding-left:0;font-size:11px;line-height:1.3}.hm-site b{font-size:12px}.hm-site br{display:none}.hm-site b::after{content:" · ";font-weight:400}
+  .tile{height:clamp(96px,calc((100dvh - 270px)/4),140px);padding:12px 13px}.tile .side,.tile .en{display:none}.tile .no{top:10px;bottom:auto;right:12px;font-size:26px}.tile .meta{max-width:100%}.tile .dotr{width:34px;height:34px;font-size:15px}.tile .ml{font-size:11px}}
+.tile.dark{background:#232220;color:#f3f0e9}.tile.dark .en,.tile.dark .side{color:#a7a296}.tile.dark .ml{color:#cfcabe}.tile.dark .ml b{color:#fff}
+.hm-sec{display:flex;align-items:baseline;gap:10px;margin:22px 0 8px}
+.hm-sec h2{margin:0;font-size:24px;font-weight:900;color:var(--red);letter-spacing:-.03em}
+.hm-sec span{font-size:11px;color:#7a766c;letter-spacing:.06em}
+body.is-home .card{background:var(--tile);border-radius:22px;box-shadow:none}
+.hint a{color:var(--red,#d8432c);font-weight:700}
+@media print{
+  @page{size:A4;margin:10mm}
+  body{background:#fff}
+  body>*:not(#print){display:none!important}
+  #print{display:block}
+  .pg{page-break-after:always}
+  .pg:last-child{page-break-after:auto}
+}
+.doc{font-size:11pt;color:#000;width:100%;max-width:190mm;margin:0 auto;padding-right:.6mm;background:#fff;box-sizing:border-box}
+.doc h1{text-align:center;font-size:18pt;margin:0 0 2mm}
+.doc .site{text-align:center;font-size:11pt;margin-bottom:2mm}
+.doc table{width:100%;border-collapse:collapse;margin:1mm 0}
+.doc th,.doc td{border:1px solid #000;padding:1.4mm 2mm;vertical-align:middle;font-size:10.5pt}
+.doc th{background:#eee;width:24mm;white-space:nowrap}
+.doc .sec{font-weight:700;margin:3mm 0 1mm}
+.doc .sigimg{height:14mm;max-width:50mm;vertical-align:middle}
+.doc .ph{max-width:62mm;max-height:46mm;margin:.5mm;object-fit:cover}
+.doc .note{border:1px solid #000;padding:2mm 3mm;font-size:10pt;line-height:1.5}
+.doc .lv{display:inline-block;padding:1mm 4mm;border-radius:3mm;font-weight:700;border:1px solid #000}
+.doc.list th,.doc.list td{font-size:9pt;padding:1mm;text-align:center;width:auto}
+/* 가로로 눕힌 휴대폰: 타일 4열 */
+@media (orientation:landscape) and (max-height:500px){
+  .hm-grid{grid-template-columns:repeat(4,1fr)}.tile{height:104px;padding:10px 12px}.tile .side,.tile .en{display:none}
+  .tile .no{font-size:28px}.tile .nm{font-size:22px}.hm-title{font-size:30px}.hm-kicker{display:none}.hm-head{margin-bottom:10px}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><img class="logo" src="icon.svg" alt="">현장ON</div>
+  <small id="siteName"></small>
+  <div class="sp"></div>
+  <span id="netBadge" class="badge" style="background:rgba(255,255,255,.15);color:#fff"></span>
+</header>
+<div class="layout">
+  <nav id="nav"></nav>
+  <main id="view"></main>
+</div>
+<div id="modal" class="modal hidden"><div class="sheet"><div class="sheet-h"><b id="mTitle"></b><button class="x" id="mClose" aria-label="닫기">✕</button></div><div id="mBody"></div></div></div>
+<div id="toast"></div>
+<div id="print"></div>
+
+<script>
+'use strict';
+/* ---------- helpers ---------- */
+const $=(s,r=document)=>r.querySelector(s);
+const $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const h=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const nl=s=>h(s).replace(/\n/g,'<br>');
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+const norm=s=>String(s??'').toLowerCase().replace(/[\s\n\r()（）\-_.·]/g,'');
+const pad=n=>String(n).padStart(2,'0');
+const ymd=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const today=()=>ymd(new Date());
+const nowLocal=()=>{const d=new Date();return `${ymd(d)}T${pad(d.getHours())}:${pad(d.getMinutes())}`};
+const fmtDT=s=>s?s.replace('T',' '):'';
+const hm=s=>s?s.slice(11,16):'';
+const WD='일월화수목금토';
+const dayLabel=ds=>{const d=new Date(ds+'T00:00');return `${pad(d.getMonth()+1)}/${pad(d.getDate())}(${WD[d.getDay()]})`};
+const addDays=(ds,n)=>{const d=new Date(ds+'T00:00');d.setDate(d.getDate()+n);return ymd(d)};
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('on'),2200)}
+function parseDate(s){
+  s=String(s??'').trim();if(!s)return null;let m;
+  if((m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/))){let y=+m[3];if(y<100)y+=2000;return new Date(y,m[1]-1,+m[2])}
+  if((m=s.match(/(\d{2,4})\s*[.\-\/년]\s*(\d{1,2})\s*[.\-\/월]\s*(\d{1,2})/))){let y=+m[1];if(y<100)y+=2000;return new Date(y,m[2]-1,+m[3])}
+  return null;
+}
+function expState(s){const d=parseDate(s);if(!d)return '';const diff=(d-new Date(today()+'T00:00'))/864e5;if(diff<0)return 'bad';if(diff<=30)return 'warn';return 'ok'}
+function expCell(s){const st=expState(s);if(!s)return '';return `<span class="${st==='bad'?'exp-bad':st==='warn'?'exp-warn':''}">${h(s)}${st==='bad'?' (만료)':st==='warn'?' (임박)':''}</span>`}
+
+/* ---------- storage ---------- */
+const DB={db:null,
+  open(){return new Promise((res,rej)=>{const r=indexedDB.open('fieldsafety',2);
+    r.onupgradeneeded=()=>{const d=r.result;['workers','equipment','violations','alcohol','vuln'].forEach(s=>{if(!d.objectStoreNames.contains(s))d.createObjectStore(s,{keyPath:'id'})});if(!d.objectStoreNames.contains('kv'))d.createObjectStore('kv',{keyPath:'k'})};
+    r.onsuccess=()=>{this.db=r.result;res()};r.onerror=()=>rej(r.error)})},
+  req(r){return new Promise((res,rej)=>{r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})},
+  st(s,m){return this.db.transaction(s,m).objectStore(s)},
+  all(s){return this.req(this.st(s,'readonly').getAll())},
+  put(s,o){return this.req(this.st(s,'readwrite').put(o))},
+  del(s,id){return this.req(this.st(s,'readwrite').delete(id))},
+  putMany(s,arr,clear){return new Promise((res,rej)=>{const t=this.db.transaction(s,'readwrite');const o=t.objectStore(s);if(clear)o.clear();arr.forEach(x=>o.put(x));t.oncomplete=res;t.onerror=()=>rej(t.error)})}
+};
+let W=[],E=[],V=[],A=[],VU=[];
+const STORE={workers:()=>W,equipment:()=>E,violations:()=>V,alcohol:()=>A,vuln:()=>VU};
+async function save(store,obj){await DB.put(store,obj);const arr=STORE[store]();const i=arr.findIndex(x=>x.id===obj.id);if(i>=0)arr[i]=obj;else arr.push(obj)}
+async function remove(store,id){await DB.del(store,id);const arr=STORE[store]();const i=arr.findIndex(x=>x.id===id);if(i>=0)arr.splice(i,1)}
+
+const DEF={
+  site:'',inspectorOrg:'',inspector:'',periodMonths:0,pin:'',
+  vtypes:['안전모 미착용 / 턱끈 미체결','안전대 미체결','지정 통로 외 이동','출입금지구역 무단 출입','개인보호구 미착용','신호수·유도자 없이 장비작업','작업절차 미준수','흡연구역 외 흡연','음주 후 출근·작업','기타'],
+  levels:[
+    {name:'1차 적발',sticker:'노란색',act:'위반 스티커 부착(노란색)\n근로자 관리대장 기록\n현장지도 및 교육'},
+    {name:'2차 적발',sticker:'주황색',act:'위반 스티커 부착(주황색)\n근로자 관리대장 기록\n안전교육장에서 교육 진행(1시간)'},
+    {name:'3차 적발',sticker:'적색',act:'작업중지\n해당 협력사 소장에게 퇴출 요청\n퇴출 조치'}
+  ],
+  vulnAge:55,bp:{warn:[140,90],stop:[160,100]},
+  alcMode:'site',
+  alc:{retest:0.020,stop:0.050,detect:0.001,day:0.030,outCount:2},
+  alcMsg:'음주적발 알림\n1. 협력사명 : {업체}\n2. 측정일시 : {일시}\n3. {성명}({직종})\n4. 혈중 알코올 농도 {수치}\n5. 조치 : 🚫{조치}\n\n기준 : \n{기준}\n\n해당인원이 현장에서 작업하지 않도록 각별한 관리 부탁드리며 작업 중 적발 시 영구 퇴출 등 불이익이 발생할 수 있으니 참고해주시기 바랍니다.\n\n모든 관리자께서는 해당인원이 현장에서 작업할 시 작업중지 및 안전보건팀에 연락해주시기 바랍니다.'
+};
+let S=JSON.parse(JSON.stringify(DEF));
+async function loadSettings(){const r=await DB.req(DB.st('kv','readonly').get('settings'));if(r){S=Object.assign(JSON.parse(JSON.stringify(DEF)),r.v);S.alc=Object.assign({},DEF.alc,r.v.alc||{})}}
+async function saveSettings(){await DB.put('kv',{k:'settings',v:S})}
+
+/* ---------- domain ---------- */
+const pkey=(name,company)=>norm(name)+'|'+norm(company);
+function inPeriod(dateStr){if(!S.periodMonths)return true;const d=new Date();d.setMonth(d.getMonth()-S.periodMonths);return dateStr>=ymd(d)}
+function strikesOf(key,excludeId){return V.filter(v=>!v.void&&v.pkey===key&&v.id!==excludeId&&inPeriod(v.date)).sort((a,b)=>a.at.localeCompare(b.at))}
+function workerByKey(key){return W.find(w=>pkey(w.name,w.company)===key)}
+function isBanned(key){const w=workerByKey(key);return (w&&w.banned)||V.some(v=>!v.void&&v.pkey===key&&v.level===3)||A.some(a=>!a.void&&a.pkey===key&&a.out)}
+function judge(val,refused,isRetest){if(refused)return '측정거부';
+  if(S.alcMode==='site'){if(val<S.alc.detect)return '정상';if(val<S.alc.day)return '오전 작업중지';return '당일 작업중지'}
+  if(val>=S.alc.stop)return '작업금지';if(val>=S.alc.retest)return isRetest?'작업금지':'재측정';return '정상'}
+const JUDGE_ACT={'정상':'작업 투입','재측정':'10분 후 재측정','작업금지':'당일 작업금지 및 귀가조치','측정거부':'출입통제 및 작업배제','오전 작업중지':'오전 작업 중지 (간단한 숙취)','당일 작업중지':'금일 작업금지, 위험성평가 회의 시 심의 예정'};
+const judgeCls=j=>({'정상':'bok','재측정':'bwarn','작업금지':'bbad','측정거부':'bbad','오전 작업중지':'b2','당일 작업중지':'bbad'}[j]||'bgray');
+const isAlcBad=a=>!!a.judge&&a.judge!=='정상'&&a.judge!=='재측정';
+const f3=v=>(+v).toFixed(3);
+function alcCriteria(){const a=S.alc;return S.alcMode==='site'
+  ?[`${+a.day}% 미만 : 오전 작업 중지 (간단한 숙취)`,`${+a.day}~0.08%미만 : 당일 작업 중지, 심의`,`${a.outCount}회 적발 시 : 영구퇴출`]
+  :[`${f3(a.retest)}% 미만 : 정상 작업`,`${f3(a.retest)}~${f3(a.stop-0.001)}% : 10분 후 재측정`,`${f3(a.stop)}% 이상 : 당일 작업금지 및 귀가조치`,'측정 거부 : 출입통제 및 작업배제']}
+/* 이전 음주 적발 횟수 (재측정 묶음은 1회) */
+function alcBadCount(key,excludeId){return A.filter(x=>x.pkey===key&&!x.void&&!x.retestOf&&x.id!==excludeId&&isAlcBad(alcFinal(x))).length}
+function alcMessage(a){const d=a.at.slice(2,10).split('-');
+  return S.alcMsg.replace(/\{업체\}/g,a.company).replace(/\{일시\}/g,`${d[0]}년 ${+d[1]}월 ${+d[2]}일 ${hm(a.at)}`).replace(/\{성명\}/g,a.name).replace(/\{직종\}/g,a.job||'-')
+   .replace(/\{수치\}/g,a.refused?'측정 거부':f3(a.value)+'%').replace(/\{조치\}/g,a.action).replace(/\{기준\}/g,alcCriteria().map((c,i)=>`${i+1}. ${c}`).join('\n'))}
+async function shareAlcMessage(a){const t=alcMessage(a);
+  if(navigator.share){try{await navigator.share({text:t});return}catch(e){if(e.name==='AbortError')return}}
+  try{await navigator.clipboard.writeText(t);toast('알림 문구 복사됨 — 카톡 등에 붙여넣기')}catch(e){const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();toast('알림 문구 복사됨')}}
+function retestChild(a){return A.find(x=>x.retestOf===a.id&&!x.void)}
+function alcFinal(a){let c=a,n;while((n=retestChild(c)))c=n;return c}
+
+/* ---------- excel import ---------- */
+const WORKER_FIELDS={company:['소속업체','협력사명','업체명','소속','업체','협력사','회사'],name:['성명','이름','근로자명'],job:['직종','공종','직책','직무'],gender:['성별'],birth:['생년월일','생일'],phone:['연락처','전화번호','휴대폰','핸드폰'],emergency:['비상연락처'],elderly:['고령근로자','고령자'],foreign:['외국인근로자','외국인'],blood:['혈액형'],helmet:['안전모번호','출입번호','안전모','사번'],inDate:['최초투입일','투입일','입사일','출근일'],hireY:['연도'],hireM:['=월'],hireD:['=일'],eduY:['기초안전보건교육이수'],eduN:['=미이수'],note:['비고']};
+const EQUIP_FIELDS={no:['관리번호','번호'],company:['소속업체','업체명','소속','업체'],type:['장비명','장비종류','기종'],operator:['운전원','조종원','기사'],plate:['차량번호','등록번호'],phone:['운전원연락처','연락처','전화번호'],inDate:['반입일자','반입일'],outDate:['반출일자','반출일'],regCert:['건설기계등록증','등록증'],inspect:['검사기간','검사유효기간','검사일'],bizCert:['사업자등록증','사업자'],license:['운전원면허증','면허증','조종사면허'],moveIns:['동산보험'],insurance:['보험유효기간','보험기간','보험만료'],manager:['전담관리자','관리자'],checklist:['점검표'],note:['비고'],commander:['작업지휘자'],signal:['신호수','유도원']};
+const EQUIP_LABEL={no:'관리번호',company:'소속업체',type:'장비명',operator:'운전원',plate:'차량번호',phone:'운전원 연락처',inDate:'반입일자',outDate:'반출일자',regCert:'건설기계 등록증',inspect:'건설기계 검사기간',bizCert:'사업자 등록증',license:'운전원 면허증',moveIns:'동산보험',insurance:'보험유효기간',manager:'전담관리자',checklist:'점검표',note:'비고',commander:'작업지휘자',signal:'신호수'};
+const WORKER_LABEL={company:'소속업체',name:'성명',job:'직종',gender:'성별',birth:'생년월일',phone:'연락처',emergency:'비상연락처',inDate:'채용일자',elderly:'고령근로자',foreign:'외국인근로자',blood:'혈액형',eduBasic:'기초안전보건교육',helmet:'안전모번호',note:'비고'};
+
+function buildMap(top,sub,FIELDS){
+  const n=Math.max(top.length,sub?sub.length:0);const best={};
+  for(let c=0;c<n;c++){
+    const hd=norm((top[c]||'')+(sub?(sub[c]||''):''));if(!hd)continue;
+    let bf=null,bl=0;
+    for(const [f,al] of Object.entries(FIELDS))for(const a of al){const ex=a[0]==='=',na=norm(ex?a.slice(1):a),L=na.length;if((ex?hd===na:hd.includes(na))&&L>bl){bf=f;bl=L}}
+    if(bf&&(!best[bf]||best[bf].l<bl))best[bf]={c,l:bl};
+  }
+  const m={};for(const k in best)m[k]=best[k].c;return m;
+}
+/* 빈 서식 행, 멀리 떨어진 낙서 셀(예: 1,048,537행의 'ㅋ')을 범위에서 제외 — 빈 행 500개 이상 이어지면 거기서 끝 */
+function trimRef(ws){
+  if(!ws['!ref'])return;const rs=new Set();let mc=0;
+  for(const k in ws){if(k[0]==='!')continue;const c=ws[k];if(c.v===undefined||c.v===null||String(c.v).trim()==='')continue;const a=XLSX.utils.decode_cell(k);rs.add(a.r);if(a.c>mc)mc=a.c}
+  const sorted=[...rs].sort((a,b)=>a-b);let mr=sorted[0]||0;
+  for(const r of sorted){if(r-mr>500)break;mr=r}
+  ws['!ref']=XLSX.utils.encode_range({s:{r:0,c:0},e:{r:mr,c:mc}});
+}
+function parseWorkbook(wb,FIELDS,minScore){
+  let best=null;
+  for(const sn of wb.SheetNames){
+    const ws=wb.Sheets[sn];trimRef(ws);
+    const rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:false,defval:'',blankrows:true});
+    for(let r=0;r<Math.min(rows.length,20);r++){
+      const m1=buildMap(rows[r],null,FIELDS),m2=buildMap(rows[r],rows[r+1]||[],FIELDS);
+      const two=Object.keys(m2).length>Object.keys(m1).length;
+      const map=two?m2:m1,sc=Object.keys(map).length;
+      if(sc>=minScore&&(!best||sc>best.score))best={sn,rows,map,score:sc,start:r+(two?2:1)};
+    }
+  }
+  if(!best)return null;
+  if(best.map.hireY!=null&&best.map.hireM==null)best.map.hireM=best.map.hireY+1;
+  if(best.map.hireM!=null&&best.map.hireD==null)best.map.hireD=best.map.hireM+1;
+  const out=[];
+  for(let r=best.start;r<best.rows.length;r++){const row=best.rows[r];const o={};
+    for(const f in best.map)o[f]=String(row[best.map[f]]??'').trim();out.push(o)}
+  return {sheet:best.sn,rows:out,fields:Object.keys(best.map)};
+}
+const readFile=f=>new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>{try{res(XLSX.read(fr.result,{type:'array'}))}catch(e){rej(e)}};fr.onerror=()=>rej(fr.error);fr.readAsArrayBuffer(f)});
+const eqKey=e=>(norm(e.plate)||norm(e.company)+'|'+norm(e.type))+'|'+norm(e.operator);
+const wKey=w=>norm(w.name)+'|'+(norm(w.birth)||norm(w.company));
+
+async function importFiles(kind,files,replace){
+  if(kind==='vuln')return importVuln(files,replace);
+  const isW=kind==='workers';const FIELDS=isW?WORKER_FIELDS:EQUIP_FIELDS;let added=0,updated=0,skipped=0;const msgs=[];
+  const cur=replace?[]:[...(isW?W:E)];const idx=new Map(cur.map(x=>[isW?wKey(x):eqKey(x),x]));
+  for(const f of files){
+    let res;try{res=parseWorkbook(await readFile(f),FIELDS,isW?2:3)}catch(e){msgs.push(`${f.name}: 읽기 실패`);continue}
+    if(!res){msgs.push(`${f.name}: 머리글(${isW?'성명/소속':'장비명/차량번호'}) 행을 찾지 못함`);continue}
+    for(const o of res.rows){
+      const valid=isW?!!o.name:!!(o.type||o.plate||o.operator);if(!valid){continue}
+      if(isW&&/^(성명|이름)$/.test(o.name)){continue}
+      if(isW){if(!o.inDate&&o.hireY&&o.hireM)o.inDate=`${o.hireY}-${pad(o.hireM)}-${pad(o.hireD||1)}`;if(o.eduY||o.eduN)o.eduBasic=o.eduY?'이수':'미이수';['hireY','hireM','hireD','eduY','eduN'].forEach(k=>delete o[k])}
+      const k=isW?wKey(o):eqKey(o);const ex=idx.get(k);
+      if(ex){for(const f2 in o)if(o[f2])ex[f2]=o[f2];ex.src=f.name;ex.updated=nowLocal();updated++}
+      else{const n={id:uid(),...o,src:f.name,created:nowLocal()};cur.push(n);idx.set(k,n);added++}
+    }
+    msgs.push(`${f.name} [${res.sheet}] 인식 완료`);
+  }
+  await DB.putMany(isW?'workers':'equipment',cur,replace);
+  if(isW)W=cur;else E=cur;
+  return {added,updated,skipped,msgs};
+}
+
+/* ---------- excel export ---------- */
+function sheet(aoa,cols,merges){const ws=XLSX.utils.aoa_to_sheet(aoa);if(cols)ws['!cols']=cols.map(w=>({wch:w}));if(merges)ws['!merges']=merges.map(m=>XLSX.utils.decode_range(m));return ws}
+function download(wb,name){XLSX.writeFile(wb,name)}
+function tplWorkers(){
+  const wb=XLSX.utils.book_new();const C=XLSX.utils.decode_col;const row=o=>{const r=[];for(const k in o)r[C(k)]=o[k];for(let i=0;i<36;i++)if(r[i]===undefined)r[i]='';return r};
+  const r1=row({E:S.site||'현장명'});
+  const r2=row({A:'구분',B:'채용일자',E:'근로자 인적사항',L:'고령근로자',M:'외국인근로자',N:'혈액형',O:'체온',P:'혈압이상유무',U:'기초안전보건교육',W:'기타건강이상유무',Y:'배치전건강검진',Z:'교육대상',AA:'불법',AD:'유소견자',AF:'취약근로자',AG:'건강검진',AH:'소음',AI:'분진'});
+  const r3=row({A:'NO',B:'연도',C:'월',D:'일',E:'협력사명',F:'직종',G:'성  명',H:'성별',I:'생년월일',J:'연락처',K:'비상연락처',P:'수축기',Q:'이완기',R:'진단',S:'복약',T:'소견서',U:'이수',V:'미이수',W:'정상',X:'이상',Y:'대상/비대상',Z:'특별',AA:'불법',AB:' 사유서제출/검사서',AC:'배치 전 검진결과',AD:'고혈압',AE:'당뇨',AJ:'비고'});
+  const aoa=[r1,r2,r3];for(let i=1;i<=300;i++)aoa.push([i]);
+  const cols=[5,6,4,4,16,10,9,5,11,14,14,9,10,6,6,6,6,6,6,6,6,6,6,6,9,6,6,12,12,6,6,9,8,6,6,18];
+  XLSX.utils.book_append_sheet(wb,sheet(aoa,cols,['A1:D1','E1:AB1','B2:D2','E2:K2','P2:S2','U2:V2','W2:X2','AD2:AE2']),'신규근로자 관리대장');
+  XLSX.utils.book_append_sheet(wb,sheet([['작성 안내'],['· 2~3행 머리글은 지우거나 바꾸지 마세요. 앱이 머리글 이름으로 열을 찾습니다.'],['· 성명·협력사명은 필수. 생년월일은 640125-1 처럼 기존 방식대로 적으면 됩니다.'],['· 업체별로 따로 작성해 여러 파일을 한 번에 올려도 됩니다. 같은 성명+생년월일은 자동 병합됩니다.']],[90]),'작성안내');
+  download(wb,'근로자 관리대장 양식.xlsx');
+}
+function tplEquip(){
+  const wb=XLSX.utils.book_new();
+  const top=['관리\n번호','소속업체','장비명','운전원','차량번호','운전원 연락처','반입일자','반출일자','장 비 관 련 서 류','','','','','보험유효기간','전담관리자','점검표','','비고','작업지휘자','신호수'];
+  const sub=['','','','','','','','','건설기계\n등 록 증','건설기계\n검사기간','사 업 자\n등 록 증','운 전 원\n면 허 증','동산보험','','','','','','',''];
+  const aoa=[['  년  월  주차 장비관리현황'],['A-고소작업대, B-굴삭기, C-이동식크레인, D-천공기, E-도저'],top,sub];for(let i=1;i<=60;i++)aoa.push([i]);
+  const mg=['A1:T1','A2:T2','I3:M3','P3:Q3'];['A','B','C','D','E','F','G','H','N','O','R','S','T'].forEach(c=>mg.push(`${c}3:${c}4`));mg.push('P4:Q4');
+  XLSX.utils.book_append_sheet(wb,sheet(aoa,[5,18,20,8,13,14,10,10,9,10,9,9,8,11,10,5,5,8,10,8],mg),'장비담당제');
+  download(wb,'장비 관리대장(장비 전담 관리자 지정서) 양식.xlsx');
+}
+function exportWorkers(list){
+  const wb=XLSX.utils.book_new();const hd=['NO',...Object.values(WORKER_LABEL),'삼진아웃 누적','상태'];
+  const aoa=[['근로자 관리대장'],['현장명 :',S.site,'','','','','','','','출력일',today()],hd];
+  list.forEach((w,i)=>{const k=pkey(w.name,w.company);aoa.push([i+1,...Object.keys(WORKER_LABEL).map(f=>w[f]||''),strikesOf(k).length,isBanned(k)?'퇴출':''])});
+  XLSX.utils.book_append_sheet(wb,sheet(aoa,[5,18,10,12,6,12,15,15,11,10,10,7,10,11,18,10,8],['A1:Q1']),'근로자관리대장');download(wb,`근로자 관리대장_${today()}.xlsx`);
+}
+function exportEquip(list){
+  const keys=Object.keys(EQUIP_LABEL);const aoa=[['장비 관리대장'],['현장명 :',S.site,'','','','','출력일',today()],keys.map(k=>EQUIP_LABEL[k])];
+  list.forEach(e=>aoa.push(keys.map(k=>e[k]||'')));const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,sheet(aoa,keys.map(k=>k==='company'||k==='type'?18:11),['A1:S1']),'장비관리대장');download(wb,`장비 관리대장_${today()}.xlsx`);
+}
+function violationRows(list){return list.map((v,i)=>[i+1,fmtDT(v.at),v.company,v.name,v.job,v.helmet||'',v.type,v.detail||'',v.place||'',`${v.level}차`,v.action.replace(/\n/g,' / '),v.level===2?(v.edu&&v.edu.done?`이수 ${fmtDT(v.edu.at)}`:'미이수'):'',`${v.inspectorOrg||''} ${v.inspector||''}`.trim(),v.violatorRefused?`서명거부(입회:${v.witness||''})`:(v.sigViolator?'서명':'') ,v.void?`무효: ${v.void.reason}`:''])}
+function exportViolations(list){
+  const wb=XLSX.utils.book_new();const hd=['NO','적발일시','소속업체','성명','직종','안전모번호','위반내용','상세','장소','차수','조치사항','교육이수','점검자','위반자확인','비고'];
+  XLSX.utils.book_append_sheet(wb,sheet([['삼진아웃제 적발 관리대장'],['현장명 :',S.site],hd,...violationRows(list)],[5,16,16,9,10,10,22,20,14,6,40,16,16,16,16],['A1:O1']),'삼진아웃');
+  download(wb,`삼진아웃 적발대장_${today()}.xlsx`);
+}
+function alcRowsOfDay(ds){return A.filter(a=>a.date===ds&&!a.void).sort((a,b)=>a.at.localeCompare(b.at))}
+function alcSheetAoa(ds){
+  const rows=alcRowsOfDay(ds);const d=new Date(ds+'T00:00');
+  const aoa=[['음주측정관리명부'],['현장명 : ',S.site,'','','','','','','',`${d.getFullYear()}. ${d.getMonth()+1}. ${d.getDate()}.`],['NO','소속/업체명','직종','성명','측정시간','측정결과(%)','판정','조치사항','측정인','사후조치']];
+  rows.forEach((a,i)=>aoa.push([i+1,a.company,a.job,a.name+(a.retestOf?' (재측정)':''),hm(a.at),a.refused?'거부':a.value.toFixed(3),a.judge,a.action,a.measurer,a.follow||'']));
+  for(let i=rows.length;i<40;i++)aoa.push([i+1]);return aoa;
+}
+function weekSummary(from,to){
+  const out=[];for(let ds=from;ds<=to;ds=addDays(ds,1)){
+    const base=alcRowsOfDay(ds).filter(a=>!a.retestOf);const am=base.filter(a=>+a.at.slice(11,13)<12),pm=base.filter(a=>+a.at.slice(11,13)>=12);
+    const c=l=>{const bad=l.filter(a=>isAlcBad(alcFinal(a))).length;return [l.length,l.length-bad,bad]};
+    out.push({ds,am:c(am),pm:c(pm)})}
+  return out;
+}
+function exportAlcohol(from,to){
+  const wb=XLSX.utils.book_new();
+  const sm=weekSummary(from,to);
+  const aoa=[[`음주측정일지 (${from} ~ ${to})`],['현장명',S.site,'','','측정일',`${from} ~ ${to}`],['측정인',`${S.inspectorOrg} ${S.inspector}`.trim()],['일자','구분','측정인원(명)','양호(명)','적발(명)']];
+  sm.forEach(r=>{aoa.push([dayLabel(r.ds),'오전',...r.am]);aoa.push(['','오후',...r.pm])});
+  const tot=sm.reduce((t,r)=>[0,1,2].map(i=>t[i]+r.am[i]+r.pm[i]),[0,0,0]);aoa.push(['합계','',...tot]);
+  aoa.push([]);aoa.push(['■ 판정기준',alcCriteria().join(' / ')]);
+  XLSX.utils.book_append_sheet(wb,sheet(aoa,[12,8,12,10,10,30],['A1:F1']),'음주측정일지');
+  for(let ds=from;ds<=to;ds=addDays(ds,1)){if(!alcRowsOfDay(ds).length)continue;
+    XLSX.utils.book_append_sheet(wb,sheet(alcSheetAoa(ds),[5,18,10,12,9,11,9,24,12,18],['A1:J1','B2:H2']),ds.slice(5).replace('-','월')+'일')}
+  download(wb,`음주측정기록표_${from}_${to}.xlsx`);
+}
+
+/* ---------- UI primitives ---------- */
+function openModal(title,html,onMount){$('#mTitle').textContent=title;$('#mBody').innerHTML=html;$('#modal').classList.remove('hidden');onMount&&onMount($('#mBody'))}
+function closeModal(){$('#modal').classList.add('hidden');$('#mBody').innerHTML=''}
+$('#mClose').onclick=closeModal;
+$('#modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal()});
+
+function sigPad(host,label){
+  host.innerHTML=`<div class="sig"><div class="sig-h"><span>${h(label)}</span><button type="button" class="btn sm ghost">지우기</button></div><canvas></canvas></div>`;
+  const cv=$('canvas',host),ctx=cv.getContext('2d');let empty=true,drawing=false,last=null;
+  const setup=()=>{const r=cv.getBoundingClientRect();if(!r.width)return;const d=window.devicePixelRatio||1;cv.width=r.width*d;cv.height=r.height*d;ctx.setTransform(d,0,0,d,0,0);ctx.lineWidth=2.6;ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle='#111';empty=true};
+  requestAnimationFrame(setup);
+  const pos=e=>{const r=cv.getBoundingClientRect();return [e.clientX-r.left,e.clientY-r.top]};
+  cv.addEventListener('pointerdown',e=>{if(!cv.width)setup();drawing=true;cv.setPointerCapture(e.pointerId);last=pos(e);ctx.beginPath();ctx.arc(last[0],last[1],1.2,0,7);ctx.fillStyle='#111';ctx.fill();empty=false;e.preventDefault()});
+  cv.addEventListener('pointermove',e=>{if(!drawing)return;const p=pos(e);ctx.beginPath();ctx.moveTo(last[0],last[1]);ctx.lineTo(p[0],p[1]);ctx.stroke();last=p;e.preventDefault()});
+  ['pointerup','pointercancel','pointerleave'].forEach(t=>cv.addEventListener(t,()=>drawing=false));
+  $('button',host).onclick=()=>{ctx.clearRect(0,0,cv.width,cv.height);empty=true};
+  return {isEmpty:()=>empty,data:()=>empty?'':cv.toDataURL('image/png')};
+}
+function compressImg(file,max=1280,q=.72){return new Promise((res,rej)=>{const img=new Image(),url=URL.createObjectURL(file);
+  img.onload=()=>{const s=Math.min(1,max/Math.max(img.width,img.height));const c=document.createElement('canvas');c.width=Math.round(img.width*s);c.height=Math.round(img.height*s);c.getContext('2d').drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(url);res(c.toDataURL('image/jpeg',q))};
+  img.onerror=rej;img.src=url})}
+
+function personPicker(host,onPick,opts={}){
+  host.innerHTML=`<input class="inp big" type="search" placeholder="${opts.ph||'이름·업체·안전모·차량번호'}" autocomplete="off"><div class="pick-res"></div>`;
+  const inp=$('input',host),res=$('.pick-res',host);
+  const draw=()=>{const q=norm(inp.value);if(!q){res.innerHTML='';return}
+    const ws=W.filter(w=>norm([w.name,w.company,w.job,w.helmet,w.phone].join(' ')).includes(q)).slice(0,8)
+      .map(w=>({name:w.name,company:w.company,job:w.job,birth:w.birth,helmet:w.helmet,workerId:w.id}));
+    const es=E.filter(e=>e.operator&&norm([e.operator,e.company,e.plate,e.type].join(' ')).includes(q)).slice(0,6)
+      .map(e=>{const w=W.find(x=>pkey(x.name,x.company)===pkey(e.operator,e.company));return {name:e.operator,company:e.company,job:(w&&w.job)||'장비운전원',helmet:w&&w.helmet,workerId:w&&w.id,equip:e.type,plate:e.plate}});
+    const all=[...ws,...es];
+    res.innerHTML=all.map((p,i)=>{const k=pkey(p.name,p.company);const n=strikesOf(k).length;const ban=isBanned(k);
+      return `<button type="button" data-i="${i}"><span class="dot ${ban?'d3':n?'d'+Math.min(n,3):'d0'}">${ban?'퇴출':n?n+'회':'—'}</span><span class="m" style="flex:1;min-width:0"><b>${h(p.name)}</b> <span class="muted">${h(p.company||'')}</span><div class="small muted ell">${h(p.job||'')}${p.equip?' · 🚜 '+h(p.equip)+' '+h(p.plate||''):''}${p.helmet?' · 안전모 '+h(p.helmet):''}${vulnOf(p.name,p.company)?' · <b style="color:#d8432c">❤ 취약</b>':''}</div></span></button>`}).join('')
+      +`<button type="button" data-new="1"><span class="dot d0">＋</span><span><b>직접 입력</b> <span class="muted">"${h(inp.value)}" 대장에 없는 사람</span></span></button>`;
+    $$('button',res).forEach(b=>b.onclick=()=>{res.innerHTML='';if(b.dataset.new){manualPerson(inp.value,onPick)}else onPick(all[+b.dataset.i]);inp.value=''});
+  };
+  inp.oninput=draw;if(opts.focus)setTimeout(()=>inp.focus(),50);
+  return inp;
+}
+function manualPerson(name,onPick){
+  openModal('대상자 직접 입력',`<label class="f">성명 *</label><input class="inp" id="mpN" value="${h(name)}"><label class="f">소속업체 *</label><input class="inp" id="mpC" list="companyList"><label class="f">직종</label><input class="inp" id="mpJ"><label class="f">안전모번호</label><input class="inp" id="mpH">
+  <label class="row" style="margin-top:12px"><input type="checkbox" id="mpAdd" checked style="width:22px;height:22px"> 근로자 관리대장에도 추가</label><div style="margin-top:14px"><button class="btn" id="mpOk" style="width:100%">확인</button></div>${companyDatalist()}`,b=>{
+    $('#mpOk',b).onclick=async()=>{const p={name:$('#mpN').value.trim(),company:$('#mpC').value.trim(),job:$('#mpJ').value.trim(),helmet:$('#mpH').value.trim()};
+      if(!p.name||!p.company)return toast('성명과 소속업체를 입력하세요');
+      if($('#mpAdd').checked){const w={id:uid(),...p,created:nowLocal(),src:'직접입력'};await save('workers',w);p.workerId=w.id}
+      closeModal();onPick(p)}});
+}
+function companyDatalist(){const set=new Set([...W.map(w=>w.company),...E.map(e=>e.company)].filter(Boolean));return `<datalist id="companyList">${[...set].map(c=>`<option value="${h(c)}">`).join('')}</datalist>`}
+const lvDot=l=>`<span class="dot d${l}">${l}차</span>`;
+const stickerHtml=(l,date)=>{const c=['','var(--l1)','var(--l2)','var(--l3)'][l];return `<div class="sticker" style="background:${c};color:${l===1?'#4a3900':'#fff'}"><div class="a">${l}차 위반</div><div class="b">${date.slice(2).replace(/-/g,'.')}</div></div>`};
+
+/* ---------- printing ---------- */
+/* 각 장을 A4 한 장(인쇄 영역 190x277mm)에 맞게 자동 축소 */
+async function printPages(pages){
+  const P=$('#print');P.innerHTML=pages.map(p=>`<div class="pg">${p}</div>`).join('');
+  P.style.cssText='display:block;position:absolute;left:-10000px;top:0;width:190mm';
+  await Promise.all($$('img',P).map(i=>i.complete?0:new Promise(r=>{i.onload=i.onerror=r})));
+  const mm=96/25.4,maxH=277*mm*0.97;
+  $$('.pg',P).forEach(pg=>{pg.style.zoom='';const hgt=pg.scrollHeight;if(hgt>maxH)pg.style.zoom=(maxH/hgt).toFixed(3)});
+  P.style.cssText='';setTimeout(()=>window.print(),100);
+}
+function docViolation(v){
+  const lv=S.levels[v.level-1];
+  return `<div class="doc"><h1>삼진아웃제 위반 적발 확인서</h1><div class="site">[ ${h(S.site||'현장명')} ]</div>
+  <div class="sec">1. 위반자 인적사항</div>
+  <table><tr><th>소속업체</th><td>${h(v.company)}</td><th>성명</th><td>${h(v.name)}</td></tr>
+  <tr><th>직종</th><td>${h(v.job)}</td><th>안전모번호</th><td>${h(v.helmet||'')}</td></tr></table>
+  <div class="sec">2. 적발 내용</div>
+  <table><tr><th>적발일시</th><td>${fmtDT(v.at)}</td><th>적발장소</th><td>${h(v.place||'')}</td></tr>
+  <tr><th>위반내용</th><td colspan="3">${h(v.type)}${v.detail?'<br>'+nl(v.detail):''}</td></tr>
+  <tr><th>적발차수</th><td colspan="3"><span class="lv">${h(lv.name)} (${h(lv.sticker)} 스티커)</span>${v.level!==v.autoLevel?` <small>※ 누적기준 ${v.autoLevel}차 → 관리자 판단 ${v.level}차 적용</small>`:''}</td></tr>
+  <tr><th>조치사항</th><td colspan="3">${nl(v.action)}</td></tr>
+  ${v.level===2?`<tr><th>교육이수</th><td colspan="3">${v.edu&&v.edu.done?`이수 완료 ${fmtDT(v.edu.at)} (교육자: ${h(v.edu.by||'')})`:'□ 이수 &nbsp;&nbsp; 일시: &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 교육자:'}</td></tr>`:''}
+  </table>
+  ${v.photos&&v.photos.length?`<div class="sec">3. 현장 사진</div><div>${v.photos.map(p=>`<img class="ph" src="${p}">`).join('')}</div>`:''}
+  <div class="sec">${v.photos&&v.photos.length?4:3}. 확인</div>
+  <div class="note">본인은 위 위반 사항을 확인하였으며, 삼진아웃제(1차 경고 · 2차 교육 · 3차 퇴출) 운영 기준에 따른 조치에 동의합니다. 향후 동일 사항이 재발하지 않도록 안전수칙을 준수하겠습니다.</div>
+  <table><tr><th>위반자</th><td>${h(v.company)} &nbsp; ${h(v.name)}</td><td style="width:65mm;text-align:center">${v.violatorRefused?`서명 거부 (입회자: ${h(v.witness||'')})`:v.sigViolator?`<img class="sigimg" src="${v.sigViolator}">`:'(서명)'}</td></tr>
+  <tr><th>점검자</th><td>${h(v.inspectorOrg||'')} &nbsp; ${h(v.inspector||'')}</td><td style="text-align:center">${v.sigInspector?`<img class="sigimg" src="${v.sigInspector}">`:'(서명)'}</td></tr></table>
+  <p style="text-align:right;font-size:9pt">문서번호 ${h(v.id)} · 작성 ${fmtDT(v.created)}${v.void?` · <b>무효 처리: ${h(v.void.reason)}</b>`:''}</p></div>`;
+}
+function docAlcohol(a){
+  const n=a.notice||{};const items=n.items||[];const ck=t=>items.includes(t)?'[ ✔ ]':'[&nbsp;&nbsp;&nbsp;&nbsp;]';const d=a.date.split('-');
+  const label=k=>k==='ban'?`향후 현장 출입 제한 ( ${h(n.days)||'&nbsp;&nbsp;&nbsp;'} 일)`:k==='etc'?`기타 ( ${h(n.etc||'')} )`:NOTICE_ITEMS.find(x=>x[0]===k)[1];
+  return `<div class="doc"><div class="site">[ ${h(S.site||'현장명')} ]</div><h1>음주 측정 결과 통지서</h1>
+  <div class="note">본 통지서는 당사 안전보건관리규정 및 현장 음주관리 기준에 의거하여 실시한 음주 측정 결과, 기준치를 초과한 근로자에 대한 조치 내용을 기록하고 본인에게 고지하였음을 확인하는 문서입니다.</div>
+  <div class="sec">1. 근로자 및 측정 인적사항</div>
+  <table><tr><th>소속 업체명</th><td>${h(a.company)}</td><th>성명</th><td>${h(a.name)}</td></tr>
+  <tr><th>직종</th><td>${h(a.job||'')}${a.equip?' / '+h(a.equip)+' '+h(a.plate||''):''}</td><th>측정 장소</th><td>${h(n.place||'')}</td></tr>
+  <tr><th>측정 일시</th><td>${fmtDT(a.at)}</td><th>적발 횟수</th><td>${a.badNo?a.badNo+'회':''}${a.out?' (영구퇴출 대상)':''}</td></tr>
+  <tr><th>측정 수치</th><td><b>${a.refused?'측정 거부':`혈중알코올농도: ( ${f3(a.value)} )%`}</b>${a.retestOf?'<br><small>(재측정 결과)</small>':''}</td><th>판정</th><td><b>${h(a.judge)}</b></td></tr></table>
+  <div class="sec">2. 현장 음주관리 기준</div>
+  <table>${alcCriteria().map((c,i)=>`<tr><td>${i+1}. ${h(c)}</td></tr>`).join('')}</table>
+  <div class="sec">3. 조치 내용</div>
+  <table>${NOTICE_ITEMS.map(([k])=>`<tr><td>${ck(k)} ${label(k)}</td></tr>`).join('')}</table>
+  <div class="sec">4. 근로자 서약 및 확인</div>
+  <div class="note">본인은 위 측정 결과와 조치 내용을 확인하였으며, 아래 사항을 엄격히 준수할 것을 서약합니다.<br>본인의 음주 상태를 인정하며, 현장의 작업 중단 및 퇴장 지시에 즉시 따르겠습니다.<br>회사의 경고에 따라 직접 운전(귀가)하지 않을 것이며 이를 어기고 발생한 모든 사고의 책임은 본인에게 있음을 확인합니다.<br>향후 재발 방지를 약속하며, 현장 영구 퇴출 등의 강화된 조치에 이의를 제기하지 않겠습니다.</div>
+  <p style="text-align:center;margin:4mm 0">${d[0]}년 ${+d[1]}월 ${+d[2]}일</p>
+  <table><tr><th>근로자</th><td>${h(a.company)} &nbsp; ${h(a.name)}</td><td style="width:65mm;text-align:center">${n.refusedSign?`서명 거부 (입회자: ${h(n.witness||'')})`:n.sigW?`<img class="sigimg" src="${n.sigW}">`:'( 서명 또는 인 )'}</td></tr>
+  <tr><th>측정자</th><td>${h(S.inspectorOrg||'')} &nbsp; ${h(a.measurer)}</td><td style="text-align:center">${n.sigM?`<img class="sigimg" src="${n.sigM}">`:'(인)'}</td></tr></table>
+  <p style="text-align:right;font-size:9pt">문서번호 ${h(a.id)}${a.void?` · <b>무효 처리: ${h(a.void.reason)}</b>`:''}</p></div>`;
+}
+function docAlcoholList(ds){
+  const aoa=alcSheetAoa(ds);const rows=aoa.slice(3);
+  return `<div class="doc list"><h1>음주측정관리명부</h1><table style="border:0"><tr><td style="border:0;text-align:left">현장명 : ${h(S.site)}</td><td style="border:0;text-align:right">${aoa[1][9]}</td></tr></table>
+  <table><tr>${aoa[2].map(x=>`<th>${x}</th>`).join('')}</tr>${rows.map(r=>`<tr>${Array.from({length:10},(_,i)=>`<td>${h(r[i]??'')}</td>`).join('')}</tr>`).join('')}</table></div>`;
+}
+
+/* ---------- views ---------- */
+const VIEWS=[['home','홈','🏠'],['strike','삼진아웃','⚠️'],['alcohol','음주측정','🍺'],['vuln','취약근로자','❤️'],['workers','근로자','👷'],['equip','장비','🚜'],['records','기록','📋'],['settings','설정','⚙️']];
+let cur='home';
+function go(v,arg){cur=v;document.body.classList.toggle('is-home',v==='home');$$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));window.scrollTo(0,0);R[v](arg);try{sessionStorage.setItem('v',v)}catch(e){}}
+function renderNav(){$('#nav').innerHTML=VIEWS.map(([v,t,i])=>`<button data-v="${v}"><span class="i">${i}</span>${t}</button>`).join('');$$('#nav button').forEach(b=>b.onclick=()=>go(b.dataset.v))}
+const R={};
+const V$=()=>$('#view');
+
+R.home=()=>{
+  const t=today();const vt=V.filter(v=>v.date===t&&!v.void);const at=A.filter(a=>a.date===t&&!a.void&&!a.retestOf);const atBad=at.filter(a=>isAlcBad(alcFinal(a)));
+  const pend=A.filter(a=>!a.void&&a.judge==='재측정'&&!retestChild(a));
+  const banned=new Set(V.filter(v=>!v.void&&v.level===3).map(v=>v.pkey));W.filter(w=>w.banned).forEach(w=>banned.add(pkey(w.name,w.company)));A.filter(a=>a.out&&!a.void).forEach(a=>banned.add(a.pkey));
+  const eduPend=V.filter(v=>!v.void&&v.level===2&&!(v.edu&&v.edu.done));
+  const noNotice=A.filter(a=>!a.void&&isAlcBad(a)&&!a.notice);
+  const vuAct=VU.filter(p=>!p.retired);const vuNo=vuAct.filter(p=>!(p.consults||[]).length);
+  const expE=E.filter(e=>!e.outDate&&(['bad','warn'].includes(expState(e.inspect))||['bad','warn'].includes(expState(e.insurance))));
+  const d=new Date();const ds=`${d.getFullYear()}.${pad(d.getMonth()+1)}.${pad(d.getDate())} (${WD[d.getDay()]})`;
+  const tile=(n,view,nm,en,side,stat,ml,dark,wide)=>`<button class="tile${dark?' dark':''}${wide?' wide':''}" data-go="${view}"><span class="side">${side}</span>
+    <div><div class="nm">${nm}</div><div class="en">${en}</div></div>
+    <div class="meta">${stat===null?'':`<span class="dotr${stat?'':' zero'}">${stat}</span>`}<div class="ml">${ml}</div></div><span class="no">${n}.</span></button>`;
+  V$().innerHTML=`<div class="hm-head"><div><div class="hm-kicker">${ds} · 현장 안전관리 · field safety board</div><h1 class="hm-title"><img class="hm-logo" src="icon.svg" alt="">현장ON.</h1><p class="hm-motto">습관이 된 노력을 실력이라 한다.</p></div>
+   <div class="hm-site"><b>${h(S.site||'현장명 미설정')}</b><br>${h([S.inspectorOrg,S.inspector].filter(Boolean).join(' ')||'점검자 미설정')}</div></div>
+  ${!S.site?`<div class="hint" style="margin-bottom:16px">처음이면 <a href="#" id="toSet">설정</a>에서 현장명과 점검자 이름을 입력하세요.</div>`:''}
+  <div class="hm-grid">
+   ${tile(1,'strike','삼진아웃','three strikes out','warning · education · exit',vt.length,`오늘 적발 <b>${vt.length}</b>건<br>퇴출 <b>${banned.size}</b> · 교육 미이수 <b>${eduPend.length}</b>`,false,true)}
+   ${tile(2,'alcohol','음주측정','alcohol check','breath test',atBad.length,`오늘 측정 <b>${at.length}</b>명 · 적발 <b>${atBad.length}</b><br>${noNotice.length?`통지서 미작성 <b>${noNotice.length}</b>`:'통지서 모두 작성됨'}`)}
+   ${tile(3,'vuln','취약근로자','vulnerable workers','health care',vuNo.length,`관리 <b>${vuAct.length}</b>명 · 고혈압 <b>${vuAct.filter(p=>vulnTags(p).includes('고혈압')).length}</b><br>사후상담 미실시 <b>${vuNo.length}</b>`)}
+   ${tile(4,'workers','근로자','worker register','people',null,`등록 <b>${W.length}</b>명<br>업체 <b>${new Set(W.map(w=>w.company)).size}</b>곳`)}
+   ${tile(5,'equip','장비','equipment register','machines',expE.length,`등록 <b>${E.length}</b>대<br>서류 만료·임박 <b>${expE.length}</b>`)}
+   ${tile(6,'records','기록','records · report','archive',null,`기간별 엑셀 · 확인서 일괄 출력<br>백업 / 복원`,true)}
+   ${tile(7,'settings','설정','settings','setup',null,`현장명 · 점검자 · 기준`)}
+  </div>
+  ${noNotice.length?`<div class="hm-sec"><h2>통지서 미작성</h2><span>alcohol notice</span></div><div class="card list">${noNotice.map(alcItem).join('')}</div>`:''}
+  ${pend.length?`<div class="hm-sec"><h2>재측정 대기</h2><span>retest</span></div><div class="card list">${pend.map(alcItem).join('')}</div>`:''}
+  ${eduPend.length?`<div class="hm-sec"><h2>교육 미이수</h2><span>2nd strike</span></div><div class="card list">${eduPend.map(vItem).join('')}</div>`:''}
+  ${expE.length?`<div class="hm-sec"><h2>장비 서류</h2><span>expiring</span></div><div class="card list">${expE.slice(0,10).map(eqItem).join('')}</div>`:''}
+  <div class="hm-sec"><h2>today.</h2><span>오늘 삼진아웃 적발</span></div><div class="card list">${vt.length?vt.sort((a,b)=>b.at.localeCompare(a.at)).map(vItem).join(''):'<div class="empty">오늘 적발 기록 없음</div>'}</div>`;
+  $$('[data-go]').forEach(b=>b.onclick=()=>go(b.dataset.go));const ts=$('#toSet');if(ts)ts.onclick=e=>{e.preventDefault();go('settings')};
+  bindItems();
+};
+function vItem(v){return `<div class="it" data-vid="${v.id}">${lvDot(v.level)}<div class="m"><b>${h(v.name)}</b> <span class="muted">${h(v.company)}</span>${v.void?' <span class="badge bgray">무효</span>':''}${v.level===2?(v.edu&&v.edu.done?' <span class="badge bok">교육이수</span>':' <span class="badge bwarn">교육 미이수</span>'):''}${v.level===3?' <span class="badge b3">퇴출</span>':''}<div class="small muted ell">${fmtDT(v.at)} · ${h(v.type)}${v.place?' · '+h(v.place):''}</div></div></div>`}
+function alcItem(a){const due=new Date(a.at);due.setMinutes(due.getMinutes()+10);return `<div class="it" data-aid="${a.id}"><span class="badge ${judgeCls(a.judge)}">${a.judge}</span><div class="m"><b>${h(a.name)}</b> <span class="muted">${h(a.company)}</span><div class="small muted">${fmtDT(a.at)} · ${a.refused?'측정거부':a.value.toFixed(3)+'%'}${a.judge==='재측정'&&!retestChild(a)?` · ${pad(due.getHours())}:${pad(due.getMinutes())} 이후 재측정`:''}${a.out?' · <b style="color:var(--bad)">영구퇴출</b>':''}${isAlcBad(a)&&!a.void?(a.notice?' · 통지서 ✔':' · <b style="color:var(--bad)">통지서 미작성</b>'):''}</div></div></div>`}
+function eqItem(e){return `<div class="it" data-eid="${e.id}"><span class="dot d0" style="font-size:20px">🚜</span><div class="m"><b>${h(e.type||'')}</b> <span class="muted">${h(e.plate||'')}</span><div class="small muted ell">${h(e.company||'')} · 운전원 ${h(e.operator||'')} · 검사 ${expCell(e.inspect)||'-'} · 보험 ${expCell(e.insurance)||'-'}</div></div></div>`}
+function bindItems(root=V$()){
+  $$('[data-vid]',root).forEach(el=>el.onclick=()=>showViolation(el.dataset.vid));
+  $$('[data-aid]',root).forEach(el=>el.onclick=()=>showAlcohol(el.dataset.aid));
+  $$('[data-eid]',root).forEach(el=>el.onclick=()=>showEquip(el.dataset.eid));
+  $$('[data-wid]',root).forEach(el=>el.onclick=()=>showWorker(el.dataset.wid));
+  $$('[data-uid]',root).forEach(el=>el.onclick=()=>showVuln(el.dataset.uid));
+}
+
+/* --- 삼진아웃 --- */
+R.strike=(arg)=>{
+  if(arg==='new'||(arg&&arg.person))return strikeForm(arg&&arg.person);
+  const act=V.filter(v=>!v.void);const q=R.strike.q||'';
+  const list=V.filter(v=>!q||norm([v.name,v.company,v.type,v.place].join(' ')).includes(norm(q))).sort((a,b)=>b.at.localeCompare(a.at));
+  V$().innerHTML=`<h1>삼진아웃제</h1>
+  <button class="btn xl" id="nv" style="background:var(--l3);margin-bottom:12px">⚠️ 적발 등록</button>
+  <div class="grid g4" style="margin-bottom:12px">${[1,2,3].map(l=>`<div class="stat" style="border-left:6px solid var(--l${l})"><div class="t">${h(S.levels[l-1].name)}</div><div class="n">${act.filter(v=>v.level===l).length}</div><div class="small muted ell">${h(S.levels[l-1].act.split('\n').join(' · '))}</div></div>`).join('')}</div>
+  <div class="row" style="margin-bottom:10px"><input class="inp grow" id="sq" type="search" placeholder="성명 · 업체 · 위반내용 검색" value="${h(q)}"><button class="btn line" id="sx">엑셀 저장</button></div>
+  <div class="card list">${list.length?list.slice(0,300).map(vItem).join(''):'<div class="empty">적발 기록 없음</div>'}</div>`;
+  $('#nv').onclick=()=>go('strike','new');
+  $('#sq').oninput=e=>{R.strike.q=e.target.value;clearTimeout(R.strike.t);R.strike.t=setTimeout(()=>{R.strike();const i=$('#sq');i.focus();i.setSelectionRange(i.value.length,i.value.length)},250)};
+  $('#sx').onclick=()=>exportViolations(list);bindItems();
+};
+function strikeForm(preset){
+  const st={person:null,type:'',photos:[],level:1,autoLevel:1,levelManual:false};
+  V$().innerHTML=`<div class="row" style="justify-content:space-between"><h1>삼진아웃 적발 등록</h1><button class="btn ghost sm" id="back">← 목록</button></div>
+  <div class="card"><label class="f">1. 위반자</label><div id="pp"></div><div id="who"></div></div>
+  <div class="card" id="lvCard" style="display:none"></div>
+  <div class="card"><label class="f">2. 위반 내용</label><div class="chips" id="vt">${S.vtypes.map(t=>`<button type="button" class="chip" data-t="${h(t)}">${h(t)}</button>`).join('')}</div>
+   <label class="f">상세 내용</label><textarea class="inp" id="detail" placeholder="예) 3층 슬래브 단부 작업 중 안전대 미체결"></textarea>
+   <div class="grid g2"><div><label class="f">적발 장소</label><input class="inp" id="place" placeholder="예) 101동 5층"></div><div><label class="f">적발 일시</label><input class="inp" type="datetime-local" id="at" value="${nowLocal()}"></div></div>
+   <label class="f">현장 사진</label><div class="photos" id="phs"></div><label class="btn ghost" style="margin-top:8px">📷 사진 촬영 / 추가<input type="file" accept="image/*" capture="environment" multiple hidden id="phIn"></label></div>
+  <div class="card"><label class="f">3. 조치사항</label><textarea class="inp" id="action" style="min-height:100px"></textarea></div>
+  <div class="card"><label class="f">4. 확인 서명</label>
+   <div class="grid g2"><div><label class="f">점검자 소속</label><input class="inp" id="iOrg" value="${h(S.inspectorOrg)}"></div><div><label class="f">점검자 성명 *</label><input class="inp" id="iName" value="${h(S.inspector)}"></div></div>
+   <div class="grid g2" style="margin-top:12px"><div id="sigV"></div><div id="sigI"></div></div>
+   <label class="row" style="margin-top:10px"><input type="checkbox" id="refuse" style="width:22px;height:22px"> 위반자 서명 거부</label>
+   <div id="witBox" style="display:none"><label class="f">입회자 (소속/성명)</label><input class="inp" id="witness"></div></div>
+  <button class="btn xl" id="saveV" style="background:var(--l3)">저장</button>`;
+  $('#back').onclick=()=>go('strike');
+  const sv=sigPad($('#sigV'),'위반자 확인 서명'),si=sigPad($('#sigI'),'점검자 서명');
+  $('#refuse').onchange=e=>$('#witBox').style.display=e.target.checked?'block':'none';
+  const setLevel=()=>{const L=st.level;$('#lvCard').style.display='block';const lv=S.levels[L-1];
+    $('#lvCard').innerHTML=`<div class="level-box">${stickerHtml(L,($('#at').value||nowLocal()).slice(0,10))}<div style="flex:1;min-width:200px"><div style="font-size:22px;font-weight:800">${h(lv.name)} <span class="badge b${L}">${h(lv.sticker)} 스티커</span></div>
+    <div class="small muted">누적 기준 자동 판정: ${st.autoLevel}차${S.periodMonths?` (최근 ${S.periodMonths}개월)`:''}</div>
+    <div class="chips" style="margin-top:8px">${[1,2,3].map(l=>`<button type="button" class="chip ${l===L?'on':''}" data-l="${l}">${l}차</button>`).join('')}</div></div></div>`;
+    $$('#lvCard [data-l]').forEach(b=>b.onclick=()=>{st.level=+b.dataset.l;st.levelManual=st.level!==st.autoLevel;$('#action').value=S.levels[st.level-1].act;setLevel()});
+  };
+  const pick=p=>{st.person=p;const k=pkey(p.name,p.company);const prev=strikesOf(k);st.autoLevel=Math.min(prev.length+1,3);st.level=st.autoLevel;
+    $('#pp').style.display='none';
+    $('#who').innerHTML=`<div class="who"><div style="flex:1"><div class="nm">${h(p.name)}</div><div class="muted">${h(p.company)} · ${h(p.job||'')}${p.helmet?' · 안전모 '+h(p.helmet):''}</div>
+     ${isBanned(k)?'<div class="badge b3" style="margin-top:6px">이미 퇴출 처리된 근로자</div>':''}${vulnBadge(p.name,p.company)}
+     ${prev.length?`<div class="small" style="margin-top:6px">이전 적발: ${prev.map(v=>`${v.date} ${h(v.type)} (${v.level}차)`).join('<br>')}</div>`:'<div class="small muted" style="margin-top:6px">이전 적발 없음</div>'}</div>
+     <button class="btn ghost sm" id="chg">변경</button></div>
+     <div class="grid g2"><div><label class="f">직종</label><input class="inp" id="pJob" value="${h(p.job||'')}"></div><div><label class="f">안전모번호</label><input class="inp" id="pHel" value="${h(p.helmet||'')}"></div></div>`;
+    $('#chg').onclick=()=>{$('#who').innerHTML='';$('#pp').style.display='block';$('#lvCard').style.display='none';st.person=null};
+    $('#action').value=S.levels[st.level-1].act;setLevel();
+  };
+  personPicker($('#pp'),pick,{focus:!preset});if(preset)pick(preset);
+  $$('#vt .chip').forEach(b=>b.onclick=()=>{$$('#vt .chip').forEach(x=>x.classList.remove('on'));b.classList.add('on');st.type=b.dataset.t});
+  const drawPh=()=>{$('#phs').innerHTML=st.photos.map((p,i)=>`<div class="ph"><img src="${p}"><button data-i="${i}">✕</button></div>`).join('');$$('#phs button').forEach(b=>b.onclick=()=>{st.photos.splice(+b.dataset.i,1);drawPh()})};
+  $('#phIn').onchange=async e=>{for(const f of e.target.files){try{st.photos.push(await compressImg(f))}catch(x){toast('사진 처리 실패')}}e.target.value='';drawPh()};
+  $('#at').onchange=()=>st.person&&setLevel();
+  $('#saveV').onclick=async()=>{
+    if(!st.person)return toast('위반자를 선택하세요');if(!st.type)return toast('위반 내용을 선택하세요');
+    if(!$('#iName').value.trim())return toast('점검자 성명을 입력하세요');
+    if(si.isEmpty())return toast('점검자 서명이 필요합니다');
+    const refused=$('#refuse').checked;if(!refused&&sv.isEmpty())return toast('위반자 서명 또는 "서명 거부"를 선택하세요');
+    if(refused&&!$('#witness').value.trim())return toast('서명 거부 시 입회자를 입력하세요');
+    const p=st.person,at=$('#at').value||nowLocal();
+    const v={id:uid(),at,date:at.slice(0,10),name:p.name,company:p.company,job:$('#pJob').value.trim(),helmet:$('#pHel').value.trim(),workerId:p.workerId||'',pkey:pkey(p.name,p.company),
+      type:st.type,detail:$('#detail').value.trim(),place:$('#place').value.trim(),photos:st.photos,level:st.level,autoLevel:st.autoLevel,action:$('#action').value.trim(),
+      inspectorOrg:$('#iOrg').value.trim(),inspector:$('#iName').value.trim(),sigInspector:si.data(),sigViolator:refused?'':sv.data(),violatorRefused:refused,witness:refused?$('#witness').value.trim():'',
+      edu:st.level===2?{done:false}:null,created:nowLocal(),linkedAlcohol:preset&&preset.alcId||''};
+    await save('violations',v);
+    if(v.level===3){const w=workerByKey(v.pkey);if(w){w.banned=true;w.bannedAt=v.at;await save('workers',w)}}
+    if(v.linkedAlcohol){const a=A.find(x=>x.id===v.linkedAlcohol);if(a){a.linkedViolation=v.id;await save('alcohol',a)}}
+    toast(`${v.level}차 적발 저장됨`);
+    if(!S.inspector){S.inspector=v.inspector;S.inspectorOrg=v.inspectorOrg;saveSettings()}
+    go('strike');showViolation(v.id);
+  };
+}
+function showViolation(id){
+  const v=V.find(x=>x.id===id);if(!v)return;const lv=S.levels[v.level-1];
+  openModal(`${lv.name} · ${v.name}`,`<div class="level-box" style="margin-bottom:12px">${stickerHtml(v.level,v.date)}<dl class="kv" style="flex:1">
+   <dt>소속</dt><dd>${h(v.company)}</dd><dt>직종</dt><dd>${h(v.job)}</dd><dt>적발일시</dt><dd>${fmtDT(v.at)}</dd><dt>장소</dt><dd>${h(v.place||'-')}</dd><dt>위반내용</dt><dd>${h(v.type)}${v.detail?'<br>'+nl(v.detail):''}</dd>
+   <dt>조치사항</dt><dd>${nl(v.action)}</dd><dt>점검자</dt><dd>${h(v.inspectorOrg)} ${h(v.inspector)}</dd><dt>위반자 확인</dt><dd>${v.violatorRefused?'서명 거부 (입회: '+h(v.witness)+')':'서명 완료'}</dd>
+   ${v.void?`<dt>무효</dt><dd style="color:var(--bad)">${h(v.void.reason)} (${fmtDT(v.void.at)})</dd>`:''}</dl></div>
+   ${v.photos&&v.photos.length?`<div class="photos" style="margin-bottom:12px">${v.photos.map(p=>`<div class="ph"><img src="${p}"></div>`).join('')}</div>`:''}
+   <div class="grid g2" style="margin-bottom:12px">${v.sigViolator?`<div class="card"><div class="small muted">위반자 서명</div><img src="${v.sigViolator}" style="max-width:100%;height:90px"></div>`:''}<div class="card"><div class="small muted">점검자 서명</div><img src="${v.sigInspector}" style="max-width:100%;height:90px"></div></div>
+   ${v.level===2&&!v.void?`<div class="card">${v.edu&&v.edu.done?`<b style="color:var(--ok)">✔ 교육 이수</b> ${fmtDT(v.edu.at)} · 교육자 ${h(v.edu.by)}`:`<b style="color:var(--warn)">교육 미이수</b><div class="row" style="margin-top:8px"><input class="inp grow" id="eduBy" placeholder="교육 실시자" value="${h(S.inspector)}"><button class="btn ok" id="eduOk">교육 이수 처리</button></div>`}</div>`:''}
+   <div class="row"><button class="btn" id="pv">🖨 확인서 출력 / PDF</button>${!v.void?'<button class="btn line" id="vd">무효 처리</button>':''}<button class="btn line" id="wh">근로자 이력</button></div>`,b=>{
+    $('#pv',b).onclick=()=>printPages([docViolation(v)]);
+    const wh=$('#wh',b);wh.onclick=()=>{closeModal();showPersonHistory(v.pkey,v.name,v.company)};
+    const eo=$('#eduOk',b);if(eo)eo.onclick=async()=>{v.edu={done:true,at:nowLocal(),by:$('#eduBy').value.trim()};await save('violations',v);toast('교육 이수 처리됨');showViolation(v.id);R[cur]()};
+    const vd=$('#vd',b);if(vd)vd.onclick=async()=>{const r=prompt('무효 사유를 입력하세요 (기록은 삭제되지 않고 무효로 표시됩니다)');if(!r)return;v.void={reason:r,at:nowLocal()};await save('violations',v);toast('무효 처리됨');closeModal();R[cur]()};
+  });
+}
+
+/* --- 음주측정 --- */
+R.alcohol=()=>{
+  const ds=R.alcohol.d||today();const rows=alcRowsOfDay(ds);const base=rows.filter(a=>!a.retestOf);
+  const pend=A.filter(a=>!a.void&&a.judge==='재측정'&&!retestChild(a));
+  V$().innerHTML=`<h1>음주측정</h1>
+  <div class="card"><label class="f">측정 대상자</label><div id="ap"></div><div id="aform"></div></div>
+  ${pend.length?`<h2>재측정 대기 (10분 후)</h2><div class="card list" id="pendL">${pend.map(alcItem).join('')}</div>`:''}
+  <div class="row" style="margin:16px 0 10px"><h2 style="margin:0;flex:1">측정 기록</h2><input type="date" class="inp" id="ad" value="${ds}" style="width:auto"></div>
+  <div class="grid g4" style="margin-bottom:10px"><div class="stat"><div class="t">측정인원</div><div class="n">${base.length}</div></div><div class="stat"><div class="t">양호</div><div class="n" style="color:var(--ok)">${base.filter(a=>!isAlcBad(alcFinal(a))&&alcFinal(a).judge!=='재측정').length}</div></div><div class="stat"><div class="t">적발</div><div class="n" style="color:var(--bad)">${base.filter(a=>isAlcBad(alcFinal(a))).length}</div></div></div>
+  <div class="card list ph-only">${rows.length?rows.map(a=>`<div class="it" data-aid="${a.id}"><span class="badge ${judgeCls(a.judge)}">${a.judge}</span><div class="m"><b>${h(a.name)}</b>${a.retestOf?' <span class="small muted">(재측정)</span>':''} <span class="muted small">${h(a.company)}</span>
+    <div class="small muted ell">${hm(a.at)} · <b style="color:var(--ink)">${a.refused?'거부':a.value.toFixed(3)+'%'}</b>${a.job?' · '+h(a.job):''} · 측정 ${h(a.measurer)}${a.follow?' · '+h(a.follow):''}</div></div>
+    ${isAlcBad(a)&&!a.void?(a.notice?`<button class="btn sm line" data-np="${a.id}">🖨</button>`:`<button class="btn sm bad" data-nw="${a.id}">✍ 통지서</button>`):''}</div>`).join(''):'<div class="empty">기록 없음</div>'}</div>
+  <div class="tbl-wrap pc-only"><table class="t"><tr><th>NO</th><th>시간</th><th>소속/업체명</th><th>직종</th><th>성명</th><th>측정결과(%)</th><th>판정</th><th>조치사항</th><th>측정인</th><th>사후조치</th><th>통지서</th></tr>
+  ${rows.length?rows.map((a,i)=>`<tr class="click" data-aid="${a.id}"><td>${i+1}</td><td>${hm(a.at)}</td><td>${h(a.company)}</td><td>${h(a.job)}</td><td><b>${h(a.name)}</b>${a.retestOf?' <span class="small muted">(재측정)</span>':''}</td><td>${a.refused?'거부':a.value.toFixed(3)}</td><td><span class="badge ${judgeCls(a.judge)}">${a.judge}</span></td><td>${h(a.action)}</td><td>${h(a.measurer)}</td><td>${h(a.follow||'')}</td><td>${isAlcBad(a)&&!a.void?(a.notice?`<button class="btn sm line" data-np="${a.id}">🖨 출력</button>`:`<button class="btn sm bad" data-nw="${a.id}">✍ 작성</button>`):''}</td></tr>`).join(''):'<tr><td colspan="11" class="empty">기록 없음</td></tr>'}</table></div>
+  <div class="row" style="margin-top:12px"><button class="btn line" id="pl">🖨 이 날짜 기록표 출력</button><button class="btn line" id="xw">📊 주간 엑셀 (기록표+일지)</button></div>`;
+  $('#ad').onchange=e=>{R.alcohol.d=e.target.value;R.alcohol()};
+  $('#pl').onclick=()=>printPages([docAlcoholList(ds)]);
+  $('#xw').onclick=()=>{const d=new Date(ds+'T00:00');const mon=addDays(ds,-((d.getDay()+6)%7));exportAlcohol(mon,addDays(mon,6))};
+  personPicker($('#ap'),p=>alcForm(p),{focus:true});
+  $$('[data-nw]').forEach(b=>b.onclick=e=>{e.stopPropagation();alcNotice(b.dataset.nw)});
+  $$('[data-np]').forEach(b=>b.onclick=e=>{e.stopPropagation();printPages([docAlcohol(A.find(x=>x.id===b.dataset.np))])});
+  bindItems();$$('[data-aid]',$('#pendL')||document.createElement('div')).forEach(el=>el.onclick=()=>{const a=A.find(x=>x.id===el.dataset.aid);alcForm({name:a.name,company:a.company,job:a.job,workerId:a.workerId,equip:a.equip,plate:a.plate},a)});
+};
+function alcForm(p,parent){
+  const k=pkey(p.name,p.company);const prevBadN=alcBadCount(k,parent&&parent.id);
+  $('#ap').style.display='none';
+  $('#aform').innerHTML=`<div class="who"><div style="flex:1"><div class="nm">${h(p.name)} ${parent?'<span class="badge bwarn">재측정</span>':''}</div><div class="muted">${h(p.company)} · ${h(p.job||'')}${p.equip?' · 🚜 '+h(p.equip)+' '+h(p.plate||''):''}</div>
+   ${isBanned(k)?'<div class="badge b3" style="margin-top:6px">삼진아웃 퇴출자</div>':''}${vulnBadge(p.name,p.company)}${prevBadN?`<div class="badge bbad" style="margin-top:6px">이전 음주 적발 ${prevBadN}회 — 이번 적발 시 ${prevBadN+1>=S.alc.outCount?'영구퇴출':(prevBadN+1)+'회'}</div>`:''}
+   ${parent?`<div class="small" style="margin-top:6px">1차 측정 ${hm(parent.at)} · ${parent.refused?'거부':f3(parent.value)+'%'}</div>`:''}</div><button class="btn ghost sm" id="ac">취소</button></div>
+   <div class="grid g2" style="margin-top:12px"><div><label class="f">측정결과 (%)</label><input class="inp big" id="av" inputmode="decimal" placeholder="0.000" style="font-size:32px;text-align:center"></div>
+   <div><label class="f">판정</label><div class="judge" id="aj" style="background:var(--chip)">—</div></div></div>
+   <div class="row" style="margin-top:10px"><button class="btn ok" id="a0" style="flex:1">0.000 (정상) 바로 저장</button><button class="btn bad" id="ar">측정 거부</button></div>
+   <div class="grid g2"><div><label class="f">직종</label><input class="inp" id="aJob" value="${h(p.job||'')}"></div><div><label class="f">측정인</label><input class="inp" id="am" value="${h(S.inspector)}"></div></div>
+   <button class="btn xl" id="as" style="margin-top:12px">저장</button>`;
+  const cancel=()=>{$('#aform').innerHTML='';$('#ap').style.display='block';$('#ap input').focus()};
+  $('#ac').onclick=cancel;
+  const show=()=>{const v=parseFloat($('#av').value);if(isNaN(v)){$('#aj').textContent='—';$('#aj').className='judge';return}
+    const j=judge(v,false,!!parent);const out=j!=='정상'&&j!=='재측정'&&prevBadN+1>=S.alc.outCount;$('#aj').textContent=j+(out?' · 영구퇴출':'')+' · '+JUDGE_ACT[j];$('#aj').className='judge badge '+judgeCls(j)};
+  $('#av').oninput=show;setTimeout(()=>$('#av').focus(),50);
+  const doSave=async(val,refused)=>{
+    if(!$('#am').value.trim())return toast('측정인 성명을 입력하세요');
+    if(!refused&&(isNaN(val)||val<0||val>1))return toast('측정값을 확인하세요 (예: 0.012)');
+    const at=nowLocal();const j=judge(val,refused,!!parent);
+    const a={id:uid(),at,date:at.slice(0,10),name:p.name,company:p.company,job:$('#aJob').value.trim(),equip:p.equip||'',plate:p.plate||'',workerId:p.workerId||'',pkey:k,
+      value:refused?null:val,refused,judge:j,action:JUDGE_ACT[j],measurer:$('#am').value.trim(),follow:'',retestOf:parent?parent.id:'',created:at};
+    if(isAlcBad(a)){a.badNo=prevBadN+1;if(a.badNo>=S.alc.outCount){a.out=true;a.action+=` / ${a.badNo}회 적발 – 영구퇴출`}}
+    await save('alcohol',a);
+    if(a.out){const w=workerByKey(k);if(w){w.banned=true;w.bannedAt=at;w.bannedReason='음주 '+a.badNo+'회 적발';await save('workers',w)}}
+    if(parent){parent.follow=`재측정 ${hm(at)} ${refused?'거부':val.toFixed(3)} → ${j}`;await save('alcohol',parent)}
+    if(!S.inspector){S.inspector=a.measurer;saveSettings()}
+    toast(`${p.name} · ${j}`);
+    R.alcohol();
+    if(isAlcBad(a))alcNotice(a.id);
+  };
+  $('#a0').onclick=()=>doSave(0,false);
+  $('#ar').onclick=()=>{if(confirm('측정 거부로 기록합니다.'))doSave(null,true)};
+  $('#as').onclick=()=>doSave(parseFloat($('#av').value),false);
+  $('#av').onkeydown=e=>{if(e.key==='Enter')$('#as').click()};
+}
+const NOTICE_ITEMS=[['am','오전 작업 중지 (간단한 숙취)'],['stop','당일 작업 즉시 중단 및 현장 퇴장 조치'],['review','위험성평가 회의 시 심의'],['out','영구 퇴출'],['edu','안전 교육 재이수 명령'],['ban','향후 현장 출입 제한'],['etc','기타']];
+function defaultNoticeItems(a){const it=a.judge==='오전 작업중지'?['am']:a.judge==='당일 작업중지'?['stop','review']:['stop'];if(a.out)it.push('out');return it}
+function alcNotice(id){
+  const a=A.find(x=>x.id===id);const n=a.notice||{items:defaultNoticeItems(a),place:'',days:'',etc:''};
+  const box=([k,t])=>`<label class="row" style="margin:6px 0"><input type="checkbox" value="${k}" ${n.items.includes(k)?'checked':''} style="width:22px;height:22px"> ${t}${k==='ban'?` <input class="inp" id="nD" value="${h(n.days)}" style="width:80px;min-height:36px;padding:4px 8px" inputmode="numeric"> 일`:k==='etc'?` <input class="inp grow" id="nE" value="${h(n.etc)}" style="min-height:36px;padding:4px 8px">`:''}</label>`;
+  openModal('음주측정 결과 통지서',`<div class="judge badge ${judgeCls(a.judge)}" style="display:block;margin-bottom:12px">${h(a.name)} · ${a.refused?'측정 거부':f3(a.value)+'%'} · ${a.judge}${a.badNo?` · ${a.badNo}회 적발`:''}${a.out?' · 영구퇴출':''}</div>
+   <div class="card"><label class="f">측정 장소</label><input class="inp" id="nP" value="${h(n.place)}" placeholder="예) 정문 게이트 / 안전교육장">
+   <label class="f">조치 내용</label>${NOTICE_ITEMS.map(box).join('')}</div>
+   <div class="hint" style="margin-bottom:12px"><b>현장 기준</b><br>${alcCriteria().map((c,i)=>`${i+1}. ${h(c)}`).join('<br>')}</div>
+   <div class="grid g2"><div id="sW"></div><div id="sM"></div></div>
+   <label class="row" style="margin-top:10px"><input type="checkbox" id="nR" style="width:22px;height:22px"> 근로자 서명 거부</label><div id="nWb" style="display:none"><label class="f">입회자</label><input class="inp" id="nWi"></div>
+   <label class="row" style="margin-top:10px"><input type="checkbox" id="nV" ${a.linkedViolation?'disabled':''} style="width:22px;height:22px"> 삼진아웃 위반으로도 등록 ${a.linkedViolation?'(등록됨)':''}</label>
+   <div class="grid g2" style="margin-top:12px"><button class="btn xl" id="nS">저장 후 출력</button><button class="btn xl line" id="nMsg">📣 적발 알림 문구 공유</button></div>`,b=>{
+    const sw=sigPad($('#sW',b),'근로자 서명'),sm=sigPad($('#sM',b),`측정자 서명 (${a.measurer})`);
+    $('#nR',b).onchange=e=>$('#nWb').style.display=e.target.checked?'block':'none';
+    $('#nMsg',b).onclick=()=>shareAlcMessage(a);
+    $('#nS',b).onclick=async()=>{
+      const refusedSign=$('#nR').checked;if(!refusedSign&&sw.isEmpty())return toast('근로자 서명 또는 서명 거부를 선택하세요');if(sm.isEmpty())return toast('측정자 서명이 필요합니다');
+      if(refusedSign&&!$('#nWi').value.trim())return toast('서명 거부 시 입회자를 입력하세요');
+      a.notice={place:$('#nP').value.trim(),items:$$('input[type=checkbox][value]',b).filter(x=>x.checked).map(x=>x.value),days:$('#nD').value.trim(),etc:$('#nE').value.trim(),sigW:refusedSign?'':sw.data(),sigM:sm.data(),refusedSign,witness:refusedSign?$('#nWi').value.trim():'',at:nowLocal()};
+      if(!/통지서/.test(a.follow||''))a.follow=[a.follow,'통지서 작성'].filter(Boolean).join(' / ');
+      await save('alcohol',a);toast('통지서 저장됨');
+      const toV=$('#nV').checked;closeModal();
+      if(toV){go('strike',{person:{name:a.name,company:a.company,job:a.job,workerId:a.workerId,alcId:a.id}});setTimeout(()=>{const c=$$('#vt .chip').find(x=>x.dataset.t.includes('음주'));c&&c.click();$('#detail').value=`음주측정 ${a.refused?'거부':f3(a.value)+'%'} (${fmtDT(a.at)})`},50)}
+      else{R[cur]();printPages([docAlcohol(a)])}
+    };
+  });
+}
+function showAlcohol(id){
+  const a=A.find(x=>x.id===id);if(!a)return;const ch=retestChild(a);const par=a.retestOf&&A.find(x=>x.id===a.retestOf);
+  openModal(`음주측정 · ${a.name}`,`<div class="judge badge ${judgeCls(a.judge)}" style="display:block;margin-bottom:12px">${a.refused?'측정 거부':f3(a.value)+'%'} · ${a.judge}${a.badNo?` · ${a.badNo}회 적발`:''}${a.out?' · 영구퇴출':''}</div>
+   <dl class="kv"><dt>소속</dt><dd>${h(a.company)}</dd><dt>직종</dt><dd>${h(a.job)}</dd>${a.equip?`<dt>장비</dt><dd>${h(a.equip)} ${h(a.plate)}</dd>`:''}<dt>측정일시</dt><dd>${fmtDT(a.at)}</dd><dt>조치</dt><dd>${h(a.action)}</dd><dt>측정인</dt><dd>${h(a.measurer)}</dd><dt>사후조치</dt><dd>${h(a.follow||'-')}</dd>
+   ${par?`<dt>1차 측정</dt><dd>${hm(par.at)} ${par.value.toFixed(3)}%</dd>`:''}${ch?`<dt>재측정</dt><dd>${hm(ch.at)} ${ch.refused?'거부':ch.value.toFixed(3)+'%'} → ${ch.judge}</dd>`:''}${a.void?`<dt>무효</dt><dd>${h(a.void.reason)}</dd>`:''}</dl>
+   <div class="row" style="margin-top:14px">
+   ${isAlcBad(a)&&!a.void?`<button class="btn bad" id="nt">✍ ${a.notice?'통지서 다시 작성':'측정결과 통지서 작성'}</button>${a.notice?'<button class="btn" id="np">🖨 통지서 출력</button>':''}<button class="btn line" id="ms">📣 알림 문구</button>`:''}
+   ${a.judge!=='정상'&&!ch&&!a.void?'<button class="btn line" id="rt">재측정 입력</button>':''}
+   <button class="btn line" id="fm">사후조치 메모</button>
+   ${!a.void?'<button class="btn line" id="vd">무효 처리</button>':''}</div>`,b=>{
+    const rt=$('#rt',b);if(rt)rt.onclick=()=>{closeModal();go('alcohol');alcForm({name:a.name,company:a.company,job:a.job,workerId:a.workerId,equip:a.equip,plate:a.plate},a)};
+    const nt=$('#nt',b);if(nt)nt.onclick=()=>alcNotice(a.id);
+    const np=$('#np',b);if(np)np.onclick=()=>printPages([docAlcohol(a)]);
+    const ms=$('#ms',b);if(ms)ms.onclick=()=>shareAlcMessage(a);
+    $('#fm',b).onclick=async()=>{const r=prompt('사후조치 내용',a.follow||'');if(r===null)return;a.follow=r;await save('alcohol',a);showAlcohol(a.id);R[cur]()};
+    const vd=$('#vd',b);if(vd)vd.onclick=async()=>{const r=prompt('무효 사유 (기록은 삭제되지 않음)');if(!r)return;a.void={reason:r,at:nowLocal()};await save('alcohol',a);closeModal();R[cur]()};
+  });
+}
+
+/* --- 근로자 --- */
+R.workers=()=>{
+  const q=R.workers.q||'',co=R.workers.co||'';const comps=[...new Set(W.map(w=>w.company).filter(Boolean))].sort();
+  const list=W.filter(w=>(!co||w.company===co)&&(!q||norm([w.name,w.company,w.job,w.helmet,w.phone,w.birth].join(' ')).includes(norm(q)))).sort((a,b)=>(a.company||'').localeCompare(b.company||'')||a.name.localeCompare(b.name));
+  V$().innerHTML=`<h1>근로자 관리대장 <span class="badge">${W.length}명</span></h1>
+  <div class="card"><div class="row"><label class="btn">📥 엑셀 불러오기<input type="file" accept=".xls,.xlsx,.csv" multiple hidden id="wf"></label><button class="btn ghost" id="wt">양식 다운로드</button><button class="btn ghost" id="wa">＋ 직접 추가</button><button class="btn line" id="wx">엑셀 저장</button></div>
+  <div class="small muted" style="margin-top:8px">업체별 작성 양식을 여러 개 한 번에 올려도 됩니다. 같은 성명+생년월일은 자동 병합.</div></div>
+  <div class="row" style="margin-bottom:10px"><input class="inp grow" id="wq" type="search" placeholder="성명 · 업체 · 직종 · 안전모번호" value="${h(q)}"><select class="inp" id="wc" style="width:auto;max-width:220px"><option value="">전체 업체</option>${comps.map(c=>`<option ${c===co?'selected':''}>${h(c)}</option>`).join('')}</select></div>
+  <div class="card list">${list.length?list.slice(0,400).map(w=>{const k=pkey(w.name,w.company);const n=strikesOf(k).length;const ban=isBanned(k);return `<div class="it" data-wid="${w.id}"><span class="dot ${ban?'d3':n?'d'+Math.min(n,3):'d0'}">${ban?'퇴출':n?n+'회':'—'}</span><div class="m"><b>${h(w.name)}</b> <span class="muted">${h(w.company||'')}</span>${vulnOf(w.name,w.company)?' <span class="badge bbad">❤ 취약</span>':''}<div class="small muted ell">${h(w.job||'')}${w.helmet?' · 안전모 '+h(w.helmet):''}${w.phone?' · '+h(w.phone):''}</div></div></div>`}).join('')+(list.length>400?`<div class="empty">${list.length-400}명 더 있음 — 검색으로 좁히세요</div>`:''):'<div class="empty">근로자 없음. 양식을 내려받아 작성 후 불러오세요.</div>'}</div>`;
+  $('#wq').oninput=e=>{R.workers.q=e.target.value;clearTimeout(R.workers.t);R.workers.t=setTimeout(()=>{R.workers();const i=$('#wq');i.focus();i.setSelectionRange(i.value.length,i.value.length)},250)};
+  $('#wc').onchange=e=>{R.workers.co=e.target.value;R.workers()};
+  $('#wt').onclick=tplWorkers;$('#wx').onclick=()=>exportWorkers(list);$('#wa').onclick=()=>editWorker();
+  $('#wf').onchange=e=>importDialog('workers',[...e.target.files]);bindItems();
+};
+function importDialog(kind,files){
+  if(!files.length)return;const has=(kind==='workers'?W:kind==='vuln'?VU:E).length;
+  openModal('엑셀 불러오기',`<p>${files.map(f=>'📄 '+h(f.name)).join('<br>')}</p>
+   <div class="grid g2"><button class="btn" id="im">병합 (같은 ${kind==='equipment'?'차량번호':'사람'} 갱신, 새 항목 추가)</button>${has?'<button class="btn line" id="ir">전체 교체 (기존 대장 지우고 새로)</button>':''}</div><div id="ires" style="margin-top:12px"></div>`,b=>{
+    const run=async rep=>{if(rep&&!confirm('기존 대장을 모두 지우고 새 파일로 바꿉니다. 계속할까요?'))return;$('#ires').textContent='처리 중...';
+      const r=await importFiles(kind,files,rep);$('#ires').innerHTML=`<div class="hint">추가 <b>${r.added}</b> · 갱신 <b>${r.updated}</b><br>${r.msgs.map(h).join('<br>')}</div><button class="btn" style="margin-top:10px;width:100%" id="idone">확인</button>`;
+      $('#idone').onclick=()=>{closeModal();R[cur]()}};
+    $('#im',b).onclick=()=>run(false);const ir=$('#ir',b);if(ir)ir.onclick=()=>run(true);
+  });
+}
+function editWorker(id){
+  const w=id?W.find(x=>x.id===id):{};
+  openModal(id?'근로자 수정':'근로자 추가',Object.entries(WORKER_LABEL).map(([k,l])=>`<label class="f">${l}${k==='name'||k==='company'?' *':''}</label><input class="inp" data-k="${k}" value="${h(w[k]||'')}" ${k==='company'?'list="companyList"':''}>`).join('')+companyDatalist()+
+   `${id?`<label class="row" style="margin-top:12px"><input type="checkbox" id="wb" ${w.banned?'checked':''} style="width:22px;height:22px"> 퇴출 상태</label>`:''}<div class="row" style="margin-top:14px"><button class="btn" id="ws" style="flex:1">저장</button>${id?'<button class="btn bad" id="wd">삭제</button>':''}</div>`,b=>{
+    $('#ws',b).onclick=async()=>{const o={...w,id:w.id||uid()};$$('[data-k]',b).forEach(i=>o[i.dataset.k]=i.value.trim());if(!o.name||!o.company)return toast('성명과 소속업체는 필수');if(id)o.banned=$('#wb').checked;if(!id)o.created=nowLocal();await save('workers',o);closeModal();R[cur]()};
+    const wd=$('#wd',b);if(wd)wd.onclick=async()=>{if(!confirm(`${w.name} 근로자를 대장에서 삭제할까요? (적발·측정 기록은 유지)`))return;await remove('workers',id);closeModal();R[cur]()};
+  });
+}
+function showWorker(id){const w=W.find(x=>x.id===id);if(w)showPersonHistory(pkey(w.name,w.company),w.name,w.company,w)}
+function showPersonHistory(k,name,company,w){
+  w=w||workerByKey(k);const vs=V.filter(v=>v.pkey===k).sort((a,b)=>b.at.localeCompare(a.at));const as=A.filter(a=>a.pkey===k).sort((a,b)=>b.at.localeCompare(a.at));const n=strikesOf(k).length;
+  openModal(`${name} · ${company}`,`<div class="who" style="margin-bottom:12px"><span class="dot ${isBanned(k)?'d3':n?'d'+Math.min(n,3):'d0'}" style="width:60px;height:60px;font-size:16px">${isBanned(k)?'퇴출':n+'회'}</span><div style="flex:1">${w?`<dl class="kv">${Object.entries(WORKER_LABEL).filter(([f])=>w[f]).map(([f,l])=>`<dt>${l}</dt><dd>${f==='phone'?`<a href="tel:${h(w[f])}">${h(w[f])}</a>`:h(w[f])}</dd>`).join('')}</dl>`:'<span class="muted">근로자 대장에 없음</span>'}${vulnBadge(name,company)}</div></div>
+   <div class="row" style="margin-bottom:12px"><button class="btn" id="hs" style="background:var(--l3)">⚠️ 적발 등록</button><button class="btn" id="ha">🍺 음주측정</button>${vulnOf(name,company)?'<button class="btn" id="hv" style="background:#d8432c">❤ 취약근로자</button>':''}${w?'<button class="btn line" id="he">정보 수정</button>':''}</div>
+   <h2>삼진아웃 이력 (${vs.length})</h2><div class="card list">${vs.length?vs.map(vItem).join(''):'<div class="empty">없음</div>'}</div>
+   <h2>음주측정 이력 (${as.length})</h2><div class="card list">${as.length?as.slice(0,30).map(alcItem).join(''):'<div class="empty">없음</div>'}</div>`,b=>{
+    const p={name,company,job:w?w.job:'',helmet:w?w.helmet:'',workerId:w?w.id:''};
+    $('#hs',b).onclick=()=>{closeModal();go('strike',{person:p})};
+    $('#ha',b).onclick=()=>{closeModal();go('alcohol');alcForm(p)};
+    const hv=$('#hv',b);if(hv)hv.onclick=()=>showVuln(vulnOf(name,company).id);
+    const he=$('#he',b);if(he)he.onclick=()=>editWorker(w.id);
+    bindItems(b);
+  });
+}
+
+/* --- 장비 --- */
+const eqCat=t=>(String(t||'기타').split(/[(\s]/)[0]||'기타');
+R.equip=()=>{
+  const q=R.equip.q||'',cat=R.equip.cat||'',f=R.equip.f||'';
+  const cats=[...new Set(E.map(e=>eqCat(e.type)))].sort();
+  const list=E.filter(e=>(!cat||eqCat(e.type)===cat)&&(!q||norm(Object.values(e).join(' ')).includes(norm(q)))&&
+    (!f||(f==='exp'?['bad','warn'].includes(expState(e.inspect))||['bad','warn'].includes(expState(e.insurance)):f==='in'?!e.outDate:!!e.outDate))).sort((a,b)=>(+a.no||999)-(+b.no||999));
+  V$().innerHTML=`<h1>장비 관리대장 <span class="badge">${E.length}대</span></h1>
+  <div class="card"><div class="row"><label class="btn">📥 엑셀 불러오기<input type="file" accept=".xls,.xlsx" multiple hidden id="ef"></label><button class="btn ghost" id="et">양식 다운로드</button><button class="btn ghost" id="ea">＋ 직접 추가</button><button class="btn line" id="ex">엑셀 저장</button></div>
+  <div class="small muted" style="margin-top:8px">"장비 전담 관리자 지정서" 양식 그대로 올리면 됩니다. 같은 차량번호+운전원은 최신 내용으로 갱신.</div></div>
+  <input class="inp big" id="eq" type="search" placeholder="차량번호 · 장비명 · 운전원 · 업체 · 전담관리자" value="${h(q)}" style="margin-bottom:10px">
+  <div class="chips scroll" style="margin-bottom:8px"><button class="chip ${!cat?'on':''}" data-c="">전체</button>${cats.map(c=>`<button class="chip ${c===cat?'on':''}" data-c="${h(c)}">${h(c)} ${E.filter(e=>eqCat(e.type)===c).length}</button>`).join('')}</div>
+  <div class="chips scroll" style="margin-bottom:12px">${[['','전체'],['in','반입중'],['out','반출'],['exp','⚠ 서류 만료·임박']].map(([v,t])=>`<button class="chip ${f===v?'on':''}" data-f="${v}">${t}</button>`).join('')}</div>
+  <div class="card list ph-only">${list.length?list.map(eqItem).join(''):'<div class="empty">장비 없음</div>'}</div>
+  <div class="tbl-wrap pc-only"><table class="t"><tr><th>번호</th><th>장비명</th><th>차량번호</th><th>소속업체</th><th>운전원</th><th>연락처</th><th>반입</th><th>검사기간</th><th>보험</th><th>전담관리자</th><th>작업지휘자</th><th>신호수</th></tr>
+  ${list.length?list.map(e=>`<tr class="click" data-eid="${e.id}"><td>${h(e.no)}</td><td><b>${h(e.type)}</b></td><td>${h(e.plate)}</td><td>${h(e.company)}</td><td>${h(e.operator)}</td><td>${h(e.phone)}</td><td>${h(e.inDate)}${e.outDate?'<br><span class="muted small">반출 '+h(e.outDate)+'</span>':''}</td><td>${expCell(e.inspect)}</td><td>${expCell(e.insurance)}</td><td>${h(e.manager)}</td><td>${h(e.commander)}</td><td>${h(e.signal)}</td></tr>`).join(''):'<tr><td colspan="12" class="empty">장비 없음</td></tr>'}</table></div>`;
+  $('#eq').oninput=e=>{R.equip.q=e.target.value;clearTimeout(R.equip.t);R.equip.t=setTimeout(()=>{R.equip();const i=$('#eq');i.focus();i.setSelectionRange(i.value.length,i.value.length)},250)};
+  $$('[data-c]').forEach(b=>b.onclick=()=>{R.equip.cat=b.dataset.c;R.equip()});
+  $$('[data-f]').forEach(b=>b.onclick=()=>{R.equip.f=b.dataset.f;R.equip()});
+  $('#et').onclick=tplEquip;$('#ex').onclick=()=>exportEquip(list);$('#ea').onclick=()=>editEquip();
+  $('#ef').onchange=e=>importDialog('equipment',[...e.target.files]);bindItems();
+};
+function showEquip(id){
+  const e=E.find(x=>x.id===id);if(!e)return;
+  openModal(`${e.type||'장비'} · ${e.plate||''}`,`<dl class="kv">${Object.entries(EQUIP_LABEL).filter(([k])=>e[k]).map(([k,l])=>`<dt>${l}</dt><dd>${k==='phone'?`<a href="tel:${h(e[k])}">${h(e[k])}</a>`:k==='inspect'||k==='insurance'?expCell(e[k]):h(e[k])}</dd>`).join('')}</dl>
+   <p class="small muted">출처: ${h(e.src||'')} ${h(e.updated||e.created||'')}</p>
+   <div class="row" style="margin-top:12px">${e.operator?'<button class="btn" id="ea">🍺 운전원 음주측정</button><button class="btn" id="es" style="background:var(--l3)">⚠️ 운전원 적발</button>':''}<button class="btn line" id="ee">수정</button></div>`,b=>{
+    const p={name:e.operator,company:e.company,job:'장비운전원',equip:e.type,plate:e.plate};const w=W.find(x=>pkey(x.name,x.company)===pkey(e.operator,e.company));if(w){p.job=w.job||p.job;p.workerId=w.id;p.helmet=w.helmet}
+    const ea=$('#ea',b);if(ea)ea.onclick=()=>{closeModal();go('alcohol');alcForm(p)};
+    const es=$('#es',b);if(es)es.onclick=()=>{closeModal();go('strike',{person:p})};
+    $('#ee',b).onclick=()=>editEquip(id);
+  });
+}
+function editEquip(id){
+  const e=id?E.find(x=>x.id===id):{};
+  openModal(id?'장비 수정':'장비 추가',`<div class="grid g2">${Object.entries(EQUIP_LABEL).map(([k,l])=>`<div><label class="f">${l}</label><input class="inp" data-k="${k}" value="${h(e[k]||'')}" ${k==='company'?'list="companyList"':''}></div>`).join('')}</div>${companyDatalist()}
+   <div class="row" style="margin-top:14px"><button class="btn" id="qs" style="flex:1">저장</button>${id?'<button class="btn bad" id="qd">삭제</button>':''}</div>`,b=>{
+    $('#qs',b).onclick=async()=>{const o={...e,id:e.id||uid()};$$('[data-k]',b).forEach(i=>o[i.dataset.k]=i.value.trim());if(!o.type&&!o.plate)return toast('장비명 또는 차량번호 입력');if(!id){o.created=nowLocal();o.src='직접입력'}else o.updated=nowLocal();await save('equipment',o);closeModal();R[cur]()};
+    const qd=$('#qd',b);if(qd)qd.onclick=async()=>{if(!confirm('이 장비를 대장에서 삭제할까요?'))return;await remove('equipment',id);closeModal();R[cur]()};
+  });
+}
+
+/* --- 기록 --- */
+R.records=()=>{
+  const from=R.records.from||addDays(today(),-30),to=R.records.to||today(),ty=R.records.ty||'';
+  const vs=V.filter(v=>v.date>=from&&v.date<=to);const as=A.filter(a=>a.date>=from&&a.date<=to);
+  const items=[...(ty!=='a'?vs.map(v=>({at:v.at,html:vItem(v)})):[]),...(ty!=='v'?as.filter(a=>ty==='a'||a.judge!=='정상').map(a=>({at:a.at,html:alcItem(a)})):[])].sort((a,b)=>b.at.localeCompare(a.at));
+  V$().innerHTML=`<h1>기록 · 보고</h1>
+  <div class="card"><div class="grid g2"><div><label class="f">시작일</label><input type="date" class="inp" id="rf" value="${from}"></div><div><label class="f">종료일</label><input type="date" class="inp" id="rt" value="${to}"></div></div>
+  <div class="chips" style="margin-top:10px">${[['','전체 (음주는 이상자만)'],['v','삼진아웃'],['a','음주측정 전체']].map(([v,t])=>`<button class="chip ${ty===v?'on':''}" data-ty="${v}">${t}</button>`).join('')}</div>
+  <div class="row" style="margin-top:12px"><button class="btn" id="rx">📊 기간 엑셀 저장</button><button class="btn line" id="rp">🖨 확인서 일괄 출력</button></div></div>
+  <div class="card list">${items.length?items.map(i=>i.html).join(''):'<div class="empty">기간 내 기록 없음</div>'}</div>
+  <h2>백업</h2><div class="card"><div class="small muted" style="margin-bottom:10px">기록은 이 기기 브라우저에만 저장됩니다. 주기적으로 백업 파일을 저장해 두세요. (지침: 관련 기록 3년 보관)</div>
+  <div class="row"><button class="btn ghost" id="bk">💾 전체 백업 저장</button><label class="btn line">📂 백업 복원<input type="file" accept=".json" hidden id="rs"></label></div></div>`;
+  $('#rf').onchange=e=>{R.records.from=e.target.value;R.records()};$('#rt').onchange=e=>{R.records.to=e.target.value;R.records()};
+  $$('[data-ty]').forEach(b=>b.onclick=()=>{R.records.ty=b.dataset.ty;R.records()});
+  $('#rx').onclick=()=>{
+    const wb=XLSX.utils.book_new();const hd=['NO','적발일시','소속업체','성명','직종','안전모번호','위반내용','상세','장소','차수','조치사항','교육이수','점검자','위반자확인','비고'];
+    XLSX.utils.book_append_sheet(wb,sheet([[`삼진아웃제 적발 관리대장 (${from} ~ ${to})`],['현장명 :',S.site],hd,...violationRows(vs.sort((a,b)=>a.at.localeCompare(b.at)))],[5,16,16,9,10,10,22,20,14,6,40,16,16,16,16],['A1:O1']),'삼진아웃');
+    const ah=['NO','측정일시','소속/업체명','직종','성명','장비','차량번호','측정결과(%)','판정','조치사항','측정인','사후조치','확인서','비고'];
+    XLSX.utils.book_append_sheet(wb,sheet([[`음주측정 기록 (${from} ~ ${to})`],['현장명 :',S.site],ah,...as.sort((a,b)=>a.at.localeCompare(b.at)).map((a,i)=>[i+1,fmtDT(a.at),a.company,a.job,a.name+(a.retestOf?' (재측정)':''),a.equip,a.plate,a.refused?'거부':a.value.toFixed(3),a.judge,a.action,a.measurer,a.follow||'',a.notice?'작성':'',a.void?'무효: '+a.void.reason:''])],[5,16,16,10,12,14,12,10,9,22,10,24,7,14],['A1:N1']),'음주측정');
+    download(wb,`안전관리기록_${from}_${to}.xlsx`)};
+  $('#rp').onclick=()=>{const pages=[...vs.filter(v=>!v.void).map(docViolation),...as.filter(a=>a.notice&&!a.void).map(docAlcohol)];if(!pages.length)return toast('출력할 확인서 없음');printPages(pages)};
+  $('#bk').onclick=()=>{const blob=new Blob([JSON.stringify({app:'fieldsafety',v:1,at:nowLocal(),settings:S,workers:W,equipment:E,violations:V,alcohol:A,vuln:VU})],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`현장ON_백업_${today()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};
+  $('#rs').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const d=JSON.parse(await f.text());if(d.app!=='fieldsafety')throw 0;
+    if(!confirm(`백업(${d.at})을 복원합니다.\n같은 ID 기록은 덮어쓰고, 없는 기록은 추가합니다. 계속할까요?`))return;
+    for(const s of ['workers','equipment','violations','alcohol','vuln'])await DB.putMany(s,d[s]||[]);if(d.settings){S=Object.assign(S,d.settings);await saveSettings()}await loadAll();toast('복원 완료');R.records()}catch(x){toast('백업 파일이 아닙니다')}};
+  bindItems();
+};
+
+/* --- 설정 --- */
+R.settings=()=>{
+  V$().innerHTML=`<h1>설정</h1>
+  <div class="card"><label class="f">현장명</label><input class="inp" id="sS" value="${h(S.site)}" placeholder="예) OO지구 공동주택 신축공사">
+  <div class="grid g2"><div><label class="f">기본 점검자/측정인 소속</label><input class="inp" id="sO" value="${h(S.inspectorOrg)}" placeholder="예) 안전팀"></div><div><label class="f">기본 점검자/측정인 성명</label><input class="inp" id="sI" value="${h(S.inspector)}"></div></div></div>
+  <div class="card"><b>삼진아웃 기준</b>
+   <label class="f">누적 기간</label><select class="inp" id="sP">${[[0,'공사 기간 전체 누적'],[3,'최근 3개월'],[6,'최근 6개월'],[12,'최근 12개월']].map(([v,t])=>`<option value="${v}" ${S.periodMonths==v?'selected':''}>${t}</option>`).join('')}</select>
+   ${S.levels.map((l,i)=>`<div style="border-left:6px solid var(--l${i+1});padding-left:10px;margin-top:12px"><div class="grid g2"><div><label class="f">${i+1}차 명칭</label><input class="inp" data-ln="${i}" value="${h(l.name)}"></div><div><label class="f">스티커 색</label><input class="inp" data-ls="${i}" value="${h(l.sticker)}"></div></div><label class="f">조치사항 (줄바꿈 구분)</label><textarea class="inp" data-la="${i}">${h(l.act)}</textarea></div>`).join('')}
+   <label class="f">위반 유형 (한 줄에 하나)</label><textarea class="inp" id="sV" style="min-height:180px">${h(S.vtypes.join('\n'))}</textarea></div>
+  <div class="card"><b>음주측정 판정 기준</b>
+   <label class="f">적용 기준</label><select class="inp" id="sAm"><option value="site" ${S.alcMode==='site'?'selected':''}>현장 기준 (오전 중지 / 당일 중지·심의 / 2회 영구퇴출)</option><option value="policy" ${S.alcMode==='policy'?'selected':''}>회사 음주관리 지침 5.3 (재측정 / 작업금지)</option></select>
+   <div class="grid g2"><div><label class="f">[현장] 적발 기준 (% 이상)</label><input class="inp" id="sDt" inputmode="decimal" value="${f3(S.alc.detect)}"></div><div><label class="f">[현장] 당일 작업중지 기준 (% 이상)</label><input class="inp" id="sDy" inputmode="decimal" value="${f3(S.alc.day)}"></div><div><label class="f">[현장] 영구퇴출 적발 횟수</label><input class="inp" id="sOc" inputmode="numeric" value="${S.alc.outCount}"></div></div>
+   <div class="grid g2"><div><label class="f">[지침] 재측정 기준 (% 이상)</label><input class="inp" id="sR" inputmode="decimal" value="${S.alc.retest.toFixed(3)}"></div><div><label class="f">[지침] 작업금지·귀가 기준 (% 이상)</label><input class="inp" id="sT" inputmode="decimal" value="${S.alc.stop.toFixed(3)}"></div></div>
+   <div class="small muted" style="margin-top:6px">[지침] 재측정에서 다시 재측정 기준 이상이면 음주상태로 판정(작업금지). 측정거부는 출입통제·작업배제.</div>
+   <label class="f">적발 알림 문구 — {업체} {일시} {성명} {직종} {수치} {조치} {기준} 자동 치환</label><textarea class="inp" id="sMsg" style="min-height:220px">${h(S.alcMsg)}</textarea></div>
+  <div class="card"><b>취약근로자 기준</b>
+   <div class="grid g2"><div><label class="f">고령 분류 연령 (세 이상)</label><input class="inp" id="sVa" inputmode="numeric" value="${S.vulnAge}"></div><div></div>
+   <div><label class="f">혈압 주의 (수축기/이완기 이상)</label><input class="inp" id="sBw" value="${S.bp.warn.join('/')}"></div><div><label class="f">혈압 위험 (수축기/이완기 이상)</label><input class="inp" id="sBs" value="${S.bp.stop.join('/')}"></div></div></div>
+  <div class="card"><b>잠금</b><label class="f">PIN (숫자 4~6자리, 비우면 잠금 없음)</label><input class="inp" id="sN" inputmode="numeric" maxlength="6" value="${h(S.pin)}">
+   <div class="small muted" style="margin-top:6px">지침 10.3: 기록 열람은 현장소장 및 안전관리책임자로 제한.</div></div>
+  <button class="btn xl" id="sSave">설정 저장</button>
+  <h2>데이터</h2><div class="card"><div class="small muted">근로자 ${W.length} · 장비 ${E.length} · 삼진아웃 ${V.length} · 음주측정 ${A.length}</div>
+  <div class="row" style="margin-top:10px"><button class="btn line" id="dW">근로자 대장 비우기</button><button class="btn line" id="dE">장비 대장 비우기</button></div></div>
+  <p class="small muted">앱 설치: 크롬/사파리 메뉴 → "홈 화면에 추가". 인터넷 없이도 동작합니다.</p>`;
+  $('#sSave').onclick=async()=>{
+    const r=parseFloat($('#sR').value),t=parseFloat($('#sT').value),dt=parseFloat($('#sDt').value),dy=parseFloat($('#sDy').value),oc=parseInt($('#sOc').value);if(!(r>0&&t>r&&dt>0&&dy>dt&&oc>=1))return toast('음주 기준값을 확인하세요');
+    const bpP=v=>{const m=String(v).match(/(\d{2,3})\s*\/\s*(\d{2,3})/);return m?[+m[1],+m[2]]:null};const bw=bpP($('#sBw').value),bs=bpP($('#sBs').value),va=parseInt($('#sVa').value);
+    if(!bw||!bs||!(va>0))return toast('취약근로자 기준값을 확인하세요 (예: 140/90)');S.bp={warn:bw,stop:bs};S.vulnAge=va;
+    const pin=$('#sN').value.trim();if(pin&&!/^\d{4,6}$/.test(pin))return toast('PIN은 숫자 4~6자리');
+    Object.assign(S,{site:$('#sS').value.trim(),inspectorOrg:$('#sO').value.trim(),inspector:$('#sI').value.trim(),periodMonths:+$('#sP').value,pin,alc:{retest:r,stop:t,detect:dt,day:dy,outCount:oc},alcMode:$('#sAm').value,alcMsg:$('#sMsg').value,
+      vtypes:$('#sV').value.split('\n').map(s=>s.trim()).filter(Boolean),
+      levels:S.levels.map((l,i)=>({name:$(`[data-ln="${i}"]`).value.trim()||l.name,sticker:$(`[data-ls="${i}"]`).value.trim(),act:$(`[data-la="${i}"]`).value.trim()}))});
+    await saveSettings();$('#siteName').textContent=S.site;toast('저장됨')};
+  $('#dW').onclick=async()=>{if(!confirm('근로자 대장을 모두 지웁니다. (적발·측정 기록은 유지) 계속할까요?'))return;await DB.putMany('workers',[],true);W=[];R.settings()};
+  $('#dE').onclick=async()=>{if(!confirm('장비 대장을 모두 지웁니다. 계속할까요?'))return;await DB.putMany('equipment',[],true);E=[];R.settings()};
+};
+
+/* ---------- 취약근로자 ---------- */
+const VULN_FIELDS={no:['순번','번호'],name:['성명','이름'],company:['업체명','협력사명','소속업체','업체'],job:['공종명','공종','직종'],age:['연령','나이'],exam:['검진명','검진종류','유해인자'],grade:['건강구분1','건강구분'],finding:['검진소견1','검진소견'],follow1:['사후관리소견1','사후관리소견'],follow2:['사후관리소견2'],note:['비고']};
+const compNorm=c=>norm(String(c||'').replace(/\((유|주)\)|㈜|주식회사|유한회사/g,''));
+const vKey=p=>norm(p.name)+'|'+compNorm(p.company)+'|'+norm(p.job);
+function vulnOf(name,company){const n=norm(name),c=compNorm(company);if(!n)return null;return VU.find(p=>!p.retired&&norm(p.name)===n&&(!c||!compNorm(p.company)||compNorm(p.company)===c))||null}
+function vulnTags(p){const all=[...(p.items||[]).map(i=>[i.exam,i.finding,i.follow1,i.follow2,i.note].join(' ')),p.note||''].join(' ');const t=[];
+  if(/혈압/.test(all))t.push('고혈압');if(/당뇨/.test(all))t.push('당뇨');if(/소음|난청/.test(all))t.push('소음성난청');if(/분진/.test(all))t.push('분진');
+  if(+String(p.age).replace(/\D/g,'')>=S.vulnAge)t.push('고령');if((p.items||[]).some(i=>/^D/i.test(i.grade)))t.push('유소견(D)');
+  if(/특검/.test(all))t.push('특검대상');if(/상담|진료|병원|치료/.test(all))t.push('상담·진료필요');return t}
+const tagCls=t=>t==='유소견(D)'||t==='상담·진료필요'||t==='고혈압'?'bbad':'bwarn';
+function vulnBadge(name,company){const p=vulnOf(name,company);return p?`<div class="badge bbad wrap" style="margin-top:6px">❤ 취약근로자 · ${vulnTags(p).join(' · ')||'관리대상'}</div>`:''}
+function bpJudge(sy,di){if(!sy||!di)return '';if(sy>=S.bp.stop[0]||di>=S.bp.stop[1])return '위험';if(sy>=S.bp.warn[0]||di>=S.bp.warn[1])return '주의';return '정상'}
+const bpCls=j=>({'정상':'bok','주의':'bwarn','위험':'bbad'}[j]||'bgray');
+const isGenExam=i=>!i.exam||/^일반|혈압|당뇨|혈액|간기능/.test(i.exam);
+const FIT=['가 (현재 조건에서 작업 가능)','나 (일정 조건하 작업 가능)','다 (한시적 작업 불가)','라 (영구적 작업 불가)'];
+const CVD=['저위험','중등도위험','고위험','최고위험'];
+
+async function importVuln(files,replace){
+  let added=0,updated=0;const msgs=[];const cur=replace?[]:[...VU];const idx=new Map(cur.map(p=>[vKey(p),p]));const seen=new Set();
+  for(const f of files){
+    let wb;try{wb=await readFile(f)}catch(e){msgs.push(`${f.name}: 읽기 실패`);continue}let found=0;
+    for(const sn of wb.SheetNames){
+      const ws=wb.Sheets[sn];trimRef(ws);const rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:false,defval:'',blankrows:true});
+      let hr=-1,map=null;for(let r=0;r<Math.min(rows.length,15);r++){const m=buildMap(rows[r],null,VULN_FIELDS);if(m.name!=null&&(m.exam!=null||m.finding!=null)){hr=r;map=m;break}}
+      if(hr<0)continue;found++;let curP=null,skip=false,n=0;
+      const g=(row,k)=>map[k]==null?'':String(row[map[k]]??'').replace(/\s*\n\s*/g,'').trim();
+      for(let r=hr+1;r<rows.length;r++){const row=rows[r];const name=g(row,'name'),no=g(row,'no');
+        if(name){
+          if(/예시/.test(no)||/예시/.test(name)){skip=true;curP=null;continue}skip=false;
+          const o={name,company:g(row,'company'),job:g(row,'job'),age:g(row,'age').replace(/\D/g,'')};const k=vKey(o);const ex=idx.get(k);
+          if(ex){if(!seen.has(ex.id)){ex.items=[];updated++}Object.assign(ex,{company:o.company||ex.company,age:o.age||ex.age,src:f.name,updated:nowLocal()});curP=ex}
+          else{curP={id:uid(),...o,items:[],consults:[],bp:[],src:f.name,created:nowLocal()};cur.push(curP);idx.set(k,curP);added++}
+          seen.add(curP.id);n++;
+        }else if(skip||!curP)continue;
+        const it={exam:g(row,'exam'),grade:g(row,'grade'),finding:g(row,'finding'),follow1:g(row,'follow1'),follow2:g(row,'follow2'),note:g(row,'note')};
+        if(Object.values(it).some(Boolean))curP.items.push(it);
+      }
+      msgs.push(`${f.name} [${sn}] ${n}명 인식`);
+    }
+    if(!found)msgs.push(`${f.name}: 머리글(성명/검진명) 행을 찾지 못함`);
+  }
+  cur.forEach(p=>{p.retired=!!p.retiredManual||(p.items||[]).some(i=>/퇴사/.test(i.note))});
+  await DB.putMany('vuln',cur,replace);VU=cur;return {added,updated,skipped:0,msgs};
+}
+function tplVuln(){
+  const wb=XLSX.utils.book_new();const hd=['순번','성명','업체명','공종명','연령','검진명','건강구분1','검진소견1','사후관리소견1','사후관리소견2','비고'];
+  const aoa=[['취약근로자 명단'],hd,['예시','김성수','태경','굴삭기','51','소음','A','정상','필요없음','특검','퇴사'],['','','','굴삭기','','광물성분진','A','정상','필요없음']];for(let i=1;i<=100;i++)aoa.push([i]);
+  XLSX.utils.book_append_sheet(wb,sheet(aoa,[6,10,16,14,6,14,10,18,36,14,30],['A1:K1']),'목록');
+  XLSX.utils.book_append_sheet(wb,sheet([['작성 안내'],['· 2행 머리글은 지우거나 바꾸지 마세요.'],['· 한 사람의 검진 항목이 여러 개면 아랫줄에 성명 없이 검진명부터 이어 적으면 같은 사람으로 묶입니다.'],['· 비고에 "퇴사"라고 적으면 퇴사자로 분류됩니다.'],['· 업체별로 시트를 나눠도 모두 읽습니다.']],[90]),'작성안내');
+  download(wb,'취약근로자 명단 양식.xlsx');
+}
+function exportVuln(list){
+  const hd=['순번','성명','업체명','공종명','연령','검진명','건강구분1','검진소견1','사후관리소견1','사후관리소견2','비고','분류','최근 사후상담','최근 혈압','상태'];const aoa=[['취약근로자 명단'],hd];const mg=['A1:O1'];
+  list.forEach((p,i)=>{const its=p.items&&p.items.length?p.items:[{}];const c=(p.consults||[]).slice(-1)[0],b=(p.bp||[]).slice(-1)[0];
+    its.forEach((it,j)=>aoa.push(j?['','','',p.job,'',it.exam,it.grade,it.finding,it.follow1,it.follow2,it.note]:[i+1,p.name,p.company,p.job,p.age,it.exam,it.grade,it.finding,it.follow1,it.follow2,it.note,vulnTags(p).join(', '),c?c.date:'미실시',b?`${b.sys}/${b.dia} ${b.judge}`:'',p.retired?'퇴사':'']))});
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,sheet(aoa,[6,10,16,14,6,14,10,18,36,14,30,24,12,14,6],mg),'취약근로자');download(wb,`취약근로자 명단_${today()}.xlsx`);
+}
+function vulnItem(p,tags){tags=tags||vulnTags(p);const c=(p.consults||[]).slice(-1)[0],b=(p.bp||[]).slice(-1)[0];
+  return `<div class="it" data-uid="${p.id}"><span class="dot" style="background:#d8432c">❤</span><div class="m"><b>${h(p.name)}</b> <span class="muted">${h(p.company)} · ${h(p.job)}${p.age?' · '+h(p.age)+'세':''}</span>${p.retired?' <span class="badge bgray">퇴사</span>':''}
+   <div class="chips" style="gap:4px;margin:4px 0">${tags.map(t=>`<span class="badge ${tagCls(t)}">${t}</span>`).join('')}</div>
+   <div class="small muted ell">${c?`사후상담 ${c.date}`:'<b style="color:var(--bad)">사후상담 미실시</b>'}${b?` · 혈압 ${b.sys}/${b.dia} <span class="badge ${bpCls(b.judge)}">${b.judge}</span> ${fmtDT(b.at).slice(5)}`:''}</div></div></div>`}
+R.vuln=()=>{
+  const q=R.vuln.q||'',tag=R.vuln.tag||'',ret=!!R.vuln.ret;
+  const base=VU.filter(p=>ret||!p.retired);const T=new Map(base.map(p=>[p.id,vulnTags(p)]));
+  const tags=['고혈압','소음성난청','고령','유소견(D)','특검대상','상담·진료필요','당뇨','분진'].filter(t=>base.some(p=>T.get(p.id).includes(t)));
+  const noC=base.filter(p=>!(p.consults||[]).length);
+  const list=(tag==='미상담'?noC:base.filter(p=>!tag||T.get(p.id).includes(tag))).filter(p=>!q||norm([p.name,p.company,p.job,...(p.items||[]).map(i=>i.exam+i.finding+i.follow1)].join(' ')).includes(norm(q)))
+    .sort((a,b)=>(a.company||'').localeCompare(b.company||'')||a.name.localeCompare(b.name));
+  V$().innerHTML=`<h1>취약근로자 <span class="badge">${base.length}명</span></h1>
+  <div class="card"><div class="row"><label class="btn">📥 엑셀 불러오기<input type="file" accept=".xls,.xlsx" multiple hidden id="uf"></label><button class="btn ghost" id="ut">양식 다운로드</button><button class="btn ghost" id="ua">＋ 직접 추가</button><button class="btn line" id="ux">엑셀 저장</button></div>
+  <div class="small muted" style="margin-top:8px">"유소견자 사후관리 명단" 엑셀을 그대로 올리면 됩니다. 업체별 시트가 여러 개여도 모두 읽고, 성명 없는 아랫줄은 같은 사람의 검진 항목으로 묶습니다.</div></div>
+  <input class="inp big" id="uq" type="search" placeholder="성명 · 업체 · 공종 · 소견" value="${h(q)}" style="margin-bottom:10px">
+  <div class="chips scroll" style="margin-bottom:12px"><button class="chip ${!tag?'on':''}" data-t="">전체 ${base.length}</button><button class="chip ${tag==='미상담'?'on':''}" data-t="미상담">사후상담 미실시 ${noC.length}</button>${tags.map(t=>`<button class="chip ${t===tag?'on':''}" data-t="${t}">${t} ${base.filter(p=>T.get(p.id).includes(t)).length}</button>`).join('')}<button class="chip ${ret?'on':''}" id="uret">퇴사자 포함</button></div>
+  <div class="card list">${list.length?list.map(p=>vulnItem(p,T.get(p.id))).join(''):'<div class="empty">해당 없음. 명단 엑셀을 불러오세요.</div>'}</div>`;
+  $('#uq').oninput=e=>{R.vuln.q=e.target.value;clearTimeout(R.vuln.t);R.vuln.t=setTimeout(()=>{R.vuln();const i=$('#uq');i.focus();i.setSelectionRange(i.value.length,i.value.length)},250)};
+  $$('[data-t]').forEach(b=>b.onclick=()=>{R.vuln.tag=b.dataset.t;R.vuln()});$('#uret').onclick=()=>{R.vuln.ret=!ret;R.vuln()};
+  $('#ut').onclick=tplVuln;$('#ux').onclick=()=>exportVuln(list);$('#ua').onclick=()=>editVuln();
+  $('#uf').onchange=e=>importDialog('vuln',[...e.target.files]);bindItems();
+};
+function showVuln(id){
+  const p=VU.find(x=>x.id===id);if(!p)return;const w=W.find(x=>norm(x.name)===norm(p.name)&&compNorm(x.company)===compNorm(p.company));const cs=(p.consults||[]).slice().reverse(),bs=(p.bp||[]).slice().reverse();
+  openModal(`❤ ${p.name} · ${p.company}`,`<div class="chips" style="gap:6px;margin-bottom:10px">${vulnTags(p).map(t=>`<span class="badge ${tagCls(t)}">${t}</span>`).join('')}${p.retired?'<span class="badge bgray">퇴사</span>':''}</div>
+   <dl class="kv"><dt>공종</dt><dd>${h(p.job)}</dd><dt>연령</dt><dd>${h(p.age)}${p.age?'세':''}</dd>${w&&w.phone?`<dt>연락처</dt><dd><a href="tel:${h(w.phone)}">${h(w.phone)}</a></dd>`:''}${p.note?`<dt>메모</dt><dd>${nl(p.note)}</dd>`:''}</dl>
+   <div class="row" style="margin:12px 0"><button class="btn" id="vc" style="background:#d8432c">📝 사후상담일지 작성</button><button class="btn" id="vb">🩺 혈압 측정</button>${cs.length?'<button class="btn line" id="vp">🖨 최근 일지 출력</button>':''}<button class="btn line" id="ve">수정</button><button class="btn line" id="vr">${p.retired?'재직 처리':'퇴사 처리'}</button></div>
+   <h2>검진 결과</h2><div class="card list ph-only">${(p.items||[]).length?p.items.map(i=>`<div class="it" style="cursor:default">${i.grade?`<span class="badge ${/^D/i.test(i.grade)?'bbad':'bwarn'}">${h(i.grade)}</span>`:''}<div class="m"><b>${h(i.exam||'-')}</b> · ${h(i.finding||'')}<div class="small muted">${h([i.follow1,i.follow2,i.note].filter(Boolean).join(' / '))}</div></div></div>`).join(''):'<div class="empty">검진 항목 없음</div>'}</div><div class="tbl-wrap pc-only"><table class="t"><tr><th>검진명</th><th>건강구분</th><th>검진소견</th><th>사후관리소견</th><th>사후관리2</th><th>비고</th></tr>
+   ${(p.items||[]).length?p.items.map(i=>`<tr><td>${h(i.exam)}</td><td>${h(i.grade)}</td><td>${h(i.finding)}</td><td style="white-space:normal;min-width:180px">${h(i.follow1)}</td><td>${h(i.follow2)}</td><td style="white-space:normal">${h(i.note)}</td></tr>`).join(''):'<tr><td colspan="6" class="empty">검진 항목 없음</td></tr>'}</table></div>
+   <h2>혈압 기록 (${bs.length})</h2><div class="card list">${bs.length?bs.slice(0,10).map(b=>`<div class="it" style="cursor:default"><span class="badge ${bpCls(b.judge)}">${b.judge}</span><div class="m"><b>${b.sys}/${b.dia}</b> mmHg${b.pulse?' · 맥박 '+h(b.pulse):''}<div class="small muted">${fmtDT(b.at)} · ${h(b.by||'')}${b.note?' · '+h(b.note):''}</div></div></div>`).join(''):'<div class="empty">없음</div>'}</div>
+   <h2>사후상담 (${cs.length})</h2><div class="card list">${cs.length?cs.map(c=>`<div class="it" data-cid="${c.id}"><span class="dot d0">📝</span><div class="m"><b>${c.date}</b> <span class="muted">상담 ${h(c.counselor||'')}</span><div class="small muted ell">${c.sys?`혈압 ${c.sys}/${c.dia} · `:''}${h(c.comment||'')}</div></div><span class="small">🖨</span></div>`).join(''):'<div class="empty">사후상담 미실시</div>'}</div>`,b=>{
+    $('#vc',b).onclick=()=>vulnConsult(p.id);$('#vb',b).onclick=()=>vulnBP(p.id);$('#ve',b).onclick=()=>editVuln(p.id);
+    const vp=$('#vp',b);if(vp)vp.onclick=()=>printPages([docVulnConsult(p,cs[0])]);
+    $('#vr',b).onclick=async()=>{p.retiredManual=!p.retired;p.retired=!p.retired;await save('vuln',p);showVuln(p.id);R[cur]()};
+    $$('[data-cid]',b).forEach(el=>el.onclick=()=>printPages([docVulnConsult(p,p.consults.find(c=>c.id===el.dataset.cid))]));
+  });
+}
+function editVuln(id){
+  const p=id?VU.find(x=>x.id===id):{items:[{}]};const its=(p.items&&p.items.length?p.items:[{}]).map(i=>({...i}));
+  const row=(i,n)=>`<div class="card" style="padding:10px;margin-bottom:8px" data-row="${n}"><div class="grid g2">${[['exam','검진명'],['grade','건강구분'],['finding','검진소견'],['follow1','사후관리소견'],['follow2','사후관리소견2'],['note','비고']].map(([k,l])=>`<div><label class="f">${l}</label><input class="inp" data-ik="${k}" value="${h(i[k]||'')}"></div>`).join('')}</div></div>`;
+  openModal(id?'취약근로자 수정':'취약근로자 추가',`<div class="grid g2">${[['name','성명 *'],['company','업체명 *'],['job','공종'],['age','연령']].map(([k,l])=>`<div><label class="f">${l}</label><input class="inp" data-k="${k}" value="${h(p[k]||'')}" ${k==='company'?'list="companyList"':''}${k==='age'?' inputmode="numeric"':''}></div>`).join('')}</div>${companyDatalist()}
+   <label class="f">메모</label><textarea class="inp" data-k="note">${h(p.note||'')}</textarea>
+   <h2>검진 항목</h2><div id="irows">${its.map(row).join('')}</div><button class="btn ghost sm" id="iadd">＋ 항목 추가</button>
+   <div class="row" style="margin-top:14px"><button class="btn" id="us" style="flex:1">저장</button>${id?'<button class="btn bad" id="ud">삭제</button>':''}</div>`,b=>{
+    $('#iadd',b).onclick=()=>$('#irows',b).insertAdjacentHTML('beforeend',row({},$$('[data-row]',b).length));
+    $('#us',b).onclick=async()=>{const o={...p,id:p.id||uid(),consults:p.consults||[],bp:p.bp||[]};$$('[data-k]',b).forEach(i=>o[i.dataset.k]=i.value.trim());
+      if(!o.name||!o.company)return toast('성명과 업체명은 필수');o.age=String(o.age).replace(/\D/g,'');
+      o.items=$$('[data-row]',b).map(r=>{const it={};$$('[data-ik]',r).forEach(i=>it[i.dataset.ik]=i.value.trim());return it}).filter(it=>Object.values(it).some(Boolean));
+      if(!id){o.created=nowLocal();o.src='직접입력'}else o.updated=nowLocal();o.retired=!!o.retiredManual||o.items.some(i=>/퇴사/.test(i.note));
+      await save('vuln',o);closeModal();R[cur]();showVuln(o.id)};
+    const ud=$('#ud',b);if(ud)ud.onclick=async()=>{if(!confirm(`${p.name} 취약근로자 기록(상담·혈압 포함)을 삭제할까요?`))return;await remove('vuln',id);closeModal();R[cur]()};
+  });
+}
+function bpFields(){return `<div class="grid g2"><div><label class="f">수축기 (mmHg)</label><input class="inp big" id="bS" inputmode="numeric" placeholder="120" style="text-align:center"></div><div><label class="f">이완기 (mmHg)</label><input class="inp big" id="bD" inputmode="numeric" placeholder="80" style="text-align:center"></div></div><div class="judge" id="bJ" style="margin-top:10px;background:var(--chip)">—</div>`}
+function bindBP(b){const f=()=>{const j=bpJudge(+$('#bS',b).value,+$('#bD',b).value);$('#bJ',b).textContent=j?`${j} (주의 ${S.bp.warn.join('/')} · 위험 ${S.bp.stop.join('/')} 이상)`:'—';$('#bJ',b).className='judge '+(j?'badge '+bpCls(j):'')};$('#bS',b).oninput=f;$('#bD',b).oninput=f}
+function vulnBP(id){
+  const p=VU.find(x=>x.id===id);
+  openModal(`🩺 혈압 측정 · ${p.name}`,`${bpFields()}<div class="grid g2"><div><label class="f">맥박</label><input class="inp" id="bP" inputmode="numeric"></div><div><label class="f">측정자</label><input class="inp" id="bBy" value="${h(S.inspector)}"></div></div>
+   <label class="f">메모</label><input class="inp" id="bN" placeholder="예) 10분 휴식 후 재측정"><button class="btn xl" id="bSv" style="margin-top:12px">저장</button>`,b=>{
+    bindBP(b);setTimeout(()=>$('#bS',b).focus(),50);
+    $('#bSv',b).onclick=async()=>{const sy=+$('#bS').value,di=+$('#bD').value;if(!(sy>50&&sy<300&&di>30&&di<200))return toast('혈압 값을 확인하세요');
+      (p.bp=p.bp||[]).push({at:nowLocal(),sys:sy,dia:di,pulse:$('#bP').value.trim(),judge:bpJudge(sy,di),by:$('#bBy').value.trim(),note:$('#bN').value.trim()});
+      await save('vuln',p);toast(`혈압 ${sy}/${di} · ${bpJudge(sy,di)}`);R[cur]();showVuln(p.id)};
+  });
+}
+function vulnConsult(id){
+  const p=VU.find(x=>x.id===id);const sel=(id,opts)=>`<select class="inp" id="${id}"><option value=""></option>${opts.map(o=>`<option>${o}</option>`).join('')}</select>`;
+  openModal(`📝 사후상담일지 · ${p.name}`,`<div class="card"><div class="grid g2"><div><label class="f">상담일</label><input class="inp" type="date" id="cDt" value="${today()}"></div><div><label class="f">상담 실시자</label><input class="inp" id="cBy" value="${h(S.inspector)}"></div>
+    <div><label class="f">일반건강검진 업무수행적합</label>${sel('cFg',FIT)}</div><div><label class="f">특수건강검진 업무수행적합</label>${sel('cFs',FIT)}</div>
+    <div><label class="f">흉부방사선 판독 결과</label><input class="inp" id="cX" placeholder="예) 정상"></div><div><label class="f">뇌심혈관질환 발병위험도 (KOSHA)</label>${sel('cCv',CVD)}</div></div></div>
+   <div class="card"><label class="f">혈압 측정 (선택)</label>${bpFields()}</div>
+   <div class="card"><label class="f">보호구 수령 확인</label><label class="row"><input type="checkbox" id="cM" style="width:22px;height:22px"> 마스크</label><label class="row"><input type="checkbox" id="cE" style="width:22px;height:22px"> 귀마개</label>
+    <label class="f">검사결과에 대해 물어보고 싶은 내용</label><textarea class="inp" id="cQ"></textarea>
+    <label class="f">보건관리자 코멘트</label><textarea class="inp" id="cC" placeholder="예) 혈압약 복용 지속, 혹서기 고열작업 시 휴식 준수">${h((p.items||[]).map(i=>i.follow1).filter(Boolean).join(' / '))}</textarea></div>
+   <div class="hint" style="margin-bottom:10px">서약: 위의 건강검진 결과에 대해 안내 받았으며, 결과에 따른 현장 조치사항에 성실히 임할 것을 서약합니다.</div>
+   <div class="grid g2"><div id="cSw"></div><div id="cSc"></div></div>
+   <button class="btn xl" id="cSv" style="margin-top:12px;background:#d8432c">저장 후 출력</button>`,b=>{
+    bindBP(b);const sw=sigPad($('#cSw',b),'서약자(근로자) 서명'),sc=sigPad($('#cSc',b),'상담 실시자 서명');
+    $('#cSv',b).onclick=async()=>{if(sw.isEmpty())return toast('근로자 서명이 필요합니다');if(sc.isEmpty())return toast('상담 실시자 서명이 필요합니다');
+      const sy=+$('#bS').value||0,di=+$('#bD').value||0;if((sy||di)&&!(sy>50&&di>30))return toast('혈압 값을 확인하세요');
+      const c={id:uid(),date:$('#cDt').value||today(),counselor:$('#cBy').value.trim(),fitGen:$('#cFg').value,fitSpe:$('#cFs').value,xray:$('#cX').value.trim(),cvd:$('#cCv').value,
+        sys:sy||'',dia:di||'',bpJudge:sy?bpJudge(sy,di):'',mask:$('#cM').checked,ear:$('#cE').checked,question:$('#cQ').value.trim(),comment:$('#cC').value.trim(),sigW:sw.data(),sigC:sc.data(),created:nowLocal()};
+      (p.consults=p.consults||[]).push(c);if(sy)(p.bp=p.bp||[]).push({at:nowLocal(),sys:sy,dia:di,judge:bpJudge(sy,di),by:c.counselor,note:'사후상담 시 측정'});
+      await save('vuln',p);toast('사후상담일지 저장됨');closeModal();R[cur]();printPages([docVulnConsult(p,c)])};
+  });
+}
+function docVulnConsult(p,c){
+  const w=W.find(x=>norm(x.name)===norm(p.name)&&compNorm(x.company)===compNorm(p.company));const y=c.date.slice(0,4);const ck=v=>v?'[ ✔ ]':'[&nbsp;&nbsp;&nbsp;&nbsp;]';
+  const tbl=(list,first)=>`<table><tr><th style="width:30mm">${first}</th><th style="width:16mm">건강구분</th><th>검진소견</th><th>사후관리소견</th></tr>${list.length?list.map(i=>`<tr><td>${h(i.exam)}</td><td style="text-align:center">${h(i.grade)}</td><td>${h(i.finding)}</td><td>${h([i.follow1,i.follow2].filter(Boolean).join(' / '))}</td></tr>`).join(''):'<tr><td colspan="4" style="text-align:center">해당 없음</td></tr>'}</table>`;
+  const its=p.items||[];
+  return `<div class="doc"><div class="site">[ ${h(S.site||'현장명')} ]</div><h1>${y}년 건강검진 결과 및 사후상담일지</h1>
+  <table><tr><th>성명</th><td>${h(p.name)}</td><th>업체명</th><td>${h(p.company)}</td></tr>
+  <tr><th>공종</th><td>${h(p.job)}</td><th>연령 / 연락처</th><td>${h(p.age)}${p.age?'세':''} / ${h(w&&w.phone||'')}</td></tr></table>
+  <div class="sec">♥ 일반건강검진 결과 귀하의 업무수행적합결과는 [ ${h(c.fitGen)||'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'} ] 입니다.</div>${tbl(its.filter(isGenExam),'검진명')}
+  <table><tr><th style="width:45mm">흉부방사선 판독 결과</th><td>${h(c.xray)}</td><th style="width:40mm">뇌심혈관질환 발병위험도</th><td>${h(c.cvd)}</td></tr></table>
+  <div class="sec">♥ 특수건강검진 결과 귀하의 업무수행적합결과는 [ ${h(c.fitSpe)||'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'} ] 입니다.</div>${tbl(its.filter(i=>!isGenExam(i)),'유해인자')}
+  <div class="sec">♥ 서약</div>
+  <div class="note">위의 건강검진 결과에 대해 안내 받았으며, 결과에 따른 현장 조치사항에 성실히 임할 것을 서약합니다.<br>* 보호구 수령 확인 : ${ck(c.mask)} 마스크 &nbsp;&nbsp; ${ck(c.ear)} 귀마개</div>
+  <table><tr><th>서약자</th><td>${h(p.company)} &nbsp; ${h(p.name)}</td><td style="width:65mm;text-align:center">${c.sigW?`<img class="sigimg" src="${c.sigW}">`:'(서명)'}</td></tr></table>
+  <div class="sec">♥ 검사결과에 대해 의료인 혹은 보건관리자에게 물어보고 싶은 내용</div><div class="note" style="min-height:12mm">${nl(c.question)}</div>
+  <div class="sec">♥ 혈압측정 결과</div><div class="note">${c.sys?`${c.sys} / ${c.dia} mmHg (${h(c.bpJudge)})`:'해당없음'}</div>
+  <div class="sec">♥ 보건관리자 코멘트</div><div class="note" style="min-height:14mm">${nl(c.comment)}</div>
+  <table><tr><th>상담 실시자</th><td>${h(S.inspectorOrg||'')} &nbsp; ${h(c.counselor)} &nbsp;·&nbsp; ${c.date}</td><td style="width:65mm;text-align:center">${c.sigC?`<img class="sigimg" src="${c.sigC}">`:'(서명)'}</td></tr></table></div>`;
+}
+
+/* ---------- boot ---------- */
+async function loadAll(){[W,E,V,A,VU]=await Promise.all(['workers','equipment','violations','alcohol','vuln'].map(s=>DB.all(s)))}
+function lockScreen(){return new Promise(res=>{if(!S.pin)return res();const d=document.createElement('div');d.className='lock';d.innerHTML=`<img src="icon.svg" alt="" style="width:84px;height:84px;border-radius:20px;box-shadow:0 0 0 3px rgba(255,255,255,.25)"><div style="font-size:28px;font-weight:900">현장ON</div><div style="opacity:.8;font-size:14px;margin-top:-6px">습관이 된 노력을 실력이라 한다.</div><div style="margin-top:10px">PIN 입력</div><input class="inp" type="password" inputmode="numeric" maxlength="6" autofocus>`;document.body.appendChild(d);const i=$('input',d);i.focus();i.oninput=()=>{if(i.value===S.pin){d.remove();res()}else if(i.value.length>=S.pin.length){i.value='';i.style.outline='3px solid #f66'}}})}
+function net(){$('#netBadge').textContent=navigator.onLine?'온라인':'오프라인 · 기기 저장'}
+(async()=>{
+  try{await DB.open()}catch(e){V$().innerHTML='<div class="card">이 브라우저에서 저장소를 열 수 없습니다. 시크릿 모드가 아닌 일반 창에서 열어주세요.</div>';return}
+  await loadSettings();await loadAll();await lockScreen();
+  $('#siteName').textContent=S.site;renderNav();net();addEventListener('online',net);addEventListener('offline',net);
+  let v='home';try{v=sessionStorage.getItem('v')||'home'}catch(e){}go(R[v]?v:'home');
+  if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});
+  if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(()=>{});
+})();
+</script>
+</body>
+</html>
