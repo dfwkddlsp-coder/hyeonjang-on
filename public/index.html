@@ -152,7 +152,13 @@ table.t tr.click:hover td{background:#f8fafc}
 .i-bp{--m:url("data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M4%2015a8%208%200%201%201%2016%200%22%2F%3E%3Cpath%20d%3D%22M12%2015l4-4.5%22%2F%3E%3Ccircle%20cx%3D%2212%22%20cy%3D%2215%22%20r%3D%221.4%22%2F%3E%3Cpath%20d%3D%22M4%2019h16%22%2F%3E%3C%2Fsvg%3E")}
 .i-check{--m:url("data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M5%2012.5l4.5%204.5L19%207.5%22%2F%3E%3C%2Fsvg%3E")}
 .i-x{--m:url("data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M6%206l12%2012%22%2F%3E%3Cpath%20d%3D%22M18%206L6%2018%22%2F%3E%3C%2Fsvg%3E")}
+.i-reg{--m:url("data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M4%206.5A2.5%202.5%200%200%201%206.5%204H20v14H6.5A2.5%202.5%200%200%200%204%2020.5z%22%2F%3E%3Cpath%20d%3D%22M4%2020.5V6.5%22%2F%3E%3Cpath%20d%3D%22M9%208.5h7%22%2F%3E%3Cpath%20d%3D%22M9%2012h5%22%2F%3E%3C%2Fsvg%3E")}
 .x .i{width:20px;height:20px}
+/* 화면 안 하위 탭 */
+.seg{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:-2px 0 14px;padding:4px;background:var(--chip);border-radius:14px}
+.seg::-webkit-scrollbar{display:none}
+.seg button{flex:1 0 auto;border:0;background:none;border-radius:10px;padding:9px 12px;font-weight:600;color:var(--sub);cursor:pointer;white-space:nowrap}
+.seg button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.08)}
 .dot .i{width:20px;height:20px}
 
 /* --- smartphone --- */
@@ -631,10 +637,14 @@ function docAlcoholList(ds){
 }
 
 /* ---------- views ---------- */
-const APP_VER='2026.10.09-1';
-const VIEWS=[['home','홈'],['strike','삼진아웃'],['alcohol','음주측정'],['vuln','취약근로자'],['workers','근로자'],['equip','장비'],['records','기록'],['settings','설정']];
+const APP_VER='2026.10.09-2';
+const VIEWS=[['home','홈'],['strike','삼진아웃'],['alcohol','음주측정'],['reg','관리대장'],['settings','설정']];
+/* 하위 화면 → 하단 탭 묶음 */
+const NAVOF={workers:'reg',equip:'reg',vuln:'reg',records:'settings'};
+const REG_TABS=[['workers','근로자'],['equip','장비'],['vuln','취약근로자']];
+let lastReg='workers';
 let cur='home';
-function go(v,arg){cur=v;document.body.classList.toggle('is-home',v==='home');$$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));window.scrollTo(0,0);R[v](arg);try{sessionStorage.setItem('v',v)}catch(e){}}
+function go(v,arg){if(v==='reg')v=lastReg;if(NAVOF[v]==='reg')lastReg=v;cur=v;document.body.classList.toggle('is-home',v==='home');$$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===(NAVOF[v]||v)));window.scrollTo(0,0);R[v](arg);try{sessionStorage.setItem('v',v)}catch(e){}}
 function renderNav(){$('#nav').innerHTML=VIEWS.map(([v,t])=>`<button data-v="${v}"><span class="ni"><i class="i i-${v}"></i></span>${t}</button>`).join('');$$('#nav button').forEach(b=>b.onclick=()=>go(b.dataset.v))}
 const R={};
 const V$=()=>$('#view');
@@ -651,7 +661,7 @@ R.home=()=>{
   const tile=(n,view,nm,en,side,stat,ml,dark,wide)=>`<button class="tile${dark?' dark':''}${wide?' wide':''}" data-go="${view}"><span class="tic"><i class="i i-${view}"></i></span>
     <div><div class="nm">${nm}</div><div class="en">${en}</div></div>
     <div class="meta">${stat===null?'':`<span class="dotr${stat?'':' zero'}">${stat}</span>`}<div class="ml">${ml}</div></div></button>`;
-  V$().innerHTML=`<div class="hm-head"><div><div class="hm-kicker">${ds} · 현장 안전관리 · field safety board</div><h1 class="hm-title"><img class="hm-logo" src="icon.svg" alt="">현장ON.</h1><p class="hm-motto">습관이 된 노력을 실력이라 한다.</p></div>
+  V$().innerHTML=`<div class="hm-head"><div><div class="hm-kicker">${ds} · 현장 안전관리 · field safety board</div><h1 class="hm-title">현장ON.</h1><p class="hm-motto">습관이 된 노력을 실력이라 한다.</p></div>
    <div class="hm-site"><b>${h(S.site||'현장명 미설정')}</b><br>${h([S.inspectorOrg,S.inspector].filter(Boolean).join(' ')||'점검자 미설정')}</div></div>
   ${!S.site||!S.inspector?`<div class="hint" style="margin-bottom:16px"><a href="#" id="toSet">설정</a>에서 ${!S.inspector?'<b>내 정보</b>(이름·서명)':''}${!S.site&&!S.inspector?'와 ':''}${!S.site?'현장명':''}을 등록하세요. 점검자 이름·서명이 자동으로 들어갑니다.</div>`:''}
   <div class="hm-grid">
@@ -668,7 +678,7 @@ R.home=()=>{
   ${eduPend.length?`<div class="hm-sec"><h2>교육 미이수</h2><span>2nd strike</span></div><div class="card list">${eduPend.map(vItem).join('')}</div>`:''}
   ${expE.length?`<div class="hm-sec"><h2>장비 서류</h2><span>expiring</span></div><div class="card list">${expE.slice(0,10).map(eqItem).join('')}</div>`:''}
   <div class="hm-sec"><h2>today.</h2><span>오늘 삼진아웃 적발</span></div><div class="card list">${vt.length?vt.sort((a,b)=>b.at.localeCompare(a.at)).map(vItem).join(''):'<div class="empty">오늘 적발 기록 없음</div>'}</div>`;
-  $$('[data-go]').forEach(b=>b.onclick=()=>go(b.dataset.go));const ts=$('#toSet');if(ts)ts.onclick=e=>{e.preventDefault();go('settings')};
+  $$('[data-go]').forEach(b=>b.onclick=()=>go(b.dataset.go));const ts=$('#toSet');if(ts)ts.onclick=e=>{e.preventDefault();go('settings',!S.inspector?'me':'site')};
   bindItems();
 };
 function vItem(v){return `<div class="it" data-vid="${v.id}">${lvDot(v.level)}<div class="m"><b>${h(v.name)}</b> <span class="muted">${h(v.company)}</span>${v.void?' <span class="badge bgray">무효</span>':''}${v.level===2?(v.edu&&v.edu.done?' <span class="badge bok">교육이수</span>':' <span class="badge bwarn">교육 미이수</span>'):''}${v.level===3?' <span class="badge b3">퇴출</span>':''}<div class="small muted ell">${fmtDT(v.at)} · ${h(v.type)}${v.place?' · '+h(v.place):''}</div></div></div>`}
@@ -1004,13 +1014,17 @@ R.records=()=>{
 R.settings=()=>{
   const adm=isAdmin();
   V$().innerHTML=`<h1>설정</h1>
+  <section class="st" data-st="me">
   ${SERVER?`<div class="card"><div class="row"><div class="grow"><b>${h(ME.name)}</b> <span class="muted small">${h(ME.loginId)}</span> ${ME.role==='admin'?'<span class="badge">운영자</span>':'<span class="badge bgray">사용자</span>'}</div><button class="btn sm line" id="pwBtn">비밀번호 변경</button><button class="btn sm line" id="outBtn">로그아웃</button></div></div>`:''}
+  </section><section class="st" data-st="users">
   ${SERVER&&adm?`<div class="card"><div class="row"><b class="grow">사용자 관리</b><button class="btn sm" id="uAdd"><i class="i i-plus"></i> 사용자 등록</button></div><div class="small muted" style="margin-top:4px">등록한 사람만 로그인할 수 있습니다. 첫 로그인 때 비밀번호를 직접 바꾸게 됩니다.</div><div class="list" id="usersBox" style="margin-top:6px"><div class="empty">불러오는 중…</div></div></div>`:''}
+  </section><section class="st" data-st="me">
   <div class="card" id="myCard"><b>내 정보</b> <span class="small muted">— 등록하면 점검자·측정인·상담자 이름과 서명이 자동으로 들어갑니다</span>
    <div class="grid g2"><div><label class="f">소속</label><input class="inp" id="sO" value="${h(S.inspectorOrg)}" placeholder="예) OO건설 안전팀"></div><div><label class="f">성명</label><input class="inp" id="sI" value="${h(S.inspector)}" placeholder="이름"></div>
    <div><label class="f">직책</label><input class="inp" id="sRole" value="${h(S.myRole||'')}" placeholder="예) 안전관리자"></div><div></div></div>
    <label class="f">내 서명</label><div id="mySigBox"></div>
    <button class="btn" id="mySave" style="width:100%;margin-top:12px">내 정보 저장</button></div>
+  </section><section class="st" data-st="site">
   ${adm?'':'<div class="hint" style="margin-bottom:12px">현장명·삼진아웃·음주 기준은 운영자가 관리합니다.</div><div hidden>'}
   <div class="card"><label class="f">현장명</label><input class="inp" id="sS" value="${h(S.site)}" placeholder="현장명을 직접 입력하세요"></div>
   <div class="card"><b>삼진아웃 기준</b>
@@ -1027,13 +1041,17 @@ R.settings=()=>{
    <div class="grid g2"><div><label class="f">고령 분류 연령 (세 이상)</label><input class="inp" id="sVa" inputmode="numeric" value="${S.vulnAge}"></div><div></div>
    <div><label class="f">혈압 주의 (수축기/이완기 이상)</label><input class="inp" id="sBw" value="${S.bp.warn.join('/')}"></div><div><label class="f">혈압 위험 (수축기/이완기 이상)</label><input class="inp" id="sBs" value="${S.bp.stop.join('/')}"></div></div></div>
   ${adm?'':'</div>'}
+  </section><section class="st" data-st="me">
   <div class="card"><b>갤러리 사진 사용</b><div class="row" style="margin-top:8px"><span class="grow small">${S.galleryConsent?`동의함 (${fmtDT(S.galleryConsent.at)})`:'동의 안 함 — 갤러리에서 선택할 때 동의를 묻습니다'}</span>${S.galleryConsent?'<button class="btn sm line" id="gcOff">동의 철회</button>':''}</div></div>
   <div class="card"><b>잠금</b><label class="f">PIN (숫자 4~6자리, 비우면 잠금 없음)</label><input class="inp" id="sN" inputmode="numeric" maxlength="6" value="${h(S.pin)}">
    <div class="small muted" style="margin-top:6px">지침 10.3: 기록 열람은 현장소장 및 안전관리책임자로 제한.</div></div>
-  <button class="btn xl" id="sSave">${adm?'설정 저장':'저장'}</button>
-  <h2>데이터</h2><div class="card"><div class="small muted">근로자 ${W.length} · 장비 ${E.length} · 삼진아웃 ${V.length} · 음주측정 ${A.length} · 취약근로자 ${VU.length}</div>
+  </section><section class="st" data-st="me site">
+  <button class="btn xl" id="sSave">저장</button>
+  </section><section class="st" data-st="data">
+  <div class="card"><b>데이터</b><div style="height:6px"></div><div class="small muted">근로자 ${W.length} · 장비 ${E.length} · 삼진아웃 ${V.length} · 음주측정 ${A.length} · 취약근로자 ${VU.length}</div>
   ${adm?'<div class="row" style="margin-top:10px"><button class="btn line" id="dW">근로자 대장 비우기</button><button class="btn line" id="dE">장비 대장 비우기</button></div>':''}${SERVER?'<button class="btn sm line" id="syncNow" style="margin-top:10px">지금 동기화</button>':''}</div>
-  <p class="small muted">앱 설치: 크롬/사파리 메뉴 → "홈 화면에 추가". 인터넷 없이도 동작합니다.<br>버전 ${APP_VER} · 인터넷에 연결되어 있으면 새 버전을 자동으로 받습니다.</p>`;
+  <div class="card small muted">앱 설치: 크롬/사파리 메뉴 → "홈 화면에 추가". 인터넷 없이도 동작합니다.<br>버전 ${APP_VER} · 인터넷에 연결되어 있으면 새 버전을 자동으로 받습니다.</div>
+  </section>`;
   /* 내 서명: 저장된 서명이 있으면 보여주고, 다시 그리면 교체 */
   const drawMine=()=>{$('#mySigBox').innerHTML=S.mySig?`<div class="sig" style="padding:8px;text-align:center;background:#fff"><img src="${S.mySig}" style="max-width:100%;height:110px;object-fit:contain"></div><div class="row" style="margin-top:8px"><button class="btn sm line" id="myRe">다시 등록</button><button class="btn sm line" id="myDel">서명 삭제</button></div>`:'<div id="myPad"></div>';
     if(!S.mySig)window._myPad=sigPad($('#myPad'),'여기에 서명');else{window._myPad=null;$('#myRe').onclick=()=>{S._reSig=true;$('#mySigBox').innerHTML='<div id="myPad"></div>';window._myPad=sigPad($('#myPad'),'여기에 새 서명')};$('#myDel').onclick=async()=>{if(!confirm('저장된 내 서명을 삭제할까요?'))return;if(SERVER){try{const r=await api('me',{sig:''});await kvSet('me',r.user);applyMe(r.user)}catch(x){return toast(x.message)}}S.mySig='';await saveSettings();drawMine()}}};
@@ -1046,7 +1064,8 @@ R.settings=()=>{
   $('#mySave').onclick=async()=>{if(await saveMine()){toast(S.mySig?'내 정보·서명 저장됨':'내 정보 저장됨 (서명은 아직 없음)');drawMine()}};
   const gco=$('#gcOff');if(gco)gco.onclick=async()=>{S.galleryConsent=null;await saveSettings();toast('갤러리 사용 동의 철회됨');R.settings()};
   $('#sSave').onclick=async()=>{
-    if(!adm){if(await saveMine()){await saveSettings();toast('저장됨')}return}
+    const pin0=$('#sN').value.trim();if(pin0&&!/^\d{4,6}$/.test(pin0))return toast('PIN은 숫자 4~6자리');S.pin=pin0;
+    if(!adm||R.settings.tab==='me'){if(await saveMine()){await saveSettings();toast('저장됨')}return}
     const r=parseFloat($('#sR').value),t=parseFloat($('#sT').value),dt=parseFloat($('#sDt').value),dy=parseFloat($('#sDy').value),oc=parseInt($('#sOc').value);if(!(r>0&&t>r&&dt>0&&dy>dt&&oc>=1))return toast('음주 기준값을 확인하세요');
     const bpP=v=>{const m=String(v).match(/(\d{2,3})\s*\/\s*(\d{2,3})/);return m?[+m[1],+m[2]]:null};const bw=bpP($('#sBw').value),bs=bpP($('#sBs').value),va=parseInt($('#sVa').value);
     if(!bw||!bs||!(va>0))return toast('취약근로자 기준값을 확인하세요 (예: 140/90)');S.bp={warn:bw,stop:bs};S.vulnAge=va;
@@ -1062,7 +1081,7 @@ R.settings=()=>{
   if($('#syncNow'))$('#syncNow').onclick=async()=>{await Sync.run();toast(Sync.state==='ok'?'동기화 완료':'서버에 연결할 수 없습니다');R.settings()};
   if($('#pwBtn'))$('#pwBtn').onclick=async()=>{const u=await authScreen('pw');await kvSet('me',u);applyMe(u);toast('비밀번호 변경됨')};
   if($('#outBtn'))$('#outBtn').onclick=()=>{if(confirm('로그아웃할까요?'))logout()};
-  if(SERVER&&adm){$('#uAdd').onclick=()=>editUser();loadUsers()}
+  if(SERVER&&adm){$('#uAdd').onclick=()=>editUser();if(R.settings.tab==='users')loadUsers()}
 };
 
 /* ---------- 취약근로자 ---------- */
@@ -1335,6 +1354,21 @@ async function authGate(){
   await kvSet('me',u);applyMe(u);return reset;
 }
 async function logout(){try{await api('logout',{})}catch(e){}await kvSet('me',null);location.reload()}
+
+/* ---------- 하위 탭 (관리대장 / 설정) ---------- */
+function setTabs(){const adm=isAdmin();return [['settings:me','내 정보'],...(adm?[['settings:site','현장 기준']]:[]),...(SERVER&&adm?[['settings:users','사용자 관리']]:[]),['records','기록·보고'],['settings:data','데이터·앱']]}
+function segBar(items,active){
+  const h1=$('h1',V$());const html=`<div class="seg">${items.map(([k,l])=>`<button type="button" data-seg="${k}" class="${k===active?'on':''}">${l}</button>`).join('')}</div>`;
+  if(h1)h1.insertAdjacentHTML('afterend',html);else V$().insertAdjacentHTML('afterbegin',html);
+  $$('[data-seg]',V$()).forEach(b=>b.onclick=()=>{const [v,t]=b.dataset.seg.split(':');go(v,t)});
+}
+for(const k of ['workers','equip','vuln']){const f=R[k];R[k]=(...a)=>{f(...a);segBar(REG_TABS,k)}}
+{const f=R.records;R.records=(...a)=>{f(...a);segBar(setTabs(),'records')}}
+{const f=R.settings;R.settings=(tab)=>{
+  const tabs=setTabs().map(x=>x[0]);if(typeof tab==='string')R.settings.tab=tab;
+  let t=R.settings.tab||'me';if(!tabs.includes('settings:'+t))t='me';R.settings.tab=t;
+  f();$$('section.st',V$()).forEach(sec=>sec.hidden=!sec.dataset.st.split(' ').includes(t));
+  segBar(setTabs(),'settings:'+t);if(t==='users'&&typeof loadUsers==='function')loadUsers()}}
 
 /* ---------- boot ---------- */
 async function loadAll(){[W,E,V,A,VU]=await Promise.all(['workers','equipment','violations','alcohol','vuln'].map(s=>DB.all(s)))}
