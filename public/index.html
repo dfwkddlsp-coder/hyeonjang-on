@@ -161,6 +161,22 @@ table.t tr.click:hover td{background:#f8fafc}
 .eqd{border:1.5px solid var(--line);background:#fff;border-radius:10px;padding:6px 2px;display:flex;flex-direction:column;align-items:center;gap:1px;cursor:pointer;min-height:58px}
 .eqd span{font-size:11px;color:var(--sub);white-space:nowrap}.eqd b{font-size:18px;line-height:1.2;color:#b9b4aa}.eqd small{font-size:10px;color:var(--sub)}
 .eqd.ok b{color:var(--ok)}.eqd.bad{border-color:var(--bad)}.eqd.bad b{color:var(--bad)}.eqd.today{border-color:var(--ink)}.eqd:disabled{opacity:.4;cursor:default}
+/* 주간 점검표 (항목 × 월~토) */
+.eqd.off{opacity:.45}
+.wkwrap{overflow-x:auto;margin-bottom:12px;background:var(--card);border-radius:14px;padding:6px}
+.wkt{border-collapse:collapse;width:100%;min-width:330px}
+.wkt th,.wkt td{border-bottom:1px solid var(--line);padding:4px 2px;text-align:center}
+.wkt .it{text-align:left;font-size:13px;line-height:1.3;padding:6px 4px;min-width:96px}
+.wkt th.it{font-size:12px;color:var(--sub)}
+.wkh{border:0;background:var(--chip);border-radius:8px;padding:4px 0;width:100%;font-weight:700;font-size:13px;cursor:pointer;line-height:1.15}
+.wkh small{font-weight:500;font-size:10px;color:var(--sub)}.wkh:disabled{opacity:.35}
+.wkc{width:100%;min-width:34px;height:40px;border:1.5px solid var(--line);border-radius:9px;background:#fff;font-size:20px;font-weight:800;cursor:pointer;color:var(--ink)}
+.wkc.vO{color:var(--ok);border-color:var(--ok)}.wkc.vX{color:#fff;background:var(--bad);border-color:var(--bad)}.wkc.vN{color:var(--sub)}.wkc:disabled{background:#f3f1ec;opacity:.5}
+/* 주간 사진 칸 */
+.wpslot{padding:12px}.wpslot.done{box-shadow:inset 3px 0 0 var(--ok),var(--sh)}
+.wpthumb{width:84px;height:84px;border-radius:10px;background:var(--chip);flex:none;display:flex;align-items:center;justify-content:center;overflow:hidden;color:var(--sub)}
+.wpthumb img{width:100%;height:100%;object-fit:cover}.wpthumb .i{width:28px;height:28px}
+.doc .pgrid>div{position:relative}.doc .pcap{position:absolute;left:0;bottom:0;background:rgba(255,255,255,.85);font-size:8.5pt;padding:.5mm 1.5mm;border-top-right-radius:1.5mm}
 .ecopt{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px}
 .ecopt button{border:1.5px solid var(--line);background:#fff;border-radius:10px;min-height:46px;font-weight:700;color:var(--sub);cursor:pointer}
 .ecopt button.on[data-v="O"]{background:var(--ok);border-color:var(--ok);color:#fff}.ecopt button.on[data-v="X"]{background:var(--bad);border-color:var(--bad);color:#fff}.ecopt button.on[data-v="N"]{background:var(--ink);border-color:var(--ink);color:#fff}
@@ -610,12 +626,13 @@ const stickerHtml=(l,date)=>{const c=['','var(--l1)','var(--l2)','var(--l3)'][l]
 /* 갤러리 사진 사용 동의 (기기당 1회, 설정에서 철회 가능) */
 function withGalleryConsent(go){
   if(S.galleryConsent)return go();
-  openModal('갤러리 사진 사용 동의',`<div class="card"><p style="margin-top:0">현장 사진을 휴대폰·태블릿 <b>갤러리(사진첩)</b>에서 불러오려면 동의가 필요합니다.</p>
+  /* 별도 레이어: 열려 있는 작성 창(통지서·사진 등)을 닫지 않음 */
+  const ov=document.createElement('div');ov.className='modal';ov.style.zIndex=80;ov.innerHTML=`<div class="sheet" style="max-width:520px"><div class="sheet-h"><b>갤러리 사진 사용 동의</b></div><div class="card"><p style="margin-top:0">현장 사진을 휴대폰·태블릿 <b>갤러리(사진첩)</b>에서 불러오려면 동의가 필요합니다.</p>
    <ul class="small" style="padding-left:18px;line-height:1.7;margin:0"><li>직접 고른 사진만 불러오며, 다른 사진에는 접근하지 않습니다.</li><li>불러온 사진은 적발 기록에 첨부되어 <b>이 기기 안에만</b> 저장되고 외부로 전송되지 않습니다.</li><li>처음 한 번은 기기에서 사진 접근 허용을 물어볼 수 있습니다.</li><li>동의는 설정 화면에서 언제든 철회할 수 있습니다.</li></ul></div>
-   <div class="grid g2"><button class="btn xl" id="gcOk">동의하고 사진 선택</button><button class="btn xl line" id="gcNo">동의 안 함</button></div>`,b=>{
-    $('#gcNo',b).onclick=closeModal;
-    $('#gcOk',b).onclick=()=>{S.galleryConsent={at:nowLocal()};saveSettings();closeModal();go()};
-  });
+   <div class="grid g2"><button class="btn xl" id="gcOk">동의하고 사진 선택</button><button class="btn xl line" id="gcNo">동의 안 함</button></div></div>`;
+  document.body.appendChild(ov);
+  $('#gcNo',ov).onclick=()=>ov.remove();
+  $('#gcOk',ov).onclick=()=>{S.galleryConsent={at:nowLocal()};saveSettings();ov.remove();go()};
 }
 
 /* ---------- printing ---------- */
@@ -676,7 +693,7 @@ function docAlcoholList(ds){
 }
 
 /* ---------- views ---------- */
-const APP_VER='2026.10.09-5';
+const APP_VER='2026.10.09-6';
 const VIEWS=[['home','홈'],['strike','삼진아웃'],['alcohol','음주측정'],['reg','관리대장'],['settings','설정']];
 /* 하위 화면 → 하단 탭 묶음 */
 const NAVOF={workers:'reg',equip:'reg',eqcheck:'reg',vuln:'reg',records:'settings'};
@@ -1015,7 +1032,7 @@ function showEquip(id){
   const e=E.find(x=>x.id===id);if(!e)return;
   openModal(`${e.type||'장비'} · ${e.plate||''}`,`<dl class="kv">${Object.entries(EQUIP_LABEL).filter(([k])=>e[k]).map(([k,l])=>`<dt>${l}</dt><dd>${k==='phone'?`<a href="tel:${h(e[k])}">${h(e[k])}</a>`:k==='inspect'||k==='insurance'?expCell(e[k]):h(e[k])}</dd>`).join('')}</dl>
    <p class="small muted">출처: ${h(e.src||'')} ${h(e.updated||e.created||'')}</p>
-   <div class="row" style="margin-top:12px">${e.operator?'<button class="btn" id="ea"><i class="i i-alcohol"></i> 운전원 음주측정</button><button class="btn" id="es"><i class="i i-alert"></i> 운전원 적발</button>':''}<button class="btn" id="ek"><i class="i i-eqcheck"></i> 일일점검</button><button class="btn line" id="ee">수정</button></div>`,b=>{
+   <div class="row" style="margin-top:12px">${e.operator?'<button class="btn" id="ea"><i class="i i-alcohol"></i> 운전원 음주측정</button><button class="btn" id="es"><i class="i i-alert"></i> 운전원 적발</button>':''}<button class="btn" id="ek"><i class="i i-eqcheck"></i> 점검표</button><button class="btn line" id="ee">수정</button></div>`,b=>{
     $('#ek',b).onclick=()=>{closeModal();eqCheckForm(e.id,today())};
     const p={name:e.operator,company:e.company,job:'장비운전원',equip:e.type,plate:e.plate};const w=W.find(x=>pkey(x.name,x.company)===pkey(e.operator,e.company));if(w){p.job=w.job||p.job;p.workerId=w.id;p.helmet=w.helmet}
     const ea=$('#ea',b);if(ea)ea.onclick=()=>{closeModal();go('alcohol');alcForm(p)};
@@ -1410,146 +1427,179 @@ async function authGate(){
 }
 async function logout(){try{await api('logout',{})}catch(e){}await kvSet('me',null);location.reload()}
 
-/* ---------- 장비 일일점검 (장비전담제) ----------
-   점검표 양식: 「장비 전담 관리자 점검표」 일일점검표 시트 (월~토 / 비고)
+/* ---------- 장비 점검 (장비전담제) ----------
+   주간 점검표: 「장비 전담 관리자 점검표」 일일점검표 시트처럼 한 장(한 화면)에 월~토를 한꺼번에 체크
    점검 항목: 「장비전담제 장비점검방법」 10~16쪽 (설정 → 현장 기준에서 운영자가 수정)
-   사진대지: 「사진대지 양식」 — 한 장에 2건, 건마다 사진 최대 4장 + 일시·내용 */
+   주간 사진: 장비당 주 1회 — [점검사진(관리자+장비)] + 항목별 1장
+   사진대지: 「사진대지 양식」 — 한 장에 2건, 건마다 사진 4장 + 일시·내용 */
 const WD6='월화수목금토';
 function eqItems(){return String(S.eqItems||DEF.eqItems).split('\n').map(l=>l.trim()).filter(Boolean).map(l=>{const i=l.indexOf('|');return i<0?{t:l,d:''}:{t:l.slice(0,i).trim(),d:l.slice(i+1).trim()}})}
+function eqSlots(){return [{t:'점검사진',d:'전담관리자와 장비가 함께 나온 사진'},...eqItems().map((it,i)=>({t:`${i+1}. ${it.t}`,d:it.d}))]}
 const weekMon=ds=>{const d=new Date(ds+'T00:00');return addDays(ds,-((d.getDay()+6)%7))};
 function weekLabel(mon){const d=new Date(mon+'T00:00');const first=new Date(d.getFullYear(),d.getMonth(),1);const off=(first.getDay()+6)%7;
   return `${String(d.getFullYear()).slice(2)}년 ${d.getMonth()+1}월 ${Math.ceil((d.getDate()+off)/7)}주차`}
 const md=ds=>`${+ds.slice(5,7)}/${+ds.slice(8,10)}`;
 const eqName=e=>`${e.type||'장비'}${e.plate?`(${e.plate})`:''}`;
 const isMine=e=>!!S.inspector&&norm(e.manager)===norm(S.inspector);
-function eqCheckOf(eid,ds){return EC.filter(c=>c.kind!=='weekPhoto'&&c.equipId===eid&&c.date===ds&&!c.void).sort((a,b)=>(b.created||'').localeCompare(a.created||''))[0]}
-const EQ_PH_MAX=4; // 사진대지 1건 = 사진 4장
+const weekDays=mon=>[0,1,2,3,4,5].map(i=>addDays(mon,i));
+const weekRecId=(eid,mon)=>`wk-${eid}-${mon}`;
 const weekPhotoId=(eid,mon)=>`wp-${eid}-${mon}`;
-function eqWeekPhoto(eid,mon){return EC.find(c=>c.id===weekPhotoId(eid,mon)&&!c.void)}
-function eqMark(c){if(!c)return '';return c.items.some(i=>i.v==='X')?'X':'O'}
+const eqWeekRec=(eid,mon)=>EC.find(c=>c.id===weekRecId(eid,mon)&&!c.void);
+const eqWeekPhoto=(eid,mon)=>EC.find(c=>c.id===weekPhotoId(eid,mon)&&!c.void);
+/* 예전 방식(하루 1건) 기록도 같이 읽음 */
+const eqLegacyDay=(eid,ds)=>EC.filter(c=>!c.kind&&c.equipId===eid&&c.date===ds&&!c.void).sort((a,b)=>(b.created||'').localeCompare(a.created||''))[0];
+/* 특정 날짜 칸의 표시: 'O' 양호 · 'X' 불량 있음 · 'P' 일부만 체크 · '' 미점검 */
+function eqDayMark(eid,ds){
+  const mon=weekMon(ds),i=weekDays(mon).indexOf(ds),w=eqWeekRec(eid,mon);
+  if(w){const vals=Object.values(w.marks||{}).map(a=>a[i]||'');if(vals.some(v=>v)){if(vals.includes('X'))return 'X';return vals.every(v=>v)?'O':'P'}}
+  const c=eqLegacyDay(eid,ds);if(c)return c.items.some(x=>x.v==='X')?'X':'O';
+  return '';
+}
+const eqCheckOf=(eid,ds)=>eqDayMark(eid,ds)||undefined;
+function eqCheckForm(eid,ds){eqWeekForm(eid,weekMon(ds||today()))}
 
 R.eqcheck=()=>{
-  const ds=R.eqcheck.d||today();const mon=weekMon(ds);const days=[0,1,2,3,4,5].map(i=>addDays(mon,i));const t=today();
+  const ds=R.eqcheck.d||today();const mon=weekMon(ds);const days=weekDays(mon);const t=today();
   const f=R.eqcheck.f||(E.some(isMine)?'mine':'all');const q=R.eqcheck.q||'';
   const inUse=E.filter(e=>!e.outDate);
-  const list=inUse.filter(e=>(f!=='mine'||isMine(e))&&(f!=='todo'||!eqCheckOf(e.id,t))&&(!q||norm([e.type,e.plate,e.company,e.manager,e.operator].join(' ')).includes(norm(q))))
+  const list=inUse.filter(e=>(f!=='mine'||isMine(e))&&(f!=='todo'||!eqDayMark(e.id,t))&&(!q||norm([e.type,e.plate,e.company,e.manager,e.operator].join(' ')).includes(norm(q))))
     .sort((a,b)=>(isMine(b)-isMine(a))||(+a.no||999)-(+b.no||999));
-  const done=inUse.filter(e=>eqCheckOf(e.id,t)).length,mine=inUse.filter(isMine),mineTodo=mine.filter(e=>!eqCheckOf(e.id,t));
-  const weekPhotoDone=inUse.filter(e=>eqWeekPhoto(e.id,mon)).length;
-  V$().innerHTML=`<h1>장비 일일점검</h1>
+  const done=inUse.filter(e=>eqDayMark(e.id,t)).length,mine=inUse.filter(isMine),mineTodo=mine.filter(e=>!eqDayMark(e.id,t));
+  const slots=eqSlots().length,phDone=inUse.filter(e=>{const p=eqWeekPhoto(e.id,mon);return p&&(p.photos||[]).length>=slots}).length;
+  const future=mon>weekMon(t);
+  V$().innerHTML=`<h1>장비 점검</h1>
   <div class="row" style="margin-bottom:10px"><button class="btn sm line" id="wPrev">◀</button><div class="grow" style="text-align:center"><b>${weekLabel(mon)}</b><div class="small muted">${md(days[0])} ~ ${md(days[5])}</div></div><button class="btn sm line" id="wNext">▶</button>${mon!==weekMon(t)?'<button class="btn sm ghost" id="wNow">이번 주</button>':''}</div>
   <div class="grid g4" style="margin-bottom:10px"><div class="stat"><div class="t">오늘 점검</div><div class="n">${done}<span class="small muted">/${inUse.length}대</span></div></div>
    <div class="stat"><div class="t">내 담당 미점검</div><div class="n" style="color:${mineTodo.length?'var(--bad)':'inherit'}">${mineTodo.length}<span class="small muted">/${mine.length}대</span></div></div>
-   <div class="stat"><div class="t">이번 주 사진</div><div class="n">${weekPhotoDone}<span class="small muted">/${inUse.length}대</span></div></div></div>
+   <div class="stat"><div class="t">주간 사진 완료</div><div class="n">${phDone}<span class="small muted">/${inUse.length}대</span></div></div></div>
   <div class="row" style="margin-bottom:10px"><button class="btn line" id="pWeek"><i class="i i-print"></i> 주간 점검표</button><button class="btn line" id="pPhoto"><i class="i i-camera"></i> 사진대지</button></div>
   <div class="chips scroll" style="margin-bottom:8px">${[['mine','내 담당'],['all','전체'],['todo','오늘 미점검']].map(([k,l])=>`<button class="chip ${f===k?'on':''}" data-ef="${k}">${l}</button>`).join('')}</div>
   <input class="inp" id="eqq" type="search" placeholder="장비명·차량번호·업체·전담관리자" value="${h(q)}" style="margin-bottom:10px">
   ${!inUse.length?'<div class="card empty">장비 대장이 비어 있습니다. 관리대장 → 장비에서 엑셀을 불러오세요.</div>':''}
-  ${list.map(e=>`<div class="card eqc"><div class="row" style="gap:8px"><div class="grow" style="min-width:0"><b>${h(eqName(e))}</b>${isMine(e)?' <span class="badge">내 담당</span>':''}<div class="small muted ell">${h(e.company||'')} · 전담 ${h(e.manager||'미지정')}${e.operator?' · 운전원 '+h(e.operator):''}</div></div>
-     ${days.includes(t)?`<button class="btn sm${eqCheckOf(e.id,t)?' line':''}" data-new="${e.id}">${eqCheckOf(e.id,t)?'오늘 완료':'<i class="i i-pen"></i> 오늘 점검'}</button>`:''}</div>
-    <div class="eqdays">${days.map((d,i)=>{const c=eqCheckOf(e.id,d),m=eqMark(c);return `<button class="eqd${d===t?' today':''}${m==='O'?' ok':m==='X'?' bad':''}" data-day="${e.id}|${d}" ${d>t&&!c?'disabled':''}><span>${WD6[i]} ${md(d)}</span><b>${m==='O'?'○':m==='X'?'×':d>t?'':'–'}</b></button>`}).join('')}</div>
-    ${(()=>{const wp=eqWeekPhoto(e.id,mon),n=wp?(wp.photos||[]).length:0;return mon>weekMon(t)?'':`<button class="btn sm ${n?'line':'ghost'}" data-wp="${e.id}" style="width:100%;margin-top:8px"><i class="i i-camera"></i> ${n?`주간 사진 ${n}장 등록됨 · 보기/수정`:'주간 사진 등록 (주 1회)'}</button>`})()}</div>`).join('')}
+  ${list.map(e=>{const wp=eqWeekPhoto(e.id,mon),pn=wp?(wp.photos||[]).length:0;
+    return `<div class="card eqc"><div class="row" style="gap:8px"><div class="grow" style="min-width:0"><b>${h(eqName(e))}</b>${isMine(e)?' <span class="badge">내 담당</span>':''}<div class="small muted ell">${h(e.company||'')} · 전담 ${h(e.manager||'미지정')}${e.operator?' · 운전원 '+h(e.operator):''}</div></div></div>
+    <div class="eqdays">${days.map((d,i)=>{const m=eqDayMark(e.id,d);return `<div class="eqd${d===t?' today':''}${m==='O'?' ok':m==='X'?' bad':''}${d>t&&!m?' off':''}"><span>${WD6[i]} ${md(d)}</span><b>${m==='O'?'○':m==='X'?'×':m==='P'?'△':d>t?'':'–'}</b></div>`}).join('')}</div>
+    ${future?'':`<div class="grid g2" style="margin-top:8px;gap:8px"><button class="btn sm${eqWeekRec(e.id,mon)?' line':''}" data-wk="${e.id}"><i class="i i-pen"></i> ${eqWeekRec(e.id,mon)?'주간 점검표 보기/수정':'주간 점검표 체크'}</button>
+      <button class="btn sm ${pn>=slots?'line':'ghost'}" data-wp="${e.id}"><i class="i i-camera"></i> 주간 사진 ${pn}/${slots}</button></div>`}</div>`}).join('')}
   ${inUse.length&&!list.length?'<div class="card empty">해당 장비 없음</div>':''}
-  <div class="hint small">전담관리자는 매일 작업 전 점검하고, 사진은 <b>주 1회</b>(장비당 최대 ${EQ_PH_MAX}장) 등록합니다. 주간 점검표와 사진대지는 자동으로 만들어집니다. (○ 양호 · × 불량 · – 미점검)</div>`;
+  <div class="hint small">점검표는 한 화면에서 <b>월~토를 한꺼번에</b> 체크합니다. 사진은 <b>주 1회</b>, [점검사진(관리자+장비)]과 항목별로 1장씩 올립니다. (○ 양호 · × 불량 · △ 일부 · – 미점검)</div>`;
   const setD=v=>{R.eqcheck.d=v;R.eqcheck()};
   $('#wPrev').onclick=()=>setD(addDays(mon,-7));$('#wNext').onclick=()=>setD(addDays(mon,7));if($('#wNow'))$('#wNow').onclick=()=>setD(t);
   $$('[data-ef]').forEach(b=>b.onclick=()=>{R.eqcheck.f=b.dataset.ef;R.eqcheck()});
   $('#eqq').oninput=e=>{R.eqcheck.q=e.target.value;clearTimeout(R.eqcheck.t);R.eqcheck.t=setTimeout(()=>{R.eqcheck();const i=$('#eqq');i.focus();i.setSelectionRange(i.value.length,i.value.length)},250)};
-  $$('[data-new]').forEach(b=>b.onclick=()=>eqCheckForm(b.dataset.new,t));
-  $$('[data-day]').forEach(b=>b.onclick=()=>{const [id,d]=b.dataset.day.split('|');eqCheckForm(id,d)});
+  $$('[data-wk]').forEach(b=>b.onclick=()=>eqWeekForm(b.dataset.wk,mon));
   $$('[data-wp]').forEach(b=>b.onclick=()=>eqWeekPhotoForm(b.dataset.wp,mon));
-  $('#pWeek').onclick=()=>{const es=list.filter(e=>days.some(d=>eqCheckOf(e.id,d)));if(!es.length)return toast('이번 주 점검 기록이 없습니다');printPages(es.map(e=>docEqWeek(e,mon)))};
-  $('#pPhoto').onclick=()=>{const blocks=eqPhotoBlocks(list,days[0],days[5],weekLabel(mon));if(!blocks.length)return toast('이번 주 올린 사진이 없습니다');printPages(docPhotoSheet(blocks))};
+  $('#pWeek').onclick=()=>{const es=list.filter(e=>days.some(d=>eqDayMark(e.id,d)));if(!es.length)return toast('이번 주 점검 기록이 없습니다');printPages(es.map(e=>docEqWeek(e,mon)))};
+  $('#pPhoto').onclick=()=>{const blocks=eqPhotoBlocks(list,mon);if(!blocks.length)return toast('이번 주 올린 사진이 없습니다');printPages(docPhotoSheet(blocks))};
 };
 
-function eqCheckForm(eid,ds){
-  const e=E.find(x=>x.id===eid);if(!e)return;const prev=eqCheckOf(eid,ds);const items=eqItems();
-  const st={vals:{},notes:{},photos:prev?[...(prev.photos||[])].map(p=>({...p})):[]};
-  if(prev)for(const it of prev.items){st.vals[it.t]=it.v;st.notes[it.t]=it.note||''}
-  const meIsMgr=isMine(e);
-  openModal(`일일점검 · ${eqName(e)}`,`<div class="card"><dl class="kv"><dt>소속협력사</dt><dd>${h(e.company||'-')}</dd><dt>장비</dt><dd>${h(eqName(e))}</dd><dt>전담관리자</dt><dd>${h(e.manager||'미지정')}</dd>${e.operator?`<dt>운전원</dt><dd>${h(e.operator)}</dd>`:''}</dl>
-     <label class="f">점검일</label><input class="inp" type="date" id="ecD" value="${ds}" max="${today()}"></div>
-   <div class="row" style="margin-bottom:8px"><b class="grow">점검 항목</b><button class="btn sm ghost" id="ecAll">모두 양호</button></div>
-   <div id="ecItems">${items.map((it,i)=>`<div class="card ecit" data-t="${h(it.t)}"><div><b>${i+1}. ${h(it.t)}</b>${it.d?`<div class="small muted" style="margin-top:2px">${h(it.d)}</div>`:''}</div>
-     <div class="ecopt">${[['O','○ 양호'],['X','× 불량'],['N','해당없음']].map(([v,l])=>`<button type="button" data-v="${v}">${l}</button>`).join('')}</div>
-     <input class="inp ecnote" placeholder="불량 내용·조치사항" style="display:none;margin-top:8px"></div>`).join('')}</div>
-   <div class="card"><div class="small muted">점검 사진은 장비 목록의 <b>[주간 사진 등록]</b>에서 주 1회 올립니다.</div>
-     <label class="f">비고</label><textarea class="inp" id="ecR" placeholder="특이사항">${h(prev&&prev.remark||'')}</textarea></div>
-   <div class="card"><div class="grid g2"><div><label class="f">점검자</label><input class="inp" id="ecBy" value="${h(prev&&prev.inspector||S.inspector||'')}"></div></div><div id="ecSig" style="margin-top:10px"></div></div>
-   <div class="grid g2"><button class="btn xl" id="ecSave">저장</button>${prev&&isAdmin()?'<button class="btn xl line" id="ecDel">이 점검 삭제</button>':''}</div>`,b=>{
-    const paint=()=>$$('.ecit',b).forEach(c=>{const t=c.dataset.t,v=st.vals[t];$$('[data-v]',c).forEach(x=>x.classList.toggle('on',x.dataset.v===v));const n=$('.ecnote',c);n.style.display=v==='X'?'':'none';if(document.activeElement!==n)n.value=st.notes[t]||''});
-    $$('.ecit',b).forEach(c=>{$$('[data-v]',c).forEach(x=>x.onclick=()=>{st.vals[c.dataset.t]=x.dataset.v;paint();if(x.dataset.v==='X')$('.ecnote',c).focus()});$('.ecnote',c).oninput=ev=>st.notes[c.dataset.t]=ev.target.value});
-    $('#ecAll',b).onclick=()=>{items.forEach(it=>{if(!st.vals[it.t])st.vals[it.t]='O'});paint()};paint();
-    const _unusedDrawPh=()=>{$('#ecPh',b).innerHTML=st.photos.map((p,i)=>`<div class="ecph"><div class="ph"><img src="${p.src}"><button type="button" data-i="${i}"><i class="i i-x"></i></button></div><input class="inp" data-cap="${i}" value="${h(p.cap||'')}" placeholder="설명 (선택)"></div>`).join('');
-      $$('[data-i]',$('#ecPh',b)).forEach(x=>x.onclick=()=>{st.photos.splice(+x.dataset.i,1);drawPh()});$$('[data-cap]',b).forEach(x=>x.oninput=()=>st.photos[+x.dataset.cap].cap=x.value)};
-    const sig=sigPad($('#ecSig',b),'점검자 서명',prev&&prev.sig?prev.sig:(($('#ecBy',b).value.trim()===S.inspector)?S.mySig:''));
-    $('#ecBy',b).addEventListener('change',()=>{$('#ecBy').value.trim()===S.inspector?sig.useMine():sig.clear()});
-    const del=$('#ecDel',b);if(del)del.onclick=async()=>{if(!confirm('이 날짜 점검 기록을 삭제할까요?'))return;try{await remove('eqchecks',prev.id);closeModal();R[cur]()}catch(x){toast(x.message)}};
-    $('#ecSave',b).onclick=async()=>{
-      const miss=items.filter(it=>!st.vals[it.t]);if(miss.length)return toast(`${miss.length}개 항목을 선택하세요 (양호/불량/해당없음)`);
-      const bad=items.filter(it=>st.vals[it.t]==='X'&&!String(st.notes[it.t]||'').trim());if(bad.length)return toast(`불량 항목에 내용·조치사항을 적어주세요: ${bad[0].t}`);
-      const by=$('#ecBy').value.trim();if(!by)return toast('점검자 이름을 입력하세요');if(sig.isEmpty())return toast('점검자 서명이 필요합니다');
-      const d=$('#ecD').value||ds;
-      const rec={id:prev&&prev.date===d?prev.id:uid(),date:d,equipId:e.id,type:e.type||'',plate:e.plate||'',company:e.company||'',manager:e.manager||'',inspector:by,
-        items:items.map(it=>({t:it.t,v:st.vals[it.t],note:st.vals[it.t]==='X'?String(st.notes[it.t]||'').trim():''})),remark:$('#ecR').value.trim(),photos:st.photos,sig:sig.data(),
-        created:prev&&prev.date===d?prev.created:nowLocal(),updated:nowLocal()};
-      await save('eqchecks',rec);closeModal();toast(rec.items.some(i=>i.v==='X')?'저장됨 — 불량 항목 조치를 확인하세요':'점검 저장됨');R[cur]();
+/* 주간 점검표: 항목 × 월~토 표에서 칸을 눌러 ○ → × → - → 빈칸 */
+function eqWeekForm(eid,mon){
+  const e=E.find(x=>x.id===eid);if(!e)return;const items=eqItems(),days=weekDays(mon),t=today();const prev=eqWeekRec(eid,mon);
+  const st={marks:{},notes:{...(prev&&prev.notes||{})}};
+  for(const it of items)st.marks[it.t]=[...((prev&&prev.marks&&prev.marks[it.t])||['','','','','',''])];
+  /* 예전 방식 하루 기록이 있으면 빈칸에 채워 넣음 */
+  days.forEach((d,i)=>{const c=eqLegacyDay(eid,d);if(c)c.items.forEach(x=>{if(st.marks[x.t]&&!st.marks[x.t][i])st.marks[x.t][i]=x.v;if(x.note&&!st.notes[x.t])st.notes[x.t]=x.note})});
+  const SYM={O:'○',X:'×',N:'-','':''},NEXT={'':'O',O:'X',X:'N',N:''};
+  openModal(`주간 점검표 · ${eqName(e)}`,`<div class="card"><dl class="kv"><dt>소속협력사</dt><dd>${h(e.company||'-')}</dd><dt>장비</dt><dd>${h(eqName(e))}</dd><dt>전담관리자</dt><dd>${h(e.manager||'미지정')}</dd></dl>
+     <div style="margin-top:8px"><b>${weekLabel(mon)}</b> <span class="muted small">(${md(days[0])}~${md(days[5])})</span></div></div>
+   <details class="card small"><summary><b>점검 기준 보기</b> (장비점검방법 10~16쪽)</summary>${items.map((it,i)=>`<div style="margin-top:8px"><b>${i+1}. ${h(it.t)}</b><div class="muted">${h(it.d)}</div></div>`).join('')}</details>
+   <div class="row" style="margin-bottom:8px"><span class="grow small muted">칸을 누를 때마다 ○ → × → - → 빈칸. 요일을 누르면 그날 전체 ○</span><button class="btn sm ghost" id="wkAll">오늘까지 모두 ○</button></div>
+   <div class="wkwrap"><table class="wkt"><tr><th class="it">점검 항목</th>${days.map((d,i)=>`<th><button type="button" class="wkh" data-col="${i}" ${d>t?'disabled':''}>${WD6[i]}<br><small>${md(d)}</small></button></th>`).join('')}</tr>
+     ${items.map((it,r)=>`<tr><td class="it">${r+1}. ${h(it.t)}</td>${days.map((d,c)=>`<td><button type="button" class="wkc" data-r="${r}" data-c="${c}" ${d>t?'disabled':''}></button></td>`).join('')}</tr>`).join('')}</table></div>
+   <div id="wkNotes"></div>
+   <div class="card"><label class="f">비고</label><textarea class="inp" id="wkR" placeholder="특이사항">${h(prev&&prev.remark||'')}</textarea>
+     <div class="grid g2"><div><label class="f">점검자 (전담관리자)</label><input class="inp" id="wkBy" value="${h(prev&&prev.inspector||S.inspector||'')}"></div></div><div id="wkSig" style="margin-top:10px"></div></div>
+   <div class="grid g2"><button class="btn xl" id="wkSave">저장</button>${prev&&isAdmin()?'<button class="btn xl line" id="wkDel">이 주 점검표 삭제</button>':''}</div>`,b=>{
+    const paint=()=>{
+      $$('.wkc',b).forEach(x=>{const v=st.marks[items[+x.dataset.r].t][+x.dataset.c];x.textContent=SYM[v];x.className='wkc'+(v?' v'+v:'')});
+      const bad=items.filter(it=>st.marks[it.t].includes('X'));
+      const box=$('#wkNotes',b);const keep={};$$('[data-note]',box).forEach(i=>keep[i.dataset.note]=i.value);Object.assign(st.notes,keep);
+      box.innerHTML=bad.length?`<div class="card"><b style="color:var(--bad)">불량 항목 조치사항</b>${bad.map(it=>`<label class="f">${items.indexOf(it)+1}. ${h(it.t)} (${st.marks[it.t].map((v,i)=>v==='X'?WD6[i]:'').filter(Boolean).join('·')})</label><input class="inp" data-note="${h(it.t)}" value="${h(st.notes[it.t]||'')}" placeholder="불량 내용·조치사항">`).join('')}</div>`:'';
+      $$('[data-note]',box).forEach(i=>i.oninput=()=>st.notes[i.dataset.note]=i.value)};
+    $$('.wkc',b).forEach(x=>x.onclick=()=>{const a=st.marks[items[+x.dataset.r].t],c=+x.dataset.c;a[c]=NEXT[a[c]];paint()});
+    $$('.wkh',b).forEach(x=>x.onclick=()=>{const c=+x.dataset.col;items.forEach(it=>{if(!st.marks[it.t][c])st.marks[it.t][c]='O'});paint()});
+    $('#wkAll',b).onclick=()=>{days.forEach((d,c)=>{if(d<=t)items.forEach(it=>{if(!st.marks[it.t][c])st.marks[it.t][c]='O'})});paint()};
+    paint();
+    const sig=sigPad($('#wkSig',b),'전담관리자 서명',prev&&prev.sig?prev.sig:(($('#wkBy',b).value.trim()===S.inspector)?S.mySig:''));
+    $('#wkBy',b).addEventListener('change',()=>{$('#wkBy').value.trim()===S.inspector?sig.useMine():sig.clear()});
+    const del=$('#wkDel',b);if(del)del.onclick=async()=>{if(!confirm('이 주 점검표를 삭제할까요?'))return;try{await remove('eqchecks',prev.id);closeModal();R[cur]()}catch(x){toast(x.message)}};
+    $('#wkSave',b).onclick=async()=>{
+      $$('[data-note]',b).forEach(i=>st.notes[i.dataset.note]=i.value);
+      if(!items.some(it=>st.marks[it.t].some(Boolean)))return toast('체크한 칸이 없습니다');
+      const bad=items.find(it=>st.marks[it.t].includes('X')&&!String(st.notes[it.t]||'').trim());if(bad)return toast(`불량 조치사항을 적어주세요: ${bad.t}`);
+      const by=$('#wkBy').value.trim();if(!by)return toast('점검자 이름을 입력하세요');if(sig.isEmpty())return toast('서명이 필요합니다');
+      const notes={};items.forEach(it=>{if(st.marks[it.t].includes('X'))notes[it.t]=String(st.notes[it.t]||'').trim()});
+      await save('eqchecks',{id:weekRecId(eid,mon),kind:'week',week:mon,equipId:e.id,type:e.type||'',plate:e.plate||'',company:e.company||'',manager:e.manager||'',
+        marks:st.marks,notes,remark:$('#wkR').value.trim(),inspector:by,sig:sig.data(),created:prev?prev.created:nowLocal(),updated:nowLocal()});
+      closeModal();toast(items.some(it=>st.marks[it.t].includes('X'))?'저장됨 — 불량 항목 조치를 확인하세요':'주간 점검표 저장됨');R[cur]();
     };
   });
 }
 
-/* 주간 점검 사진: 장비당 주 1회 (같은 주에 다시 열면 같은 기록을 수정) */
+/* 주간 사진: 점검사진 + 항목별 1장 (장비당 주 1회 — 같은 주에 다시 열면 같은 기록을 수정) */
 function eqWeekPhotoForm(eid,mon){
-  const e=E.find(x=>x.id===eid);if(!e)return;const prev=eqWeekPhoto(eid,mon);
-  const st={photos:prev?(prev.photos||[]).map(p=>({...p})):[]};
+  const e=E.find(x=>x.id===eid);if(!e)return;const prev=eqWeekPhoto(eid,mon);const slots=eqSlots();
+  const st={};for(const p of (prev&&prev.photos)||[])if(p.slot)st[p.slot]=p.src;
+  let target=null;
   openModal(`주간 사진 · ${eqName(e)}`,`<div class="card"><b>${weekLabel(mon)}</b> <span class="muted small">(${md(mon)}~${md(addDays(mon,5))})</span>
-     <div class="small muted" style="margin-top:4px">장비당 <b>한 주에 한 번</b>, 최대 ${EQ_PH_MAX}장 등록합니다. 이미 등록했으면 사진을 바꾸거나 추가할 수 있습니다.${prev?` · 등록 ${h(prev.by||'')} ${fmtDT(prev.updated||prev.created)}`:''}</div></div>
-   <div class="card"><div class="photos" id="wpPh"></div>
-     <div class="row" style="margin-top:8px" id="wpBtns"><label class="btn ghost"><i class="i i-camera"></i> 사진 촬영<input type="file" accept="image/*" capture="environment" hidden id="wpIn"></label><button type="button" class="btn ghost" id="wpGal"><i class="i i-folder"></i> 갤러리에서 선택</button><input type="file" accept="image/*" multiple hidden id="wpInG"></div>
-     <div class="small muted" style="margin-top:6px">사진마다 설명을 적으면 사진대지 '내용'에 함께 표시됩니다.</div></div>
-   <div class="grid g2"><button class="btn xl" id="wpSave">${prev?'수정 저장':'등록'}</button>${prev&&isAdmin()?'<button class="btn xl line" id="wpDel">이 주 사진 삭제</button>':''}</div>`,b=>{
-    const draw=()=>{$('#wpPh',b).innerHTML=st.photos.map((p,i)=>`<div class="ecph"><div class="ph"><img src="${p.src}"><button type="button" data-i="${i}"><i class="i i-x"></i></button></div><input class="inp" data-cap="${i}" value="${h(p.cap||'')}" placeholder="설명 (선택)"></div>`).join('')||'<div class="small muted">아직 사진이 없습니다</div>';
-      $$('[data-i]',$('#wpPh',b)).forEach(x=>x.onclick=()=>{st.photos.splice(+x.dataset.i,1);draw()});$$('[data-cap]',b).forEach(x=>x.oninput=()=>st.photos[+x.dataset.cap].cap=x.value);
-      $('#wpBtns',b).style.display=st.photos.length>=EQ_PH_MAX?'none':''};draw();
-    const add=async ev=>{for(const fl of ev.target.files){if(st.photos.length>=EQ_PH_MAX){toast(`한 주에 최대 ${EQ_PH_MAX}장입니다`);break}try{st.photos.push({src:await compressImg(fl),cap:''})}catch(x){toast('사진 처리 실패')}}ev.target.value='';draw()};
-    $('#wpIn',b).onchange=add;$('#wpInG',b).onchange=add;$('#wpGal',b).onclick=()=>withGalleryConsent(()=>$('#wpInG').click());
-    const del=$('#wpDel',b);if(del)del.onclick=async()=>{if(!confirm('이 주의 사진을 삭제할까요?'))return;try{await remove('eqchecks',prev.id);closeModal();R[cur]()}catch(x){toast(x.message)}};
-    $('#wpSave',b).onclick=async()=>{if(!st.photos.length)return toast('사진을 1장 이상 올려주세요');
+     <div class="small muted" style="margin-top:4px">장비당 <b>한 주에 한 번</b>, 항목마다 사진 1장. 먼저 <b>점검사진</b>(전담관리자와 장비가 함께 나온 사진)을 올려주세요.${prev?` · 마지막 저장 ${h(prev.by||'')} ${fmtDT(prev.updated||prev.created)}`:''}</div>
+     <div class="small" style="margin-top:6px" id="wpProg"></div></div>
+   <div id="wpSlots"></div>
+   <input type="file" accept="image/*" capture="environment" hidden id="wpCam"><input type="file" accept="image/*" hidden id="wpGalIn">
+   <div class="grid g2"><button class="btn xl" id="wpSave">${prev?'수정 저장':'저장'}</button>${prev&&isAdmin()?'<button class="btn xl line" id="wpDel">이 주 사진 삭제</button>':''}</div>`,b=>{
+    const draw=()=>{
+      $('#wpProg',b).innerHTML=`등록 <b>${slots.filter(s=>st[s.t]).length}</b> / ${slots.length}`;
+      $('#wpSlots',b).innerHTML=slots.map((s,i)=>`<div class="card wpslot${st[s.t]?' done':''}"><div class="row" style="gap:10px;align-items:flex-start">
+        <div class="wpthumb">${st[s.t]?`<img src="${st[s.t]}">`:'<i class="i i-camera"></i>'}</div>
+        <div class="grow" style="min-width:0"><b>${h(s.t)}</b>${s.d?`<div class="small muted">${h(s.d)}</div>`:''}
+          <div class="row" style="margin-top:8px;gap:6px"><button type="button" class="btn sm${st[s.t]?' line':''}" data-cam="${i}"><i class="i i-camera"></i> ${st[s.t]?'다시 촬영':'촬영'}</button><button type="button" class="btn sm ghost" data-gal="${i}">갤러리</button>${st[s.t]?`<button type="button" class="btn sm line" data-rm="${i}">삭제</button>`:''}</div></div></div></div>`).join('');
+      $$('[data-cam]',b).forEach(x=>x.onclick=()=>{target=slots[+x.dataset.cam].t;$('#wpCam',b).click()});
+      $$('[data-gal]',b).forEach(x=>x.onclick=()=>{target=slots[+x.dataset.gal].t;withGalleryConsent(()=>$('#wpGalIn').click())});
+      $$('[data-rm]',b).forEach(x=>x.onclick=()=>{delete st[slots[+x.dataset.rm].t];draw()});
+    };draw();
+    const take=async ev=>{const fl=ev.target.files[0];ev.target.value='';if(!fl||!target)return;try{st[target]=await compressImg(fl);draw()}catch(x){toast('사진 처리 실패')}};
+    $('#wpCam',b).onchange=take;$('#wpGalIn',b).onchange=take;
+    const del=$('#wpDel',b);if(del)del.onclick=async()=>{if(!confirm('이 주의 사진을 모두 삭제할까요?'))return;try{await remove('eqchecks',prev.id);closeModal();R[cur]()}catch(x){toast(x.message)}};
+    $('#wpSave',b).onclick=async()=>{const photos=slots.filter(s=>st[s.t]).map(s=>({slot:s.t,cap:s.t,src:st[s.t]}));if(!photos.length)return toast('사진을 1장 이상 올려주세요');
       await save('eqchecks',{id:weekPhotoId(eid,mon),kind:'weekPhoto',week:mon,equipId:e.id,type:e.type||'',plate:e.plate||'',company:e.company||'',manager:e.manager||'',
-        photos:st.photos,by:prev&&prev.by||S.inspector||'',created:prev?prev.created:nowLocal(),updated:nowLocal()});
-      closeModal();toast(`${weekLabel(mon)} 사진 ${st.photos.length}장 저장됨`);R[cur]()};
+        photos,by:S.inspector||'',created:prev?prev.created:nowLocal(),updated:nowLocal()});
+      closeModal();toast(`${weekLabel(mon)} 사진 ${photos.length}/${slots.length} 저장됨`);R[cur]()};
   });
 }
 
-/* 주간 일일점검표 (A4 1장 / 장비 1대) */
+/* 주간 일일점검표 출력 (A4 1장 / 장비 1대) */
 function docEqWeek(e,mon){
-  const days=[0,1,2,3,4,5].map(i=>addDays(mon,i)),cs=days.map(d=>eqCheckOf(e.id,d));
-  const titles=[...eqItems().map(i=>i.t)];cs.forEach(c=>c&&c.items.forEach(it=>{if(!titles.includes(it.t))titles.push(it.t)}));
+  const days=weekDays(mon),w=eqWeekRec(e.id,mon),legacy=days.map(d=>eqLegacyDay(e.id,d));
+  const titles=eqItems().map(i=>i.t);if(w)Object.keys(w.marks||{}).forEach(t=>{if(!titles.includes(t))titles.push(t)});
+  legacy.forEach(c=>c&&c.items.forEach(it=>{if(!titles.includes(it.t))titles.push(it.t)}));
   const desc=Object.fromEntries(eqItems().map(i=>[i.t,i.d]));
-  const cell=(c,t)=>{if(!c)return '';const it=c.items.find(x=>x.t===t);return it?(it.v==='O'?'○':it.v==='X'?'<b>×</b>':'-'):''};
-  const notes=t=>cs.map((c,i)=>{const it=c&&c.items.find(x=>x.t===t);return it&&it.note?`${WD6[i]}: ${h(it.note)}`:''}).filter(Boolean).join('<br>');
-  const last=[...cs].reverse().find(c=>c&&c.sig);
-  const remarks=cs.map((c,i)=>c&&c.remark?`${WD6[i]}(${md(days[i])}) ${h(c.remark)}`:'').filter(Boolean);
+  const val=(t,i)=>{const v=w&&w.marks&&w.marks[t]?w.marks[t][i]:'';if(v)return v;const c=legacy[i];const it=c&&c.items.find(x=>x.t===t);return it?it.v:''};
+  const sym=v=>v==='O'?'○':v==='X'?'<b>×</b>':v==='N'?'-':'';
+  const note=t=>{const n=[];if(w&&w.notes&&w.notes[t])n.push(h(w.notes[t]));legacy.forEach((c,i)=>{const it=c&&c.items.find(x=>x.t===t);if(it&&it.note)n.push(`${WD6[i]}: ${h(it.note)}`)});return n.join('<br>')};
+  const dayDone=i=>titles.some(t=>val(t,i));
+  const sigSrc=w&&w.sig||(legacy.find(c=>c&&c.sig)||{}).sig;
+  const remarks=[w&&w.remark?h(w.remark):'',...legacy.map((c,i)=>c&&c.remark?`${WD6[i]} ${h(c.remark)}`:'')].filter(Boolean);
   return `<div class="doc eqw"><h1>장비 전담관리자 일일점검표</h1><div class="site">[ ${h(S.site||'현장명')} ] · ${weekLabel(mon)} (${md(days[0])}~${md(days[5])})</div>
   <table><tr><th>소속협력사</th><td colspan="3">${h(e.company||'')}</td></tr>
   <tr><th>장비종류</th><td>${h(e.type||'')}</td><th>장비번호</th><td>${h(e.plate||'')}</td></tr>
-  <tr><th>장비 전담관리자</th><td>${h(e.manager||'')}</td><th>(서명)</th><td style="text-align:center">${last?`<img class="sigimg" src="${last.sig}">`:''}</td></tr></table>
+  <tr><th>장비 전담관리자</th><td>${h(w&&w.inspector||e.manager||'')}</td><th>(서명)</th><td style="text-align:center">${sigSrc?`<img class="sigimg" src="${sigSrc}">`:''}</td></tr></table>
   <table class="grid6"><tr><th class="it">점 검 항 목</th>${days.map((d,i)=>`<th>${WD6[i]}<br>(${md(d)})</th>`).join('')}<th class="rm">비 고</th></tr>
-  ${titles.map((t,i)=>`<tr><td class="it">${i+1}. ${h(t)}${desc[t]?`<div class="dsc">${h(desc[t])}</div>`:''}</td>${cs.map(c=>`<td class="mk">${cell(c,t)}</td>`).join('')}<td class="rm">${notes(t)}</td></tr>`).join('')}
-  <tr><td class="it">점검자</td>${cs.map(c=>`<td class="mk sm">${c?h(c.inspector||''):''}</td>`).join('')}<td class="rm"></td></tr></table>
+  ${titles.map((t,r)=>`<tr><td class="it">${r+1}. ${h(t)}${desc[t]?`<div class="dsc">${h(desc[t])}</div>`:''}</td>${days.map((d,i)=>`<td class="mk">${sym(val(t,i))}</td>`).join('')}<td class="rm">${note(t)}</td></tr>`).join('')}
+  <tr><td class="it">점검 여부</td>${days.map((d,i)=>`<td class="mk sm">${dayDone(i)?'완료':''}</td>`).join('')}<td class="rm"></td></tr></table>
   ${remarks.length?`<div class="sec">비고</div><div class="note">${remarks.join('<br>')}</div>`:''}
   <p style="font-size:9pt">○ 양호 · × 불량(비고에 조치사항) · - 해당없음 · 빈칸 미점검</p></div>`;
 }
 
-/* 사진대지: 장비별로 기간 내 사진을 4장씩 묶어 한 건으로 */
-function eqPhotoBlocks(list,from,to,label){
-  const out=[];
+/* 사진대지: 장비별 주간 사진을 4장씩 한 건으로 (사진마다 항목명 표시) */
+function eqPhotoBlocks(list,mon){
+  const out=[],label=weekLabel(mon),days=weekDays(mon);
   for(const e of list){
-    const wk=EC.filter(c=>c.kind==='weekPhoto'&&c.equipId===e.id&&!c.void&&c.week>=weekMon(from)&&c.week<=to).sort((a,b)=>a.week.localeCompare(b.week));
-    const cs=EC.filter(c=>c.kind!=='weekPhoto'&&c.equipId===e.id&&!c.void&&c.date>=from&&c.date<=to).sort((a,b)=>a.date.localeCompare(b.date));
-    const ph=[...wk.flatMap(c=>(c.photos||[]).map(p=>({...p,date:c.week}))),...cs.flatMap(c=>(c.photos||[]).map(p=>({...p,date:c.date})))];
-    for(let i=0;i<ph.length;i+=4){const g=ph.slice(i,i+4);const caps=[...new Set(g.map(p=>p.cap).filter(Boolean))];
-      out.push({date:label||g[0].date,content:eqName(e)+(caps.length?' — '+caps.join(' / '):''),photos:g.map(p=>p.src)})}
+    const wp=eqWeekPhoto(e.id,mon);
+    const order=eqSlots().map(s=>s.t);
+    const ph=[...((wp&&wp.photos)||[]).slice().sort((a,b)=>order.indexOf(a.slot)-order.indexOf(b.slot)),
+      ...EC.filter(c=>!c.kind&&c.equipId===e.id&&!c.void&&c.date>=days[0]&&c.date<=days[5]).flatMap(c=>(c.photos||[]))];
+    for(let i=0;i<ph.length;i+=4){const g=ph.slice(i,i+4);out.push({date:label,content:eqName(e),photos:g.map(p=>({src:p.src,cap:p.cap||p.slot||''}))})}
   }
   return out;
 }
@@ -1558,7 +1608,7 @@ function docPhotoSheet(blocks){
   for(let i=0;i<blocks.length;i+=2){
     const two=blocks.slice(i,i+2);
     pages.push(`<div class="doc psheet"><h1>사 진 대 지</h1><div class="pl">현장명 : ${h(S.site||'')}</div>
-    ${two.map(b=>`<div class="pblock"><div class="pgrid n${b.photos.length}">${b.photos.map(s=>`<div><img src="${s}"></div>`).join('')}${b.photos.length===3?'<div></div>':''}</div>
+    ${two.map(b=>`<div class="pblock"><div class="pgrid n${b.photos.length}">${b.photos.map(p=>`<div><img src="${p.src}">${p.cap?`<span class="pcap">${h(p.cap)}</span>`:''}</div>`).join('')}${b.photos.length===3?'<div></div>':''}</div>
       <table><tr><th>일 시</th><td>${h(b.date)}</td><th>내 용</th><td>${h(b.content)}</td></tr></table></div>`).join('')}
     ${two.length===1?'<div class="pblock empty">이하 여백</div>':''}</div>`);
   }
