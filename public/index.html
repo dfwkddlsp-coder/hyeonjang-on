@@ -175,6 +175,7 @@ table.t tr.click:hover td{background:#f8fafc}
 .wkh{border:0;background:var(--chip);border-radius:8px;padding:4px 0;width:100%;font-weight:700;font-size:13px;cursor:pointer;line-height:1.15}
 .wkh small{font-weight:500;font-size:10px;color:var(--sub)}.wkh:disabled{opacity:.35}
 .wkc{width:100%;min-width:34px;height:40px;border:1.5px solid var(--line);border-radius:9px;background:#fff;font-size:20px;font-weight:800;cursor:pointer;color:var(--ink)}
+@media (max-width:390px){.wkwrap{padding:4px}.wkt{min-width:0}.wkt .it{min-width:78px;font-size:12px;padding:5px 3px}.wkt th,.wkt td{padding:3px 1px}.wkc{min-width:28px;height:38px;font-size:18px;border-radius:8px}.wkh{font-size:12px}}
 .wkc.vO{color:var(--ok);border-color:var(--ok)}.wkc.vX{color:#fff;background:var(--bad);border-color:var(--bad)}.wkc.vN{color:var(--sub)}.wkc:disabled{background:#f3f1ec;opacity:.5}
 /* 주간 사진 칸 */
 .wpslot{padding:12px}.wpslot.done{box-shadow:inset 3px 0 0 var(--ok),var(--sh)}
@@ -603,10 +604,18 @@ function exportAlcohol(from,to){
 }
 
 /* ---------- UI primitives ---------- */
-function openModal(title,html,onMount){document.documentElement.classList.add('no-scroll');$('#mTitle').textContent=title;$('#mBody').innerHTML=html;$('#modal').classList.remove('hidden');onMount&&onMount($('#mBody'))}
-function closeModal(){document.documentElement.classList.remove('no-scroll');$('#modal').classList.add('hidden');$('#mBody').innerHTML=''}
-$('#mClose').onclick=closeModal;
+/* 화면·창을 브라우저 기록에 남겨서 뒤로가기가 앱 안에서 동작하게 함 */
+const NAV={modal:false,stale:false,skip:false};
+function openModal(title,html,onMount){if(!NAV.modal){if(!NAV.stale)history.pushState({hj:'m',v:cur},'');NAV.stale=false;NAV.modal=true}document.documentElement.classList.add('no-scroll');$('#mTitle').textContent=title;$('#mBody').innerHTML=html;$('#modal').classList.remove('hidden');onMount&&onMount($('#mBody'))}
+function closeModal(fromPop){if(fromPop===true){NAV.modal=false;NAV.stale=false}else if(NAV.modal){NAV.modal=false;NAV.stale=true}document.documentElement.classList.remove('no-scroll');$('#modal').classList.add('hidden');$('#mBody').innerHTML=''}
+$('#mClose').onclick=()=>closeModal();
+addEventListener('popstate',e=>{
+  if(!$('#modal').classList.contains('hidden')){closeModal(true);return}
+  if(NAV.stale){NAV.stale=false;history.back();return} // 이미 닫힌 창 자리 건너뛰기
+  const st=e.state||{};const v=st.v&&R[st.v]?st.v:'home';go(v,undefined,true);
+});
 $('#modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal()});
+try{history.replaceState({hj:'v',v:'home'},'')}catch(e){}
 
 function sigPad(host,label,preset){
   host.innerHTML=`<div class="sig"><div class="sig-h"><span>${h(label)}<small class="muted sig-auto" style="font-weight:500"></small></span><button type="button" class="btn sm ghost">지우기</button></div><canvas></canvas></div>`;
@@ -616,7 +625,7 @@ function sigPad(host,label,preset){
   const setup=()=>{const r=cv.getBoundingClientRect();if(!r.width)return;const d=window.devicePixelRatio||1;cv.width=r.width*d;cv.height=r.height*d;ctx.setTransform(d,0,0,d,0,0);ctx.lineWidth=2.6;ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle='#111';empty=true;if(preset)drawImg(preset)};
   requestAnimationFrame(setup);
   const pos=e=>{const r=cv.getBoundingClientRect();return [e.clientX-r.left,e.clientY-r.top]};
-  cv.addEventListener('pointerdown',e=>{if(!cv.width)setup();drawing=true;cv.setPointerCapture(e.pointerId);last=pos(e);ctx.beginPath();ctx.arc(last[0],last[1],1.2,0,7);ctx.fillStyle='#111';ctx.fill();empty=false;e.preventDefault()});
+  cv.addEventListener('pointerdown',e=>{if(!cv.width)setup();drawing=true;try{cv.setPointerCapture(e.pointerId)}catch(x){}last=pos(e);ctx.beginPath();ctx.arc(last[0],last[1],1.2,0,7);ctx.fillStyle='#111';ctx.fill();empty=false;e.preventDefault()});
   cv.addEventListener('pointermove',e=>{if(!drawing)return;const p=pos(e);ctx.beginPath();ctx.moveTo(last[0],last[1]);ctx.lineTo(p[0],p[1]);ctx.stroke();last=p;e.preventDefault()});
   ['pointerup','pointercancel','pointerleave'].forEach(t=>cv.addEventListener(t,()=>drawing=false));
   const clear=()=>{ctx.clearRect(0,0,cv.width,cv.height);empty=true;tag('')};
@@ -747,14 +756,14 @@ function docAlcoholList(ds){
 }
 
 /* ---------- views ---------- */
-const APP_VER='2026.10.09-11';
+const APP_VER='2026.10.09-12';
 const VIEWS=[['home','홈'],['strike','삼진아웃'],['alcohol','음주측정'],['reg','관리대장'],['settings','설정']];
 /* 하위 화면 → 하단 탭 묶음 */
 const NAVOF={workers:'reg',equip:'reg',eqcheck:'reg',vuln:'reg',records:'settings'};
 const REG_TABS=[['workers','근로자'],['equip','장비'],['eqcheck','장비점검'],['vuln','취약근로자']];
 let lastReg='workers';
 let cur='home';
-function go(v,arg){if(v==='reg')v=lastReg;if(NAVOF[v]==='reg')lastReg=v;cur=v;document.body.classList.toggle('is-home',v==='home');$$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===(NAVOF[v]||v)));window.scrollTo(0,0);R[v](arg);try{sessionStorage.setItem('v',v)}catch(e){}}
+function go(v,arg,fromPop){if(v==='reg')v=lastReg;if(NAVOF[v]==='reg')lastReg=v;if(!fromPop&&(v!==cur||arg!==undefined)){history.pushState({hj:'v',v},'');NAV.stale=false}cur=v;document.body.classList.toggle('is-home',v==='home');$$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===(NAVOF[v]||v)));window.scrollTo(0,0);R[v](arg);try{sessionStorage.setItem('v',v)}catch(e){}}
 function renderNav(){$('#nav').innerHTML=VIEWS.map(([v,t])=>`<button data-v="${v}"><span class="ni"><i class="i i-${v}"></i></span>${t}</button>`).join('');$$('#nav button').forEach(b=>b.onclick=()=>go(b.dataset.v))}
 const R={};
 const V$=()=>$('#view');
