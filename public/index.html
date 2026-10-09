@@ -14,6 +14,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Chiron+GoRound+TC:wght@200..900&display=swap" rel="stylesheet">
 <script src="vendor/xlsx.full.min.js"></script>
 <style>
+/* 출력 서식(점검표·사진대지): 나눔고딕OTF (설치돼 있으면 그대로, 없으면 같은 디자인의 나눔고딕) */
+@font-face{font-family:"HJNanum";font-weight:400;src:local("NanumGothicOTF"),local("나눔고딕OTF"),local("NanumGothic"),local("나눔고딕"),url("vendor/fonts/NanumGothic-Regular.ttf") format("truetype");font-display:swap}
+@font-face{font-family:"HJNanum";font-weight:800;src:local("NanumGothicOTFExtraBold"),local("나눔고딕OTF ExtraBold"),local("NanumGothicExtraBold"),local("나눔고딕 ExtraBold"),url("vendor/fonts/NanumGothic-ExtraBold.ttf") format("truetype");font-display:swap}
 /* 한글은 모두 Pretendard 한 글꼴로 통일 (영문·숫자는 Chiron GoRound TC) */
 @font-face{font-family:"HyeonjangKR";src:url("vendor/fonts/PretendardVariable.woff2") format("woff2-variations"),url("vendor/fonts/PretendardVariable.woff2") format("woff2");font-weight:45 920;font-style:normal;font-display:swap;unicode-range:U+1100-11FF,U+3130-318F,U+A960-A97F,U+AC00-D7A3,U+D7B0-D7FF}
 :root{
@@ -197,6 +200,10 @@ table.t tr.click:hover td{background:#f8fafc}
 .ecopt button.on[data-v="O"]{background:var(--ok);border-color:var(--ok);color:#fff}.ecopt button.on[data-v="X"]{background:var(--bad);border-color:var(--bad);color:#fff}.ecopt button.on[data-v="N"]{background:var(--ink);border-color:var(--ink);color:#fff}
 .ecph{width:132px}.ecph .ph{width:132px;height:100px}.ecph .inp{min-height:36px;padding:6px 8px;font-size:13px;margin-top:4px}
 /* 인쇄: 주간 점검표 · 사진대지 */
+.doc{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.doc.eqw,.doc.psheet{font-family:"HJNanum","Malgun Gothic",sans-serif;font-weight:400}
+.doc.eqw h1,.doc.psheet h1,.doc.eqw th,.doc.psheet th,.doc.eqw .eqf>div>span:not(.sg),.doc.eqw .eqf .wl,.doc.eqw .stamp{font-family:"HJNanum","Malgun Gothic",sans-serif;font-weight:800}
+.doc.eqw b,.doc.psheet b{font-weight:800}
 .doc.eqw{font-size:11pt}
 .doc.eqw h1{font-size:20pt;margin:1mm 0 3mm}
 .doc.eqw .eqf{font-size:11pt;line-height:1.9;margin-bottom:1.5mm}
@@ -204,9 +211,9 @@ table.t tr.click:hover td{background:#f8fafc}
 .doc.eqw .eqf .wl{float:right;font-weight:700}
 .doc.eqw .eqf .sg{margin-left:3mm;position:relative}.doc.eqw .eqf .sg img{height:11mm;vertical-align:middle;margin-left:2mm}
 .doc.eqw .grid6{table-layout:fixed;margin:0}
-.doc.eqw .grid6 th{background:#dbe7f5;font-size:11pt;padding:1.2mm .5mm;width:auto;text-align:center;line-height:1.35}
+.doc.eqw .grid6 th{background:#dceaf7;font-size:11pt;padding:1.2mm .5mm;width:auto;text-align:center;line-height:1.35}
 .doc.eqw .grid6 th.it{text-align:center}
-.doc.eqw .grid6 td.it{background:#e3e3e3;text-align:left;font-size:11pt;padding:1mm 2mm}
+.doc.eqw .grid6 td.it{background:#d9d9d9;text-align:left;font-size:11pt;padding:1mm 2mm}
 .doc.eqw .grid6 .mk{text-align:center;font-size:15pt}
 .doc.eqw .grid6 .rm{font-size:8.5pt;text-align:left;padding:1mm 1.5mm;line-height:1.3}
 .doc.eqw .eqfoot{display:flex;justify-content:space-between;gap:6mm;font-size:9.5pt;margin-top:1.5mm}
@@ -417,6 +424,7 @@ const DEF={
   ],
   vulnAge:55,bp:{warn:[140,90],stop:[160,100]},
   eqItems:'안전벨트 / 안전레버|좌석 안전벨트는 운행 중 상시 착용하고 안전레버 하강 시 조종이 불가할 것\n버켓 안전핀 / 훅해지장치|규정된 버켓을 사용하고 안전핀은 정상적으로 체결되어 있을 것, 훅해지장치가 있을 것\n조종장치 / 제동장치|브레이크, 클러치 및 조종장치는 손상 및 변형이 없으며 정상 작동될 것\n장비실명제 부착상태|장비실명제(허가증)가 부착되어 있고 해당 운전원이 실제 운전을 하고 있는지 확인\n협착방지봉 / 후방카메라·센서·후사경·경보기·조명|협착방지봉 부착상태, 후방카메라·센서·후사경·경보기·조명 정상작동 여부\n트랙 / 차륜|트랙 또는 차륜(타이어)의 균열·변형·파손 등 주행장치 이상이 없을 것 (손상이 심하면 타이어 교체 지시 및 확인)\n작업구역 통제|안전시설물 등으로 작업구역을 설정하고 유도자를 배치할 것 (장비 1대당 유도자 1명 이상)',
+  eqCheckItems:'작업계획서 작성여부\n장비 실명제 부착상태\n백호 버킷 이탈방진핀 체결상태 (인식웨빙띠 설치)\n백호 훅 해지장치 설치상태\n크레인등 양중장비 권과방지장치 부착상태\n신호수 배치 및 복장상태 (깃발,호루라기,신호봉,적색조끼 및 안전모)\n후방카메라 작동상태\n후진경고음 작동상태\n타이어 마모상태\n장비후면 접근금지표지 및 협착방지봉 부착상태\n작업장구획 및 안전표지 부착상태\n작업장 정리정돈 상태\n주변 위험요소 방치 여부',
   alcMode:'site',
   alc:{retest:0.020,stop:0.050,detect:0.001,day:0.030,outCount:2},
   alcMsg:'음주적발 알림\n1. 협력사명 : {업체}\n2. 측정일시 : {일시}\n3. {성명}({직종})\n4. 혈중 알코올 농도 {수치}\n5. 조치 : 🚫{조치}\n\n기준 : \n{기준}\n\n해당인원이 현장에서 작업하지 않도록 각별한 관리 부탁드리며 작업 중 적발 시 영구 퇴출 등 불이익이 발생할 수 있으니 참고해주시기 바랍니다.\n\n모든 관리자께서는 해당인원이 현장에서 작업할 시 작업중지 및 안전보건팀에 연락해주시기 바랍니다.'
@@ -731,7 +739,7 @@ function docAlcoholList(ds){
 }
 
 /* ---------- views ---------- */
-const APP_VER='2026.10.09-8';
+const APP_VER='2026.10.09-9';
 const VIEWS=[['home','홈'],['strike','삼진아웃'],['alcohol','음주측정'],['reg','관리대장'],['settings','설정']];
 /* 하위 화면 → 하단 탭 묶음 */
 const NAVOF={workers:'reg',equip:'reg',eqcheck:'reg',vuln:'reg',records:'settings'};
@@ -1144,9 +1152,12 @@ R.settings=()=>{
    <div class="grid g2"><div><label class="f">[지침] 재측정 기준 (% 이상)</label><input class="inp" id="sR" inputmode="decimal" value="${S.alc.retest.toFixed(3)}"></div><div><label class="f">[지침] 작업금지·귀가 기준 (% 이상)</label><input class="inp" id="sT" inputmode="decimal" value="${S.alc.stop.toFixed(3)}"></div></div>
    <div class="small muted" style="margin-top:6px">[지침] 재측정에서 다시 재측정 기준 이상이면 음주상태로 판정(작업금지). 측정거부는 출입통제·작업배제.</div>
    <label class="f">적발 알림 문구 — {업체} {일시} {성명} {직종} {수치} {조치} {기준} 자동 치환</label><textarea class="inp" id="sMsg" style="min-height:220px">${h(S.alcMsg)}</textarea></div>
-  <div class="card"><b>장비 일일점검 항목</b> <span class="small muted">— 한 줄에 하나, "항목|설명" 형식</span>
-   <textarea class="inp" id="sEq" style="min-height:200px;font-size:14px">${h(S.eqItems||DEF.eqItems)}</textarea>
-   <div class="small muted" style="margin-top:6px">기본값: 장비전담제 장비점검방법 10~16쪽. 항목을 바꿔도 이미 저장된 점검 기록은 그대로 남습니다.</div></div>
+  <div class="card"><b>장비 주간 점검표 항목</b> <span class="small muted">— 한 줄에 하나</span>
+   <textarea class="inp" id="sEqC" style="min-height:240px;font-size:14px">${h(S.eqCheckItems||DEF.eqCheckItems)}</textarea>
+   <div class="small muted" style="margin-top:6px">기본값: 「장비 전담 관리자 점검표」 일일점검표 13개 항목.</div>
+   <label class="f" style="margin-top:14px">장비 주간 사진 항목 — "항목|설명" (맨 앞 '점검사진'은 자동)</label>
+   <textarea class="inp" id="sEq" style="min-height:180px;font-size:14px">${h(S.eqItems||DEF.eqItems)}</textarea>
+   <div class="small muted" style="margin-top:6px">기본값: 장비전담제 장비점검방법 10~16쪽.</div></div>
   <div class="card"><b>취약근로자 기준</b>
    <div class="grid g2"><div><label class="f">고령 분류 연령 (세 이상)</label><input class="inp" id="sVa" inputmode="numeric" value="${S.vulnAge}"></div><div></div>
    <div><label class="f">혈압 주의 (수축기/이완기 이상)</label><input class="inp" id="sBw" value="${S.bp.warn.join('/')}"></div><div><label class="f">혈압 위험 (수축기/이완기 이상)</label><input class="inp" id="sBs" value="${S.bp.stop.join('/')}"></div></div></div>
@@ -1178,7 +1189,7 @@ R.settings=()=>{
     if(!adm||R.settings.tab==='me'){if(await saveMine()){await saveSettings();toast('저장됨')}return}
     const r=parseFloat($('#sR').value),t=parseFloat($('#sT').value),dt=parseFloat($('#sDt').value),dy=parseFloat($('#sDy').value),oc=parseInt($('#sOc').value);if(!(r>0&&t>r&&dt>0&&dy>dt&&oc>=1))return toast('음주 기준값을 확인하세요');
     const bpP=v=>{const m=String(v).match(/(\d{2,3})\s*\/\s*(\d{2,3})/);return m?[+m[1],+m[2]]:null};const bw=bpP($('#sBw').value),bs=bpP($('#sBs').value),va=parseInt($('#sVa').value);
-    if(!bw||!bs||!(va>0))return toast('취약근로자 기준값을 확인하세요 (예: 140/90)');S.bp={warn:bw,stop:bs};S.vulnAge=va;S.eqItems=$('#sEq').value.split('\n').map(x=>x.trim()).filter(Boolean).join('\n')||DEF.eqItems;
+    if(!bw||!bs||!(va>0))return toast('취약근로자 기준값을 확인하세요 (예: 140/90)');S.bp={warn:bw,stop:bs};S.vulnAge=va;S.eqItems=$('#sEq').value.split('\n').map(x=>x.trim()).filter(Boolean).join('\n')||DEF.eqItems;S.eqCheckItems=$('#sEqC').value.split('\n').map(x=>x.trim()).filter(Boolean).join('\n')||DEF.eqCheckItems;
     const pin=$('#sN').value.trim();if(pin&&!/^\d{4,6}$/.test(pin))return toast('PIN은 숫자 4~6자리');
     if($('#sI').value.trim()&&!(await saveMine()))return;
     Object.assign(S,{site:$('#sS').value.trim(),periodMonths:+$('#sP').value,pin,alc:{retest:r,stop:t,detect:dt,day:dy,outCount:oc},alcMode:$('#sAm').value,alcMsg:$('#sMsg').value,
@@ -1380,7 +1391,7 @@ function editUser(u){const nu=!u;u=u||{};
   })}
 let SERVER=false,ME=null;
 const isAdmin=()=>!SERVER||(ME&&ME.role==='admin');
-const SHARED_KEYS=['site','periodMonths','vtypes','levels','alcMode','alc','alcMsg','vulnAge','bp','eqItems'];
+const SHARED_KEYS=['site','periodMonths','vtypes','levels','alcMode','alc','alcMsg','vulnAge','bp','eqItems','eqCheckItems'];
 async function api(path,body){
   const r=await fetch('/api/'+path,{method:body!==undefined?'POST':'GET',credentials:'same-origin',headers:body!==undefined?{'content-type':'application/json'}:{},body:body!==undefined?JSON.stringify(body):undefined});
   let j=null;try{j=await r.json()}catch(e){}
@@ -1471,8 +1482,12 @@ async function logout(){try{await api('logout',{})}catch(e){}await kvSet('me',nu
    주간 사진: 장비당 주 1회 — [점검사진(관리자+장비)] + 항목별 1장
    사진대지: 「사진대지 양식」 — 한 장에 2건, 건마다 사진 4장 + 일시·내용 */
 const WD6='월화수목금토';
-function eqItems(){return String(S.eqItems||DEF.eqItems).split('\n').map(l=>l.trim()).filter(Boolean).map(l=>{const i=l.indexOf('|');return i<0?{t:l,d:''}:{t:l.slice(0,i).trim(),d:l.slice(i+1).trim()}})}
-function eqSlots(){return [{t:'점검사진',d:'전담관리자와 장비가 함께 나온 사진'},...eqItems().map((it,i)=>({t:`${i+1}. ${it.t}`,d:it.d}))]}
+const parseItems=src=>String(src).split('\n').map(l=>l.trim()).filter(Boolean).map(l=>l.replace(/^\d+\s*[.)]?\s*/,'')).filter(Boolean).map(l=>{const i=l.indexOf('|');return i<0?{t:l,d:''}:{t:l.slice(0,i).trim(),d:l.slice(i+1).trim()}});
+/* 주간 점검표 항목 (엑셀 일일점검표) */
+function eqItems(){return parseItems(S.eqCheckItems||DEF.eqCheckItems)}
+/* 주간 사진 항목 (장비점검방법 PPT) */
+function eqPhotoItems(){return String(S.eqItems||DEF.eqItems).split('\n').map(l=>l.trim()).filter(Boolean).map(l=>{const i=l.indexOf('|');return i<0?{t:l,d:''}:{t:l.slice(0,i).trim(),d:l.slice(i+1).trim()}})}
+function eqSlots(){return [{t:'점검사진',d:'전담관리자와 장비가 함께 나온 사진'},...eqPhotoItems().map((it,i)=>({t:`${i+1}. ${it.t}`,d:it.d}))]}
 const weekMon=ds=>{const d=new Date(ds+'T00:00');return addDays(ds,-((d.getDay()+6)%7))};
 function weekLabel(mon){const d=new Date(mon+'T00:00');const first=new Date(d.getFullYear(),d.getMonth(),1);const off=(first.getDay()+6)%7;
   return `${String(d.getFullYear()).slice(2)}년 ${d.getMonth()+1}월 ${Math.ceil((d.getDate()+off)/7)}주차`}
@@ -1550,7 +1565,7 @@ function eqWeekForm(eid,mon){
   const SYM=MARK_SYM,NEXT={'':'O',O:'X',X:'N',N:'E',E:''};
   openModal(`주간 점검표 · ${eqName(e)}`,`<div class="card"><dl class="kv"><dt>소속협력사</dt><dd>${h(e.company||'-')}</dd><dt>장비</dt><dd>${h(eqName(e))}</dd><dt>전담관리자</dt><dd>${h(e.manager||'미지정')}</dd></dl>
      <div style="margin-top:8px"><b>${weekLabel(mon)}</b> <span class="muted small">(${md(days[0])}~${md(days[5])})</span> <span id="wkStamp"></span></div></div>
-   <details class="card small"><summary><b>점검 기준 보기</b> (장비점검방법 10~16쪽)</summary>${items.map((it,i)=>`<div style="margin-top:8px"><b>${i+1}. ${h(it.t)}</b><div class="muted">${h(it.d)}</div></div>`).join('')}</details>
+   ${items.some(it=>it.d)?'':'<!--'}<details class="card small"><summary><b>점검 기준 보기</b> (장비점검방법 10~16쪽)</summary>${items.map((it,i)=>`<div style="margin-top:8px"><b>${i+1}. ${h(it.t)}</b><div class="muted">${h(it.d)}</div></div>`).join('')}</details>${items.some(it=>it.d)?'':'-->'}
    <div class="row" style="margin-bottom:8px"><span class="grow small muted">칸을 누를 때마다 ○적합 → ×부적합 → -해당없음 → △기타의견 → 빈칸. 요일을 누르면 그날 전체 ○</span><button class="btn sm ghost" id="wkAll">오늘까지 모두 ○</button></div>
    <div class="wkwrap"><table class="wkt"><tr><th class="it">점검 항목</th>${days.map((d,i)=>`<th><button type="button" class="wkh" data-col="${i}" ${d>t?'disabled':''}>${WD6[i]}<br><small>${md(d)}</small></button></th>`).join('')}</tr>
      ${items.map((it,r)=>`<tr><td class="it">${r+1}. ${h(it.t)}</td>${days.map((d,c)=>`<td><button type="button" class="wkc" data-r="${r}" data-c="${c}" ${d>t?'disabled':''}></button></td>`).join('')}</tr>`).join('')}</table></div>
@@ -1619,15 +1634,14 @@ function eqWeekPhotoForm(eid,mon){
 /* 주간 일일점검표 출력 — A4 가로 1장 / 장비 1대 (현장 엑셀 양식과 같은 배치) */
 function docEqWeek(e,mon){
   const days=weekDays(mon),w=eqWeekRec(e.id,mon),legacy=days.map(d=>eqLegacyDay(e.id,d));
-  const titles=eqItems().map(i=>i.t);if(w)Object.keys(w.marks||{}).forEach(t=>{if(!titles.includes(t))titles.push(t)});
-  legacy.forEach(c=>c&&c.items.forEach(it=>{if(!titles.includes(it.t))titles.push(it.t)}));
+  const titles=eqItems().map(i=>i.t);
   const val=(t,i)=>{const v=w&&w.marks&&w.marks[t]?w.marks[t][i]:'';if(v)return v;const c=legacy[i];const it=c&&c.items.find(x=>x.t===t);return it?it.v:''};
   const sym=v=>v==='X'?'<b>×</b>':MARK_SYM[v]||'';
   const note=t=>{const n=[];if(w&&w.notes&&w.notes[t])n.push(h(w.notes[t]));legacy.forEach((c,i)=>{const it=c&&c.items.find(x=>x.t===t);if(it&&it.note)n.push(`${WD6[i]}: ${h(it.note)}`)});return n.join('<br>')};
   const sigSrc=w&&w.sig||(legacy.find(c=>c&&c.sig)||{}).sig;
   const remarks=[w&&w.remark?h(w.remark):'',...legacy.map((c,i)=>c&&c.remark?`${WD6[i]} ${h(c.remark)}`:'')].filter(Boolean);
   const done=eqWeekComplete(e.id,mon);
-  const rowH=Math.max(11,Math.min(20,Math.floor(136/Math.max(titles.length,1))));
+  const rowH=Math.max(9,Math.min(20,Math.floor(140/Math.max(titles.length,1))));
   return `<div class="doc eqw">${done?stampHtml('doc'):''}<h1>장비 전담관리자 일일점검표</h1>
   <div class="eqf"><div><span>■ 소속협력사 :</span><u>${h(e.company||'')}</u></div>
     <div><span>■ 장비종류 :</span><u>${h(e.type||'')}</u><span style="margin-left:6mm">■ 장비번호 :</span><u>${h(e.plate||'')}</u><span class="wl">${weekLabel(mon)}</span></div>
