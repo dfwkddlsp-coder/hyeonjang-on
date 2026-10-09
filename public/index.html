@@ -153,7 +153,31 @@ table.t tr.click:hover td{background:#f8fafc}
 .i-check{--m:url("data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M5%2012.5l4.5%204.5L19%207.5%22%2F%3E%3C%2Fsvg%3E")}
 .i-x{--m:url("data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M6%206l12%2012%22%2F%3E%3Cpath%20d%3D%22M18%206L6%2018%22%2F%3E%3C%2Fsvg%3E")}
 .i-reg{--m:url("data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M4%206.5A2.5%202.5%200%200%201%206.5%204H20v14H6.5A2.5%202.5%200%200%200%204%2020.5z%22%2F%3E%3Cpath%20d%3D%22M4%2020.5V6.5%22%2F%3E%3Cpath%20d%3D%22M9%208.5h7%22%2F%3E%3Cpath%20d%3D%22M9%2012h5%22%2F%3E%3C%2Fsvg%3E")}
+.i-eqcheck{--m:url("data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Crect%20x%3D%225%22%20y%3D%224%22%20width%3D%2214%22%20height%3D%2217%22%20rx%3D%222%22%2F%3E%3Cpath%20d%3D%22M9%202.5h6v3.5H9z%22%2F%3E%3Cpath%20d%3D%22M8.5%2013l2.5%202.5%204.5-5%22%2F%3E%3C%2Fsvg%3E")}
 .x .i{width:20px;height:20px}
+/* 장비 일일점검 */
+.eqc .row>.btn{flex:none}
+.eqdays{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-top:10px}
+.eqd{border:1.5px solid var(--line);background:#fff;border-radius:10px;padding:6px 2px;display:flex;flex-direction:column;align-items:center;gap:1px;cursor:pointer;min-height:58px}
+.eqd span{font-size:11px;color:var(--sub);white-space:nowrap}.eqd b{font-size:18px;line-height:1.2;color:#b9b4aa}.eqd small{font-size:10px;color:var(--sub)}
+.eqd.ok b{color:var(--ok)}.eqd.bad{border-color:var(--bad)}.eqd.bad b{color:var(--bad)}.eqd.today{border-color:var(--ink)}.eqd:disabled{opacity:.4;cursor:default}
+.ecopt{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px}
+.ecopt button{border:1.5px solid var(--line);background:#fff;border-radius:10px;min-height:46px;font-weight:700;color:var(--sub);cursor:pointer}
+.ecopt button.on[data-v="O"]{background:var(--ok);border-color:var(--ok);color:#fff}.ecopt button.on[data-v="X"]{background:var(--bad);border-color:var(--bad);color:#fff}.ecopt button.on[data-v="N"]{background:var(--ink);border-color:var(--ink);color:#fff}
+.ecph{width:132px}.ecph .ph{width:132px;height:100px}.ecph .inp{min-height:36px;padding:6px 8px;font-size:13px;margin-top:4px}
+/* 인쇄: 주간 점검표 · 사진대지 */
+.doc.eqw .grid6 th,.doc.eqw .grid6 td{width:auto;text-align:center;font-size:10pt;padding:1.6mm 1mm}
+.doc.eqw .grid6 .it{text-align:left;width:62mm}.doc.eqw .grid6 .rm{width:34mm;text-align:left;font-size:8.5pt}
+.doc.eqw .dsc{font-size:8pt;color:#444;margin-top:.5mm}.doc.eqw .mk{font-size:13pt;width:12mm}.doc.eqw .mk.sm{font-size:8pt}
+.doc.psheet h1{letter-spacing:6mm}.doc.psheet .pl{margin:0 0 3mm;font-size:11pt}
+.doc .pblock{margin-bottom:5mm}.doc .pblock.empty{border:1px solid #000;height:120mm;display:flex;align-items:center;justify-content:center;font-size:12pt}
+.doc .pgrid{display:grid;grid-template-columns:1fr 1fr;border:1px solid #000;border-bottom:0}
+.doc .pgrid>div{height:57mm;border-right:1px solid #000;border-bottom:1px solid #000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#fff}
+.doc .pgrid>div:nth-child(2n){border-right:0}
+.doc .pgrid img{max-width:100%;max-height:100%;object-fit:contain}
+.doc .pgrid.n1{grid-template-columns:1fr}.doc .pgrid.n1>div{height:114mm;border-right:0}
+.doc .pgrid.n2>div{height:114mm}
+.doc .pblock table{margin:0;table-layout:fixed}.doc .pblock th{width:18mm}.doc .pblock td:nth-of-type(1){width:48mm}
 /* 화면 안 하위 탭 */
 .seg{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:-2px 0 14px;padding:4px;background:var(--chip);border-radius:14px}
 .seg::-webkit-scrollbar{display:none}
@@ -313,8 +337,8 @@ function expCell(s){const st=expState(s);if(!s)return '';return `<span class="${
 
 /* ---------- storage ---------- */
 const DB={db:null,
-  open(){return new Promise((res,rej)=>{const r=indexedDB.open('fieldsafety',3);
-    r.onupgradeneeded=()=>{const d=r.result;['workers','equipment','violations','alcohol','vuln'].forEach(s=>{if(!d.objectStoreNames.contains(s))d.createObjectStore(s,{keyPath:'id'})});if(!d.objectStoreNames.contains('kv'))d.createObjectStore('kv',{keyPath:'k'});if(!d.objectStoreNames.contains('outbox'))d.createObjectStore('outbox',{keyPath:'k'})};
+  open(){return new Promise((res,rej)=>{const r=indexedDB.open('fieldsafety',4);
+    r.onupgradeneeded=()=>{const d=r.result;['workers','equipment','violations','alcohol','vuln','eqchecks'].forEach(s=>{if(!d.objectStoreNames.contains(s))d.createObjectStore(s,{keyPath:'id'})});if(!d.objectStoreNames.contains('kv'))d.createObjectStore('kv',{keyPath:'k'});if(!d.objectStoreNames.contains('outbox'))d.createObjectStore('outbox',{keyPath:'k'})};
     r.onsuccess=()=>{this.db=r.result;res()};r.onerror=()=>rej(r.error)})},
   req(r){return new Promise((res,rej)=>{r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})},
   st(s,m){return this.db.transaction(s,m).objectStore(s)},
@@ -323,8 +347,8 @@ const DB={db:null,
   del(s,id){return this.req(this.st(s,'readwrite').delete(id))},
   putMany(s,arr,clear){return new Promise((res,rej)=>{const t=this.db.transaction(s,'readwrite');const o=t.objectStore(s);if(clear)o.clear();arr.forEach(x=>o.put(x));t.oncomplete=res;t.onerror=()=>rej(t.error)})}
 };
-let W=[],E=[],V=[],A=[],VU=[];
-const STORE={workers:()=>W,equipment:()=>E,violations:()=>V,alcohol:()=>A,vuln:()=>VU};
+let W=[],E=[],V=[],A=[],VU=[],EC=[];
+const STORE={workers:()=>W,equipment:()=>E,violations:()=>V,alcohol:()=>A,vuln:()=>VU,eqchecks:()=>EC};
 function memPut(store,obj){const arr=STORE[store]();const i=arr.findIndex(x=>x.id===obj.id);if(i>=0)arr[i]=obj;else arr.push(obj)}
 function memDel(store,id){const arr=STORE[store]();const i=arr.findIndex(x=>x.id===id);if(i>=0)arr.splice(i,1)}
 /* 서버 모드: 기기에 먼저 저장 → 전송 대기함(outbox) → 연결되면 서버로. 인터넷이 없어도 입력은 계속 됩니다 */
@@ -340,6 +364,7 @@ const DEF={
     {name:'3차 적발',sticker:'적색',act:'작업중지\n해당 협력사 소장에게 퇴출 요청\n퇴출 조치'}
   ],
   vulnAge:55,bp:{warn:[140,90],stop:[160,100]},
+  eqItems:'안전벨트 / 안전레버|좌석 안전벨트는 운행 중 상시 착용하고 안전레버 하강 시 조종이 불가할 것\n버켓 안전핀 / 훅해지장치|규정된 버켓을 사용하고 안전핀은 정상적으로 체결되어 있을 것, 훅해지장치가 있을 것\n조종장치 / 제동장치|브레이크, 클러치 및 조종장치는 손상 및 변형이 없으며 정상 작동될 것\n장비실명제 부착상태|장비실명제(허가증)가 부착되어 있고 해당 운전원이 실제 운전을 하고 있는지 확인\n협착방지봉 / 후방카메라·센서·후사경·경보기·조명|협착방지봉 부착상태, 후방카메라·센서·후사경·경보기·조명 정상작동 여부\n트랙 / 차륜|트랙 또는 차륜(타이어)의 균열·변형·파손 등 주행장치 이상이 없을 것 (손상이 심하면 타이어 교체 지시 및 확인)\n작업구역 통제|안전시설물 등으로 작업구역을 설정하고 유도자를 배치할 것 (장비 1대당 유도자 1명 이상)',
   alcMode:'site',
   alc:{retest:0.020,stop:0.050,detect:0.001,day:0.030,outCount:2},
   alcMsg:'음주적발 알림\n1. 협력사명 : {업체}\n2. 측정일시 : {일시}\n3. {성명}({직종})\n4. 혈중 알코올 농도 {수치}\n5. 조치 : 🚫{조치}\n\n기준 : \n{기준}\n\n해당인원이 현장에서 작업하지 않도록 각별한 관리 부탁드리며 작업 중 적발 시 영구 퇴출 등 불이익이 발생할 수 있으니 참고해주시기 바랍니다.\n\n모든 관리자께서는 해당인원이 현장에서 작업할 시 작업중지 및 안전보건팀에 연락해주시기 바랍니다.'
@@ -651,11 +676,11 @@ function docAlcoholList(ds){
 }
 
 /* ---------- views ---------- */
-const APP_VER='2026.10.09-3';
+const APP_VER='2026.10.09-4';
 const VIEWS=[['home','홈'],['strike','삼진아웃'],['alcohol','음주측정'],['reg','관리대장'],['settings','설정']];
 /* 하위 화면 → 하단 탭 묶음 */
-const NAVOF={workers:'reg',equip:'reg',vuln:'reg',records:'settings'};
-const REG_TABS=[['workers','근로자'],['equip','장비'],['vuln','취약근로자']];
+const NAVOF={workers:'reg',equip:'reg',eqcheck:'reg',vuln:'reg',records:'settings'};
+const REG_TABS=[['workers','근로자'],['equip','장비'],['eqcheck','장비점검'],['vuln','취약근로자']];
 let lastReg='workers';
 let cur='home';
 function go(v,arg){if(v==='reg')v=lastReg;if(NAVOF[v]==='reg')lastReg=v;cur=v;document.body.classList.toggle('is-home',v==='home');$$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===(NAVOF[v]||v)));window.scrollTo(0,0);R[v](arg);try{sessionStorage.setItem('v',v)}catch(e){}}
@@ -684,7 +709,7 @@ R.home=()=>{
    ${tile(3,'vuln','취약근로자','vulnerable workers','health care',vuNo.length,`관리 <b>${vuAct.length}</b>명 · 고혈압 <b>${vuAct.filter(p=>vulnTags(p).includes('고혈압')).length}</b><br>사후상담 미실시 <b>${vuNo.length}</b>`)}
    ${tile(4,'workers','근로자','worker register','people',null,`등록 <b>${W.length}</b>명<br>업체 <b>${new Set(W.map(w=>w.company)).size}</b>곳`)}
    ${tile(5,'equip','장비','equipment register','machines',expE.length,`등록 <b>${E.length}</b>대<br>서류 만료·임박 <b>${expE.length}</b>`)}
-   ${tile(6,'records','기록','records · report','archive',null,`기간별 엑셀 · 확인서 일괄 출력<br>백업 / 복원`,true)}
+   ${(()=>{const iu=E.filter(e=>!e.outDate),dn=iu.filter(e=>eqCheckOf(e.id,today())).length,mt=iu.filter(e=>isMine(e)&&!eqCheckOf(e.id,today())).length;return tile(6,'eqcheck','장비점검','daily inspection','',iu.length-dn,`오늘 점검 <b>${dn}</b>/${iu.length}대<br>${mt?`내 담당 미점검 <b>${mt}</b>`:'사진대지 · 주간 점검표'}`,true)})()}
    ${tile(7,'settings','설정','settings','setup',null,`현장명 · 점검자 · 기준`)}
   </div>
   ${noNotice.length?`<div class="hm-sec"><h2>통지서 미작성</h2><span>alcohol notice</span></div><div class="card list">${noNotice.map(alcItem).join('')}</div>`:''}
@@ -990,7 +1015,8 @@ function showEquip(id){
   const e=E.find(x=>x.id===id);if(!e)return;
   openModal(`${e.type||'장비'} · ${e.plate||''}`,`<dl class="kv">${Object.entries(EQUIP_LABEL).filter(([k])=>e[k]).map(([k,l])=>`<dt>${l}</dt><dd>${k==='phone'?`<a href="tel:${h(e[k])}">${h(e[k])}</a>`:k==='inspect'||k==='insurance'?expCell(e[k]):h(e[k])}</dd>`).join('')}</dl>
    <p class="small muted">출처: ${h(e.src||'')} ${h(e.updated||e.created||'')}</p>
-   <div class="row" style="margin-top:12px">${e.operator?'<button class="btn" id="ea"><i class="i i-alcohol"></i> 운전원 음주측정</button><button class="btn" id="es"><i class="i i-alert"></i> 운전원 적발</button>':''}<button class="btn line" id="ee">수정</button></div>`,b=>{
+   <div class="row" style="margin-top:12px">${e.operator?'<button class="btn" id="ea"><i class="i i-alcohol"></i> 운전원 음주측정</button><button class="btn" id="es"><i class="i i-alert"></i> 운전원 적발</button>':''}<button class="btn" id="ek"><i class="i i-eqcheck"></i> 일일점검</button><button class="btn line" id="ee">수정</button></div>`,b=>{
+    $('#ek',b).onclick=()=>{closeModal();eqCheckForm(e.id,today())};
     const p={name:e.operator,company:e.company,job:'장비운전원',equip:e.type,plate:e.plate};const w=W.find(x=>pkey(x.name,x.company)===pkey(e.operator,e.company));if(w){p.job=w.job||p.job;p.workerId=w.id;p.helmet=w.helmet}
     const ea=$('#ea',b);if(ea)ea.onclick=()=>{closeModal();go('alcohol');alcForm(p)};
     const es=$('#es',b);if(es)es.onclick=()=>{closeModal();go('strike',{person:p})};
@@ -1027,11 +1053,11 @@ R.records=()=>{
     XLSX.utils.book_append_sheet(wb,sheet([[`음주측정 기록 (${from} ~ ${to})`],['현장명 :',S.site],ah,...as.sort((a,b)=>a.at.localeCompare(b.at)).map((a,i)=>[i+1,fmtDT(a.at),a.company,a.job,a.name+(a.retestOf?' (재측정)':''),a.equip,a.plate,a.refused?'거부':a.value.toFixed(3),a.judge,a.action,a.measurer,a.follow||'',a.notice?'작성':'',a.void?'무효: '+a.void.reason:''])],[5,16,16,10,12,14,12,10,9,22,10,24,7,14],['A1:N1']),'음주측정');
     download(wb,`안전관리기록_${from}_${to}.xlsx`)};
   $('#rp').onclick=()=>{const pages=[...vs.filter(v=>!v.void).map(docViolation),...as.filter(a=>a.notice&&!a.void).map(docAlcohol)];if(!pages.length)return toast('출력할 확인서 없음');printPages(pages)};
-  if($('#bk'))$('#bk').onclick=()=>{const blob=new Blob([JSON.stringify({app:'fieldsafety',v:1,at:nowLocal(),settings:S,workers:W,equipment:E,violations:V,alcohol:A,vuln:VU})],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`현장ON_백업_${today()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};
+  if($('#bk'))$('#bk').onclick=()=>{const blob=new Blob([JSON.stringify({app:'fieldsafety',v:1,at:nowLocal(),settings:S,workers:W,equipment:E,violations:V,alcohol:A,vuln:VU,eqchecks:EC})],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`현장ON_백업_${today()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};
   if($('#rs'))$('#rs').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const d=JSON.parse(await f.text());if(d.app!=='fieldsafety')throw 0;
     if(!confirm(`백업(${d.at})을 복원합니다.\n같은 ID 기록은 덮어쓰고, 없는 기록은 추가합니다. 계속할까요?`))return;
-    if(SERVER){for(const s of ['workers','equipment','violations','alcohol','vuln'])if((d[s]||[]).length)await pushImport(s,d[s],false)}
-    else{for(const s of ['workers','equipment','violations','alcohol','vuln'])await DB.putMany(s,d[s]||[]);if(d.settings){S=Object.assign(S,d.settings);await saveSettings()}await loadAll()}
+    if(SERVER){for(const s of ['workers','equipment','violations','alcohol','vuln','eqchecks'])if((d[s]||[]).length)await pushImport(s,d[s],false)}
+    else{for(const s of ['workers','equipment','violations','alcohol','vuln','eqchecks'])await DB.putMany(s,d[s]||[]);if(d.settings){S=Object.assign(S,d.settings);await saveSettings()}await loadAll()}
     toast('복원 완료');R.records()}catch(x){toast(x.message&&x.message!=='0'?x.message:'백업 파일이 아닙니다')}};
   bindItems();
 };
@@ -1063,6 +1089,9 @@ R.settings=()=>{
    <div class="grid g2"><div><label class="f">[지침] 재측정 기준 (% 이상)</label><input class="inp" id="sR" inputmode="decimal" value="${S.alc.retest.toFixed(3)}"></div><div><label class="f">[지침] 작업금지·귀가 기준 (% 이상)</label><input class="inp" id="sT" inputmode="decimal" value="${S.alc.stop.toFixed(3)}"></div></div>
    <div class="small muted" style="margin-top:6px">[지침] 재측정에서 다시 재측정 기준 이상이면 음주상태로 판정(작업금지). 측정거부는 출입통제·작업배제.</div>
    <label class="f">적발 알림 문구 — {업체} {일시} {성명} {직종} {수치} {조치} {기준} 자동 치환</label><textarea class="inp" id="sMsg" style="min-height:220px">${h(S.alcMsg)}</textarea></div>
+  <div class="card"><b>장비 일일점검 항목</b> <span class="small muted">— 한 줄에 하나, "항목|설명" 형식</span>
+   <textarea class="inp" id="sEq" style="min-height:200px;font-size:14px">${h(S.eqItems||DEF.eqItems)}</textarea>
+   <div class="small muted" style="margin-top:6px">기본값: 장비전담제 장비점검방법 10~16쪽. 항목을 바꿔도 이미 저장된 점검 기록은 그대로 남습니다.</div></div>
   <div class="card"><b>취약근로자 기준</b>
    <div class="grid g2"><div><label class="f">고령 분류 연령 (세 이상)</label><input class="inp" id="sVa" inputmode="numeric" value="${S.vulnAge}"></div><div></div>
    <div><label class="f">혈압 주의 (수축기/이완기 이상)</label><input class="inp" id="sBw" value="${S.bp.warn.join('/')}"></div><div><label class="f">혈압 위험 (수축기/이완기 이상)</label><input class="inp" id="sBs" value="${S.bp.stop.join('/')}"></div></div></div>
@@ -1094,7 +1123,7 @@ R.settings=()=>{
     if(!adm||R.settings.tab==='me'){if(await saveMine()){await saveSettings();toast('저장됨')}return}
     const r=parseFloat($('#sR').value),t=parseFloat($('#sT').value),dt=parseFloat($('#sDt').value),dy=parseFloat($('#sDy').value),oc=parseInt($('#sOc').value);if(!(r>0&&t>r&&dt>0&&dy>dt&&oc>=1))return toast('음주 기준값을 확인하세요');
     const bpP=v=>{const m=String(v).match(/(\d{2,3})\s*\/\s*(\d{2,3})/);return m?[+m[1],+m[2]]:null};const bw=bpP($('#sBw').value),bs=bpP($('#sBs').value),va=parseInt($('#sVa').value);
-    if(!bw||!bs||!(va>0))return toast('취약근로자 기준값을 확인하세요 (예: 140/90)');S.bp={warn:bw,stop:bs};S.vulnAge=va;
+    if(!bw||!bs||!(va>0))return toast('취약근로자 기준값을 확인하세요 (예: 140/90)');S.bp={warn:bw,stop:bs};S.vulnAge=va;S.eqItems=$('#sEq').value.split('\n').map(x=>x.trim()).filter(Boolean).join('\n')||DEF.eqItems;
     const pin=$('#sN').value.trim();if(pin&&!/^\d{4,6}$/.test(pin))return toast('PIN은 숫자 4~6자리');
     if($('#sI').value.trim()&&!(await saveMine()))return;
     Object.assign(S,{site:$('#sS').value.trim(),periodMonths:+$('#sP').value,pin,alc:{retest:r,stop:t,detect:dt,day:dy,outCount:oc},alcMode:$('#sAm').value,alcMsg:$('#sMsg').value,
@@ -1296,7 +1325,7 @@ function editUser(u){const nu=!u;u=u||{};
   })}
 let SERVER=false,ME=null;
 const isAdmin=()=>!SERVER||(ME&&ME.role==='admin');
-const SHARED_KEYS=['site','periodMonths','vtypes','levels','alcMode','alc','alcMsg','vulnAge','bp'];
+const SHARED_KEYS=['site','periodMonths','vtypes','levels','alcMode','alc','alcMsg','vulnAge','bp','eqItems'];
 async function api(path,body){
   const r=await fetch('/api/'+path,{method:body!==undefined?'POST':'GET',credentials:'same-origin',headers:body!==undefined?{'content-type':'application/json'}:{},body:body!==undefined?JSON.stringify(body):undefined});
   let j=null;try{j=await r.json()}catch(e){}
@@ -1376,10 +1405,140 @@ async function authGate(){
   else if(!u)u=await authScreen('login');
   if(u.mustChange)u=await authScreen('pw');
   const prev=await kvGet('me');let reset=false;
-  if(!prev||prev.id!==u.id){for(const s of ['workers','equipment','violations','alcohol','vuln','outbox'])await DB.putMany(s,[],true);await kvSet('lastSync',0);reset=true}
+  if(!prev||prev.id!==u.id){for(const s of ['workers','equipment','violations','alcohol','vuln','eqchecks','outbox'])await DB.putMany(s,[],true);await kvSet('lastSync',0);reset=true}
   await kvSet('me',u);applyMe(u);return reset;
 }
 async function logout(){try{await api('logout',{})}catch(e){}await kvSet('me',null);location.reload()}
+
+/* ---------- 장비 일일점검 (장비전담제) ----------
+   점검표 양식: 「장비 전담 관리자 점검표」 일일점검표 시트 (월~토 / 비고)
+   점검 항목: 「장비전담제 장비점검방법」 10~16쪽 (설정 → 현장 기준에서 운영자가 수정)
+   사진대지: 「사진대지 양식」 — 한 장에 2건, 건마다 사진 최대 4장 + 일시·내용 */
+const WD6='월화수목금토';
+function eqItems(){return String(S.eqItems||DEF.eqItems).split('\n').map(l=>l.trim()).filter(Boolean).map(l=>{const i=l.indexOf('|');return i<0?{t:l,d:''}:{t:l.slice(0,i).trim(),d:l.slice(i+1).trim()}})}
+const weekMon=ds=>{const d=new Date(ds+'T00:00');return addDays(ds,-((d.getDay()+6)%7))};
+function weekLabel(mon){const d=new Date(mon+'T00:00');const first=new Date(d.getFullYear(),d.getMonth(),1);const off=(first.getDay()+6)%7;
+  return `${String(d.getFullYear()).slice(2)}년 ${d.getMonth()+1}월 ${Math.ceil((d.getDate()+off)/7)}주차`}
+const md=ds=>`${+ds.slice(5,7)}/${+ds.slice(8,10)}`;
+const eqName=e=>`${e.type||'장비'}${e.plate?`(${e.plate})`:''}`;
+const isMine=e=>!!S.inspector&&norm(e.manager)===norm(S.inspector);
+function eqCheckOf(eid,ds){return EC.filter(c=>c.equipId===eid&&c.date===ds&&!c.void).sort((a,b)=>(b.created||'').localeCompare(a.created||''))[0]}
+function eqMark(c){if(!c)return '';return c.items.some(i=>i.v==='X')?'X':'O'}
+
+R.eqcheck=()=>{
+  const ds=R.eqcheck.d||today();const mon=weekMon(ds);const days=[0,1,2,3,4,5].map(i=>addDays(mon,i));const t=today();
+  const f=R.eqcheck.f||(E.some(isMine)?'mine':'all');const q=R.eqcheck.q||'';
+  const inUse=E.filter(e=>!e.outDate);
+  const list=inUse.filter(e=>(f!=='mine'||isMine(e))&&(f!=='todo'||!eqCheckOf(e.id,t))&&(!q||norm([e.type,e.plate,e.company,e.manager,e.operator].join(' ')).includes(norm(q))))
+    .sort((a,b)=>(isMine(b)-isMine(a))||(+a.no||999)-(+b.no||999));
+  const done=inUse.filter(e=>eqCheckOf(e.id,t)).length,mine=inUse.filter(isMine),mineTodo=mine.filter(e=>!eqCheckOf(e.id,t));
+  const weekPhotos=EC.filter(c=>!c.void&&c.date>=days[0]&&c.date<=days[5]).reduce((n,c)=>n+(c.photos||[]).length,0);
+  V$().innerHTML=`<h1>장비 일일점검</h1>
+  <div class="row" style="margin-bottom:10px"><button class="btn sm line" id="wPrev">◀</button><div class="grow" style="text-align:center"><b>${weekLabel(mon)}</b><div class="small muted">${md(days[0])} ~ ${md(days[5])}</div></div><button class="btn sm line" id="wNext">▶</button>${mon!==weekMon(t)?'<button class="btn sm ghost" id="wNow">이번 주</button>':''}</div>
+  <div class="grid g4" style="margin-bottom:10px"><div class="stat"><div class="t">오늘 점검</div><div class="n">${done}<span class="small muted">/${inUse.length}대</span></div></div>
+   <div class="stat"><div class="t">내 담당 미점검</div><div class="n" style="color:${mineTodo.length?'var(--bad)':'inherit'}">${mineTodo.length}<span class="small muted">/${mine.length}대</span></div></div>
+   <div class="stat"><div class="t">이번 주 사진</div><div class="n">${weekPhotos}<span class="small muted">장</span></div></div></div>
+  <div class="row" style="margin-bottom:10px"><button class="btn line" id="pWeek"><i class="i i-print"></i> 주간 점검표</button><button class="btn line" id="pPhoto"><i class="i i-camera"></i> 사진대지</button></div>
+  <div class="chips scroll" style="margin-bottom:8px">${[['mine','내 담당'],['all','전체'],['todo','오늘 미점검']].map(([k,l])=>`<button class="chip ${f===k?'on':''}" data-ef="${k}">${l}</button>`).join('')}</div>
+  <input class="inp" id="eqq" type="search" placeholder="장비명·차량번호·업체·전담관리자" value="${h(q)}" style="margin-bottom:10px">
+  ${!inUse.length?'<div class="card empty">장비 대장이 비어 있습니다. 관리대장 → 장비에서 엑셀을 불러오세요.</div>':''}
+  ${list.map(e=>`<div class="card eqc"><div class="row" style="gap:8px"><div class="grow" style="min-width:0"><b>${h(eqName(e))}</b>${isMine(e)?' <span class="badge">내 담당</span>':''}<div class="small muted ell">${h(e.company||'')} · 전담 ${h(e.manager||'미지정')}${e.operator?' · 운전원 '+h(e.operator):''}</div></div>
+     ${days.includes(t)?`<button class="btn sm${eqCheckOf(e.id,t)?' line':''}" data-new="${e.id}">${eqCheckOf(e.id,t)?'오늘 완료':'<i class="i i-pen"></i> 오늘 점검'}</button>`:''}</div>
+    <div class="eqdays">${days.map((d,i)=>{const c=eqCheckOf(e.id,d),m=eqMark(c);return `<button class="eqd${d===t?' today':''}${m==='O'?' ok':m==='X'?' bad':''}" data-day="${e.id}|${d}" ${d>t&&!c?'disabled':''}><span>${WD6[i]} ${md(d)}</span><b>${m==='O'?'○':m==='X'?'×':d>t?'':'–'}</b>${c&&(c.photos||[]).length?`<small>사진 ${c.photos.length}</small>`:''}</button>`}).join('')}</div></div>`).join('')}
+  ${inUse.length&&!list.length?'<div class="card empty">해당 장비 없음</div>':''}
+  <div class="hint small">전담관리자는 매일 작업 전 점검하고 사진을 올리면 됩니다. 주간 점검표와 사진대지는 자동으로 만들어집니다. (○ 양호 · × 불량 · – 미점검)</div>`;
+  const setD=v=>{R.eqcheck.d=v;R.eqcheck()};
+  $('#wPrev').onclick=()=>setD(addDays(mon,-7));$('#wNext').onclick=()=>setD(addDays(mon,7));if($('#wNow'))$('#wNow').onclick=()=>setD(t);
+  $$('[data-ef]').forEach(b=>b.onclick=()=>{R.eqcheck.f=b.dataset.ef;R.eqcheck()});
+  $('#eqq').oninput=e=>{R.eqcheck.q=e.target.value;clearTimeout(R.eqcheck.t);R.eqcheck.t=setTimeout(()=>{R.eqcheck();const i=$('#eqq');i.focus();i.setSelectionRange(i.value.length,i.value.length)},250)};
+  $$('[data-new]').forEach(b=>b.onclick=()=>eqCheckForm(b.dataset.new,t));
+  $$('[data-day]').forEach(b=>b.onclick=()=>{const [id,d]=b.dataset.day.split('|');eqCheckForm(id,d)});
+  $('#pWeek').onclick=()=>{const es=list.filter(e=>days.some(d=>eqCheckOf(e.id,d)));if(!es.length)return toast('이번 주 점검 기록이 없습니다');printPages(es.map(e=>docEqWeek(e,mon)))};
+  $('#pPhoto').onclick=()=>{const blocks=eqPhotoBlocks(list,days[0],days[5],weekLabel(mon));if(!blocks.length)return toast('이번 주 올린 사진이 없습니다');printPages(docPhotoSheet(blocks))};
+};
+
+function eqCheckForm(eid,ds){
+  const e=E.find(x=>x.id===eid);if(!e)return;const prev=eqCheckOf(eid,ds);const items=eqItems();
+  const st={vals:{},notes:{},photos:prev?[...(prev.photos||[])].map(p=>({...p})):[]};
+  if(prev)for(const it of prev.items){st.vals[it.t]=it.v;st.notes[it.t]=it.note||''}
+  const meIsMgr=isMine(e);
+  openModal(`일일점검 · ${eqName(e)}`,`<div class="card"><dl class="kv"><dt>소속협력사</dt><dd>${h(e.company||'-')}</dd><dt>장비</dt><dd>${h(eqName(e))}</dd><dt>전담관리자</dt><dd>${h(e.manager||'미지정')}</dd>${e.operator?`<dt>운전원</dt><dd>${h(e.operator)}</dd>`:''}</dl>
+     <label class="f">점검일</label><input class="inp" type="date" id="ecD" value="${ds}" max="${today()}"></div>
+   <div class="row" style="margin-bottom:8px"><b class="grow">점검 항목</b><button class="btn sm ghost" id="ecAll">모두 양호</button></div>
+   <div id="ecItems">${items.map((it,i)=>`<div class="card ecit" data-t="${h(it.t)}"><div><b>${i+1}. ${h(it.t)}</b>${it.d?`<div class="small muted" style="margin-top:2px">${h(it.d)}</div>`:''}</div>
+     <div class="ecopt">${[['O','○ 양호'],['X','× 불량'],['N','해당없음']].map(([v,l])=>`<button type="button" data-v="${v}">${l}</button>`).join('')}</div>
+     <input class="inp ecnote" placeholder="불량 내용·조치사항" style="display:none;margin-top:8px"></div>`).join('')}</div>
+   <div class="card"><label class="f">현장 사진</label><div class="photos" id="ecPh"></div>
+     <div class="row" style="margin-top:8px"><label class="btn ghost"><i class="i i-camera"></i> 사진 촬영<input type="file" accept="image/*" capture="environment" hidden id="ecIn"></label><button type="button" class="btn ghost" id="ecGal"><i class="i i-folder"></i> 갤러리에서 선택</button><input type="file" accept="image/*" multiple hidden id="ecInG"></div>
+     <div class="small muted" style="margin-top:6px">사진은 사진대지에 4장씩 들어갑니다. 사진마다 설명을 적으면 사진대지 '내용'에 함께 표시됩니다.</div>
+     <label class="f">비고</label><textarea class="inp" id="ecR" placeholder="특이사항">${h(prev&&prev.remark||'')}</textarea></div>
+   <div class="card"><div class="grid g2"><div><label class="f">점검자</label><input class="inp" id="ecBy" value="${h(prev&&prev.inspector||S.inspector||'')}"></div></div><div id="ecSig" style="margin-top:10px"></div></div>
+   <div class="grid g2"><button class="btn xl" id="ecSave">저장</button>${prev&&isAdmin()?'<button class="btn xl line" id="ecDel">이 점검 삭제</button>':''}</div>`,b=>{
+    const paint=()=>$$('.ecit',b).forEach(c=>{const t=c.dataset.t,v=st.vals[t];$$('[data-v]',c).forEach(x=>x.classList.toggle('on',x.dataset.v===v));const n=$('.ecnote',c);n.style.display=v==='X'?'':'none';if(document.activeElement!==n)n.value=st.notes[t]||''});
+    $$('.ecit',b).forEach(c=>{$$('[data-v]',c).forEach(x=>x.onclick=()=>{st.vals[c.dataset.t]=x.dataset.v;paint();if(x.dataset.v==='X')$('.ecnote',c).focus()});$('.ecnote',c).oninput=ev=>st.notes[c.dataset.t]=ev.target.value});
+    $('#ecAll',b).onclick=()=>{items.forEach(it=>{if(!st.vals[it.t])st.vals[it.t]='O'});paint()};paint();
+    const drawPh=()=>{$('#ecPh',b).innerHTML=st.photos.map((p,i)=>`<div class="ecph"><div class="ph"><img src="${p.src}"><button type="button" data-i="${i}"><i class="i i-x"></i></button></div><input class="inp" data-cap="${i}" value="${h(p.cap||'')}" placeholder="설명 (선택)"></div>`).join('');
+      $$('[data-i]',$('#ecPh',b)).forEach(x=>x.onclick=()=>{st.photos.splice(+x.dataset.i,1);drawPh()});$$('[data-cap]',b).forEach(x=>x.oninput=()=>st.photos[+x.dataset.cap].cap=x.value)};drawPh();
+    const add=async ev=>{for(const fl of ev.target.files){try{st.photos.push({src:await compressImg(fl),cap:''})}catch(x){toast('사진 처리 실패')}}ev.target.value='';drawPh()};
+    $('#ecIn',b).onchange=add;$('#ecInG',b).onchange=add;$('#ecGal',b).onclick=()=>withGalleryConsent(()=>$('#ecInG').click());
+    const sig=sigPad($('#ecSig',b),'점검자 서명',prev&&prev.sig?prev.sig:(($('#ecBy',b).value.trim()===S.inspector)?S.mySig:''));
+    $('#ecBy',b).addEventListener('change',()=>{$('#ecBy').value.trim()===S.inspector?sig.useMine():sig.clear()});
+    const del=$('#ecDel',b);if(del)del.onclick=async()=>{if(!confirm('이 날짜 점검 기록을 삭제할까요?'))return;try{await remove('eqchecks',prev.id);closeModal();R[cur]()}catch(x){toast(x.message)}};
+    $('#ecSave',b).onclick=async()=>{
+      const miss=items.filter(it=>!st.vals[it.t]);if(miss.length)return toast(`${miss.length}개 항목을 선택하세요 (양호/불량/해당없음)`);
+      const bad=items.filter(it=>st.vals[it.t]==='X'&&!String(st.notes[it.t]||'').trim());if(bad.length)return toast(`불량 항목에 내용·조치사항을 적어주세요: ${bad[0].t}`);
+      const by=$('#ecBy').value.trim();if(!by)return toast('점검자 이름을 입력하세요');if(sig.isEmpty())return toast('점검자 서명이 필요합니다');
+      const d=$('#ecD').value||ds;
+      const rec={id:prev&&prev.date===d?prev.id:uid(),date:d,equipId:e.id,type:e.type||'',plate:e.plate||'',company:e.company||'',manager:e.manager||'',inspector:by,
+        items:items.map(it=>({t:it.t,v:st.vals[it.t],note:st.vals[it.t]==='X'?String(st.notes[it.t]||'').trim():''})),remark:$('#ecR').value.trim(),photos:st.photos,sig:sig.data(),
+        created:prev&&prev.date===d?prev.created:nowLocal(),updated:nowLocal()};
+      await save('eqchecks',rec);closeModal();toast(rec.items.some(i=>i.v==='X')?'저장됨 — 불량 항목 조치를 확인하세요':'점검 저장됨');R[cur]();
+    };
+  });
+}
+
+/* 주간 일일점검표 (A4 1장 / 장비 1대) */
+function docEqWeek(e,mon){
+  const days=[0,1,2,3,4,5].map(i=>addDays(mon,i)),cs=days.map(d=>eqCheckOf(e.id,d));
+  const titles=[...eqItems().map(i=>i.t)];cs.forEach(c=>c&&c.items.forEach(it=>{if(!titles.includes(it.t))titles.push(it.t)}));
+  const desc=Object.fromEntries(eqItems().map(i=>[i.t,i.d]));
+  const cell=(c,t)=>{if(!c)return '';const it=c.items.find(x=>x.t===t);return it?(it.v==='O'?'○':it.v==='X'?'<b>×</b>':'-'):''};
+  const notes=t=>cs.map((c,i)=>{const it=c&&c.items.find(x=>x.t===t);return it&&it.note?`${WD6[i]}: ${h(it.note)}`:''}).filter(Boolean).join('<br>');
+  const last=[...cs].reverse().find(c=>c&&c.sig);
+  const remarks=cs.map((c,i)=>c&&c.remark?`${WD6[i]}(${md(days[i])}) ${h(c.remark)}`:'').filter(Boolean);
+  return `<div class="doc eqw"><h1>장비 전담관리자 일일점검표</h1><div class="site">[ ${h(S.site||'현장명')} ] · ${weekLabel(mon)} (${md(days[0])}~${md(days[5])})</div>
+  <table><tr><th>소속협력사</th><td colspan="3">${h(e.company||'')}</td></tr>
+  <tr><th>장비종류</th><td>${h(e.type||'')}</td><th>장비번호</th><td>${h(e.plate||'')}</td></tr>
+  <tr><th>장비 전담관리자</th><td>${h(e.manager||'')}</td><th>(서명)</th><td style="text-align:center">${last?`<img class="sigimg" src="${last.sig}">`:''}</td></tr></table>
+  <table class="grid6"><tr><th class="it">점 검 항 목</th>${days.map((d,i)=>`<th>${WD6[i]}<br>(${md(d)})</th>`).join('')}<th class="rm">비 고</th></tr>
+  ${titles.map((t,i)=>`<tr><td class="it">${i+1}. ${h(t)}${desc[t]?`<div class="dsc">${h(desc[t])}</div>`:''}</td>${cs.map(c=>`<td class="mk">${cell(c,t)}</td>`).join('')}<td class="rm">${notes(t)}</td></tr>`).join('')}
+  <tr><td class="it">점검자</td>${cs.map(c=>`<td class="mk sm">${c?h(c.inspector||''):''}</td>`).join('')}<td class="rm"></td></tr></table>
+  ${remarks.length?`<div class="sec">비고</div><div class="note">${remarks.join('<br>')}</div>`:''}
+  <p style="font-size:9pt">○ 양호 · × 불량(비고에 조치사항) · - 해당없음 · 빈칸 미점검</p></div>`;
+}
+
+/* 사진대지: 장비별로 기간 내 사진을 4장씩 묶어 한 건으로 */
+function eqPhotoBlocks(list,from,to,label){
+  const out=[];
+  for(const e of list){
+    const cs=EC.filter(c=>c.equipId===e.id&&!c.void&&c.date>=from&&c.date<=to).sort((a,b)=>a.date.localeCompare(b.date));
+    const ph=cs.flatMap(c=>(c.photos||[]).map(p=>({...p,date:c.date})));
+    for(let i=0;i<ph.length;i+=4){const g=ph.slice(i,i+4);const caps=[...new Set(g.map(p=>p.cap).filter(Boolean))];
+      out.push({date:label||g[0].date,content:eqName(e)+(caps.length?' — '+caps.join(' / '):''),photos:g.map(p=>p.src)})}
+  }
+  return out;
+}
+function docPhotoSheet(blocks){
+  const pages=[];
+  for(let i=0;i<blocks.length;i+=2){
+    const two=blocks.slice(i,i+2);
+    pages.push(`<div class="doc psheet"><h1>사 진 대 지</h1><div class="pl">현장명 : ${h(S.site||'')}</div>
+    ${two.map(b=>`<div class="pblock"><div class="pgrid n${b.photos.length}">${b.photos.map(s=>`<div><img src="${s}"></div>`).join('')}${b.photos.length===3?'<div></div>':''}</div>
+      <table><tr><th>일 시</th><td>${h(b.date)}</td><th>내 용</th><td>${h(b.content)}</td></tr></table></div>`).join('')}
+    ${two.length===1?'<div class="pblock empty">이하 여백</div>':''}</div>`);
+  }
+  return pages;
+}
 
 /* ---------- 하위 탭 (관리대장 / 설정) ---------- */
 function setTabs(){const adm=isAdmin();return [['settings:me','내 정보'],...(adm?[['settings:site','현장 기준']]:[]),...(SERVER&&adm?[['settings:users','사용자 관리']]:[]),['records','기록·보고'],['settings:data','데이터·앱']]}
@@ -1388,7 +1547,7 @@ function segBar(items,active){
   if(h1)h1.insertAdjacentHTML('afterend',html);else V$().insertAdjacentHTML('afterbegin',html);
   $$('[data-seg]',V$()).forEach(b=>b.onclick=()=>{const [v,t]=b.dataset.seg.split(':');go(v,t)});
 }
-for(const k of ['workers','equip','vuln']){const f=R[k];R[k]=(...a)=>{f(...a);segBar(REG_TABS,k)}}
+for(const k of ['workers','equip','eqcheck','vuln']){const f=R[k];R[k]=(...a)=>{f(...a);segBar(REG_TABS,k)}}
 {const f=R.records;R.records=(...a)=>{f(...a);segBar(setTabs(),'records')}}
 {const f=R.settings;R.settings=(tab)=>{
   const tabs=setTabs().map(x=>x[0]);if(typeof tab==='string')R.settings.tab=tab;
@@ -1397,7 +1556,7 @@ for(const k of ['workers','equip','vuln']){const f=R[k];R[k]=(...a)=>{f(...a);se
   segBar(setTabs(),'settings:'+t);if(t==='users'&&typeof loadUsers==='function')loadUsers()}}
 
 /* ---------- boot ---------- */
-async function loadAll(){[W,E,V,A,VU]=await Promise.all(['workers','equipment','violations','alcohol','vuln'].map(s=>DB.all(s)))}
+async function loadAll(){[W,E,V,A,VU,EC]=await Promise.all(['workers','equipment','violations','alcohol','vuln','eqchecks'].map(s=>DB.all(s)))}
 function lockScreen(){return new Promise(res=>{if(!S.pin)return res();const d=document.createElement('div');d.className='lock';d.innerHTML=`<img src="icon.svg" alt="" style="width:84px;height:84px;border-radius:20px;box-shadow:0 0 0 3px rgba(255,255,255,.25)"><div style="font-size:28px;font-weight:900">현장ON</div><div style="opacity:.8;font-size:14px;margin-top:-6px">습관이 된 노력을 실력이라 한다.</div><div style="margin-top:10px">PIN 입력</div><input class="inp" type="password" inputmode="numeric" maxlength="6" autofocus>`;document.body.appendChild(d);const i=$('input',d);i.focus();i.oninput=()=>{if(i.value===S.pin){d.remove();res()}else if(i.value.length>=S.pin.length){i.value='';i.style.outline='3px solid #f66'}}})}
 
 (async()=>{

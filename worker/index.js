@@ -4,7 +4,7 @@
 // Roles: 'admin' (운영자) manages users, shared settings, register imports, deletes and voids.
 //        'user' can read everything and create/update records.
 
-const STORES = new Set(['workers', 'equipment', 'violations', 'alcohol', 'vuln', 'settings']);
+const STORES = new Set(['workers', 'equipment', 'violations', 'alcohol', 'vuln', 'eqchecks', 'settings']);
 const REGISTER_STORES = new Set(['workers', 'equipment', 'vuln']);
 const SESSION_DAYS = 30;
 const PBKDF2_ITER = 20000; // keeps login under the free-plan CPU budget
