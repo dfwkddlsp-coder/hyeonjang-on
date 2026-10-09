@@ -757,7 +757,7 @@ function docAlcoholList(ds){
 }
 
 /* ---------- views ---------- */
-const APP_VER='2026.10.09-14';
+const APP_VER='2026.10.09-15';
 const VIEWS=[['home','홈'],['strike','삼진아웃'],['alcohol','음주측정'],['reg','관리대장'],['settings','설정']];
 /* 하위 화면 → 하단 탭 묶음 */
 const NAVOF={workers:'reg',equip:'reg',eqcheck:'reg',vuln:'reg',records:'settings'};
@@ -787,7 +787,7 @@ R.home=()=>{
   <div class="hm-grid">
    ${tile(1,'strike','삼진아웃','three strikes out','warning · education · exit',vt.length,`오늘 적발 <b>${vt.length}</b>건<br>퇴출 <b>${banned.size}</b> · 교육 미이수 <b>${eduPend.length}</b>`,false,true)}
    ${tile(2,'alcohol','음주측정','alcohol check','breath test',atBad.length,`오늘 측정 <b>${at.length}</b>명 · 적발 <b>${atBad.length}</b><br>${noNotice.length?`통지서 미작성 <b>${noNotice.length}</b>`:'통지서 모두 작성됨'}`)}
-   ${vulnVisible()?tile(3,'vuln','취약근로자','vulnerable workers','health care',vuNo.length,`관리 <b>${vuAct.length}</b>명 · 고혈압 <b>${vuAct.filter(p=>vulnTags(p).includes('고혈압')).length}</b><br>사후상담 미실시 <b>${vuNo.length}</b>`):tile(3,'vuln','취약근로자','vulnerable workers','health care',null,`건강정보 보호를 위해<br><b>운영자만</b> 열람합니다`)}
+   ${vulnVisible()?tile(3,'vuln','취약근로자','vulnerable workers','health care',vuNo.length,`관리 <b>${vuAct.length}</b>명 · 고혈압 <b>${vuAct.filter(p=>vulnTags(p).includes('고혈압')).length}</b><br>사후상담 미실시 <b>${vuNo.length}</b>`):tile(3,'vuln','취약근로자','vulnerable workers','health care',null,`건강정보 보호를 위해<br><b>운영자·관리자만</b> 열람`)}
    ${tile(4,'workers','근로자','worker register','people',null,`등록 <b>${W.length}</b>명<br>업체 <b>${new Set(W.map(w=>w.company)).size}</b>곳`)}
    ${tile(5,'equip','장비','equipment register','machines',expE.length,`등록 <b>${E.length}</b>대<br>서류 만료·임박 <b>${expE.length}</b>`)}
    ${(()=>{const iu=E.filter(e=>!e.outDate),dn=iu.filter(e=>eqCheckOf(e.id,today())).length,mt=iu.filter(e=>isMine(e)&&!eqCheckOf(e.id,today())).length;return tile(6,'eqcheck','장비점검','daily inspection','',iu.length-dn,`오늘 점검 <b>${dn}</b>/${iu.length}대<br>${mt?`내 담당 미점검 <b>${mt}</b>`:'사진대지 · 주간 점검표'}`,true)})()}
@@ -1148,7 +1148,7 @@ R.settings=()=>{
   const adm=isAdmin();
   V$().innerHTML=`<h1>설정</h1>
   <section class="st" data-st="me">
-  ${SERVER?`<div class="card"><div class="row"><div class="grow"><b>${h(ME.name)}</b> <span class="muted small">${h(ME.loginId)}</span> ${ME.role==='admin'?'<span class="badge">운영자</span>':'<span class="badge bgray">사용자</span>'}</div><button class="btn sm line" id="pwBtn">비밀번호 변경</button><button class="btn sm line" id="outBtn">로그아웃</button></div></div>`:''}
+  ${SERVER?`<div class="card"><div class="row"><div class="grow"><b>${h(ME.name)}</b> <span class="muted small">${h(ME.loginId)}</span> ${roleBadge(ME.role)}</div><button class="btn sm line" id="pwBtn">비밀번호 변경</button><button class="btn sm line" id="outBtn">로그아웃</button></div></div>`:''}
   </section><section class="st" data-st="users">
   ${SERVER&&adm?`<div class="card"><div class="row"><b class="grow">사용자 관리</b><button class="btn sm" id="uAdd"><i class="i i-plus"></i> 사용자 등록</button></div><div class="small muted" style="margin-top:4px">등록한 사람만 로그인할 수 있습니다. 첫 로그인 때 비밀번호를 직접 바꾸게 됩니다.</div><div class="list" id="usersBox" style="margin-top:6px"><div class="empty">불러오는 중…</div></div></div>`:''}
   </section><section class="st" data-st="me">
@@ -1177,8 +1177,8 @@ R.settings=()=>{
    <textarea class="inp" id="sEq" style="min-height:180px;font-size:14px">${h(S.eqItems||DEF.eqItems)}</textarea>
    <div class="small muted" style="margin-top:6px">기본값: 장비전담제 장비점검방법 10~16쪽.</div></div>
   <div class="card"><b>취약근로자 열람 범위</b>
-   <select class="inp" id="sVs" style="margin-top:8px"><option value="admin" ${S.vulnScope!=='all'?'selected':''}>운영자만 (권장 — 건강정보 보호)</option><option value="all" ${S.vulnScope==='all'?'selected':''}>모든 사용자</option></select>
-   <div class="small muted" style="margin-top:6px">검진 결과·혈압은 개인정보보호법상 민감정보입니다. '운영자만'이면 서버가 다른 사용자에게 아예 보내지 않고, 이미 받은 기기에서도 지워집니다.</div></div>
+   <select class="inp" id="sVs" style="margin-top:8px"><option value="admin" ${S.vulnScope!=='all'?'selected':''}>운영자·관리자만 (권장 — 건강정보 보호)</option><option value="all" ${S.vulnScope==='all'?'selected':''}>모든 사용자</option></select>
+   <div class="small muted" style="margin-top:6px">검진 결과·혈압은 개인정보보호법상 민감정보입니다. '운영자·관리자만'이면 서버가 일반 사용자에게 아예 보내지 않고, 이미 받은 기기에서도 지워집니다.</div></div>
   <div class="card"><b>취약근로자 기준</b>
    <div class="grid g2"><div><label class="f">고령 분류 연령 (세 이상)</label><input class="inp" id="sVa" inputmode="numeric" value="${S.vulnAge}"></div><div></div>
    <div><label class="f">혈압 주의 (수축기/이완기 이상)</label><input class="inp" id="sBw" value="${S.bp.warn.join('/')}"></div><div><label class="f">혈압 위험 (수축기/이완기 이상)</label><input class="inp" id="sBs" value="${S.bp.stop.join('/')}"></div></div></div>
@@ -1306,7 +1306,7 @@ function vulnItem(p,tags){tags=tags||vulnTags(p);const c=(p.consults||[]).slice(
    <div class="chips" style="gap:4px;margin:4px 0">${tags.map(t=>`<span class="badge ${tagCls(t)}">${t}</span>`).join('')}</div>
    <div class="small muted ell">${c?`사후상담 ${c.date}`:'<b style="color:var(--bad)">사후상담 미실시</b>'}${b?` · 혈압 ${b.sys}/${b.dia} <span class="badge ${bpCls(b.judge)}">${b.judge}</span> ${fmtDT(b.at).slice(5)}`:''}</div></div></div>`}
 R.vuln=()=>{
-  if(!vulnVisible()){V$().innerHTML='<h1>취약근로자</h1><div class="card empty">취약근로자(건강검진·혈압) 정보는 개인 건강정보 보호를 위해 <b>운영자만</b> 열람할 수 있습니다.</div>';return}
+  if(!vulnVisible()){V$().innerHTML='<h1>취약근로자</h1><div class="card empty">취약근로자(건강검진·혈압) 정보는 개인 건강정보 보호를 위해 <b>운영자·관리자만</b> 열람할 수 있습니다.</div>';return}
   const q=R.vuln.q||'',tag=R.vuln.tag||'',ret=!!R.vuln.ret;
   const base=VU.filter(p=>ret||!p.retired);const T=new Map(base.map(p=>[p.id,vulnTags(p)]));
   const tags=['고혈압','소음성난청','고령','유소견(D)','특검대상','상담·진료필요','당뇨','분진'].filter(t=>base.some(p=>T.get(p.id).includes(t)));
@@ -1409,7 +1409,7 @@ function docVulnConsult(p,c){
 
 /* ---------- 서버 연결 (Cloudflare Worker + D1) ---------- */
 async function loadUsers(){const box=$('#usersBox');if(!box)return;
-  try{const r=await api('users');box.innerHTML=r.users.map(u=>`<div class="it" data-u="${u.id}"><span class="dot d0">${h(u.name.slice(0,1))}</span><div class="m"><b>${h(u.name)}</b> <span class="muted small">${h(u.loginId)}</span> ${u.role==='admin'?'<span class="badge">운영자</span>':''}${!u.active?' <span class="badge bgray">사용 정지</span>':''}${u.mustChange?' <span class="badge bwarn">첫 로그인 전</span>':''}<div class="small muted ell">${h([u.org,u.title].filter(Boolean).join(' · ')||'-')}</div></div></div>`).join('')||'<div class="empty">없음</div>';
+  try{const r=await api('users');box.innerHTML=r.users.map(u=>`<div class="it" data-u="${u.id}"><span class="dot d0">${h(u.name.slice(0,1))}</span><div class="m"><b>${h(u.name)}</b> <span class="muted small">${h(u.loginId)}</span> ${u.role!=='user'?roleBadge(u.role):''}${!u.active?' <span class="badge bgray">사용 정지</span>':''}${u.mustChange?' <span class="badge bwarn">첫 로그인 전</span>':''}<div class="small muted ell">${h([u.org,u.title].filter(Boolean).join(' · ')||'-')}</div></div></div>`).join('')||'<div class="empty">없음</div>';
     $$('[data-u]',box).forEach(el=>el.onclick=()=>editUser(r.users.find(u=>u.id===el.dataset.u)))}
   catch(x){box.innerHTML=`<div class="empty">${h(x.status?x.message:'인터넷 연결이 필요합니다')}</div>`}}
 function editUser(u){const nu=!u;u=u||{};
@@ -1418,7 +1418,7 @@ function editUser(u){const nu=!u;u=u||{};
    <div><label class="f">이름 *</label><input class="inp" id="euN" value="${h(u.name||'')}"></div>
    <div><label class="f">소속</label><input class="inp" id="euO" value="${h(u.org||'')}" list="companyList"></div>
    <div><label class="f">직책</label><input class="inp" id="euT" value="${h(u.title||'')}" placeholder="예) 관리감독자"></div>
-   <div><label class="f">권한</label><select class="inp" id="euR"><option value="user" ${u.role!=='admin'?'selected':''}>사용자 (등록·열람)</option><option value="admin" ${u.role==='admin'?'selected':''}>운영자 (삭제·대장·설정·사용자 관리)</option></select></div>
+   <div><label class="f">권한</label><select class="inp" id="euR"><option value="user" ${u.role==='user'?'selected':''}>사용자 (등록·열람, 취약근로자 제외)</option><option value="manager" ${u.role==='manager'?'selected':''}>관리자 (등록·전체 열람, 삭제·설정 불가)</option><option value="admin" ${u.role==='admin'?'selected':''}>운영자 (삭제·대장·설정·사용자 관리)</option></select></div>
    <div><label class="f">${nu?'초기 비밀번호 * (6자 이상)':'비밀번호 초기화 (입력할 때만)'}</label><input class="inp" id="euP" type="text" autocomplete="off" autocapitalize="off"></div></div>
    ${nu?'':`<label class="row" style="margin-top:12px"><input type="checkbox" id="euA" ${u.active?'checked':''} style="width:22px;height:22px"> 사용 가능 (해제하면 바로 로그아웃·로그인 불가)</label>`}
    <div class="small muted" style="margin-top:8px">초기 비밀번호는 본인에게 직접 전달하세요. 첫 로그인 때 새 비밀번호로 바꾸게 됩니다.</div>
@@ -1429,6 +1429,7 @@ function editUser(u){const nu=!u;u=u||{};
   })}
 let SERVER=false,ME=null;
 const isAdmin=()=>!SERVER||(ME&&ME.role==='admin');
+const roleBadge=r=>r==='admin'?'<span class="badge">운영자</span>':r==='manager'?'<span class="badge">관리자</span>':'<span class="badge bgray">사용자</span>';
 const SHARED_KEYS=['site','periodMonths','vtypes','levels','alcMode','alc','alcMsg','vulnAge','bp','eqItems','eqCheckItems','vulnScope'];
 async function api(path,body){
   const r=await fetch('/api/'+path,{method:body!==undefined?'POST':'GET',credentials:'same-origin',headers:body!==undefined?{'content-type':'application/json'}:{},body:body!==undefined?JSON.stringify(body):undefined});
@@ -1441,7 +1442,7 @@ const kvSet=(k,v)=>DB.put('kv',{k,v});
 function applyMe(u){ME=u;Object.assign(S,{inspector:u.name,inspectorOrg:u.org||'',myRole:u.title||'',mySig:u.sig||''})}
 function applyShared(d){for(const k of SHARED_KEYS)if(d[k]!==undefined)S[k]=k==='alc'?Object.assign({},DEF.alc,d[k]):d[k];$('#siteName').textContent=S.site||'';purgeVulnIfHidden()}
 /* 열람 권한이 없으면 이 기기에 받아둔 취약근로자 정보도 지움 */
-const vulnVisible=()=>!SERVER||isAdmin()||S.vulnScope==='all';
+const vulnVisible=()=>!SERVER||isAdmin()||(ME&&ME.role==='manager')||S.vulnScope==='all';
 function purgeVulnIfHidden(){if(vulnVisible()||!VU.length)return;VU=[];DB.putMany('vuln',[],true).catch(()=>{})}
 function sharedDoc(){const o={id:'shared'};for(const k of SHARED_KEYS)o[k]=S[k];return o}
 async function queueShared(){await DB.put('outbox',{k:'settings|shared',store:'settings',id:'shared',data:sharedDoc(),ts:Date.now()});Sync.soon()}

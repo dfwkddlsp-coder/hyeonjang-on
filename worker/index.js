@@ -50,9 +50,12 @@ async function runBackup(env, kind) {
   return key;
 }
 
-/* 취약근로자(건강정보) 열람 범위: 운영자만(기본) 또는 전체 — 현장 설정 vulnScope */
+/* 권한: admin 운영자(전부) · manager 관리자(전체 열람·등록, 삭제/설정/사용자관리 불가) · user 사용자 */
+const ROLES = ['admin', 'manager', 'user'];
+
+/* 취약근로자(건강정보) 열람 범위: 운영자·관리자만(기본) 또는 전체 — 현장 설정 vulnScope */
 async function vulnAllowed(env, u) {
-  if (u.role === 'admin') return true;
+  if (u.role === 'admin' || u.role === 'manager') return true;
   const r = await env.DB.prepare("SELECT data FROM docs WHERE store='settings' AND id='shared' AND deleted=0").first();
   try { return !!r && JSON.parse(r.data).vulnScope === 'all'; } catch { return false; }
 }
@@ -251,7 +254,7 @@ async function route(req, env, url) {
     if (exists) fail(409, '이미 있는 아이디입니다');
     const salt = newSalt(), id = uid(), t = now();
     await env.DB.prepare('INSERT INTO users (id,login_id,name,org,title,role,pw_hash,pw_salt,must_change,active,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,1,1,?,?)')
-      .bind(id, loginId, name, String(b.org || ''), String(b.title || ''), b.role === 'admin' ? 'admin' : 'user', await hashPw(b.password, salt), salt, t, t).run();
+      .bind(id, loginId, name, String(b.org || ''), String(b.title || ''), ROLES.includes(b.role) ? b.role : 'user', await hashPw(b.password, salt), salt, t, t).run();
     return json({ user: publicUser(await env.DB.prepare('SELECT * FROM users WHERE id=?').bind(id).first()), by: a.id });
   }
   let m;
@@ -260,7 +263,7 @@ async function route(req, env, url) {
     const b = await body(req);
     const u = await env.DB.prepare('SELECT * FROM users WHERE id=?').bind(m[1]).first();
     if (!u) fail(404, '사용자가 없습니다');
-    const role = b.role === 'admin' || b.role === 'user' ? b.role : u.role;
+    const role = ROLES.includes(b.role) ? b.role : u.role;
     const active = b.active === undefined ? u.active : (b.active ? 1 : 0);
     if (u.id === a.id && (role !== 'admin' || !active)) fail(400, '본인의 운영자 권한은 해제할 수 없습니다');
     const stmts = [env.DB.prepare('UPDATE users SET name=?, org=?, title=?, role=?, active=?, updated_at=? WHERE id=?')
@@ -295,6 +298,7 @@ async function route(req, env, url) {
     const b = await body(req);
     const docs = Array.isArray(b.docs) ? b.docs : [];
     const replace = Array.isArray(b.replaceStores) ? b.replaceStores : [];
+    if (!docs.length && !replace.length) return json({ saved: [] });
     if (docs.length > 500) fail(413, '한 번에 500건까지 보낼 수 있습니다');
     if ((b.import || replace.length) && u.role !== 'admin') fail(403, '대장 엑셀 업로드는 운영자만 할 수 있습니다');
     for (const s of replace) if (!REGISTER_STORES.has(s)) fail(400, '교체할 수 없는 대장입니다');
@@ -303,7 +307,7 @@ async function route(req, env, url) {
       if (!STORES.has(d.store) || typeof d.id !== 'string' || !d.id || !d.data || typeof d.data !== 'object') fail(400, '잘못된 기록');
       if (d.store === 'settings' && u.role !== 'admin') fail(403, '현장 설정은 운영자만 바꿀 수 있습니다');
     }
-    if (u.role !== 'admin' && docs.some((d) => d.store === 'vuln') && !(await vulnAllowed(env, u))) fail(403, '취약근로자 정보는 운영자만 다룰 수 있습니다');
+    if (u.role !== 'admin' && docs.some((d) => d.store === 'vuln') && !(await vulnAllowed(env, u))) fail(403, '취약근로자 정보는 운영자·관리자만 다룰 수 있습니다');
     for (const d of docs) {
     }
 

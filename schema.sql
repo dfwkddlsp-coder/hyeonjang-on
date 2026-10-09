@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS users (
   name         TEXT NOT NULL,
   org          TEXT NOT NULL DEFAULT '',
   title        TEXT NOT NULL DEFAULT '',
-  role         TEXT NOT NULL CHECK (role IN ('admin','user')),
+  role         TEXT NOT NULL CHECK (role IN ('admin','manager','user')),
   pw_hash      TEXT NOT NULL,
   pw_salt      TEXT NOT NULL,
   must_change  INTEGER NOT NULL DEFAULT 1,
