@@ -184,21 +184,36 @@ table.t tr.click:hover td{background:#f8fafc}
 /* 사진대지: 칸 크기 고정, 사진은 칸을 꽉 채움 */
 .doc .pst{width:100%;border-collapse:collapse;table-layout:fixed;margin:0 0 4mm}
 .doc .pst td,.doc .pst th{border:1px solid #000;padding:0;width:auto}
-.doc .pst .pc{height:57mm}
-.doc .pst .pw{position:relative;width:100%;height:57mm;overflow:hidden;background:#fff}
+.doc .pst .pc{height:62mm}
+.doc .pst .pw{position:relative;width:100%;height:62mm;overflow:hidden;background:#fff}
 .doc .pst .pw img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .doc .pst tr.cap th{background:#eee;font-size:10.5pt;padding:1.6mm 1mm;text-align:center}
 .doc .pst tr.cap td{padding:1.6mm 2mm;font-size:10.5pt}
-.doc .pst .pempty{height:122mm;text-align:center;font-size:12pt}
+.doc .pst .pempty{height:132mm;text-align:center;font-size:12pt}
+.doc.psheet h1{margin:0 0 2mm}.doc.psheet .pl{margin:0 0 2mm}
 .doc .pgrid>div{position:relative}.doc .pcap{position:absolute;left:0;bottom:0;background:rgba(255,255,255,.85);font-size:8.5pt;padding:.5mm 1.5mm;border-top-right-radius:1.5mm}
 .ecopt{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px}
 .ecopt button{border:1.5px solid var(--line);background:#fff;border-radius:10px;min-height:46px;font-weight:700;color:var(--sub);cursor:pointer}
 .ecopt button.on[data-v="O"]{background:var(--ok);border-color:var(--ok);color:#fff}.ecopt button.on[data-v="X"]{background:var(--bad);border-color:var(--bad);color:#fff}.ecopt button.on[data-v="N"]{background:var(--ink);border-color:var(--ink);color:#fff}
 .ecph{width:132px}.ecph .ph{width:132px;height:100px}.ecph .inp{min-height:36px;padding:6px 8px;font-size:13px;margin-top:4px}
 /* 인쇄: 주간 점검표 · 사진대지 */
-.doc.eqw .grid6 th,.doc.eqw .grid6 td{width:auto;text-align:center;font-size:10pt;padding:1.6mm 1mm}
-.doc.eqw .grid6 td{height:22mm}.doc.eqw .grid6 tr:last-child td{height:9mm}
-.doc.eqw h1{margin-top:3mm}.doc.eqw table{margin:2mm 0}.doc.eqw th{padding:2.4mm}
+.doc.eqw{font-size:11pt}
+.doc.eqw h1{font-size:20pt;margin:1mm 0 3mm}
+.doc.eqw .eqf{font-size:11pt;line-height:1.9;margin-bottom:1.5mm}
+.doc.eqw .eqf u{display:inline-block;min-width:52mm;text-decoration:none;border-bottom:1px solid #000;padding:0 2mm;margin-left:1mm}
+.doc.eqw .eqf .wl{float:right;font-weight:700}
+.doc.eqw .eqf .sg{margin-left:3mm;position:relative}.doc.eqw .eqf .sg img{height:11mm;vertical-align:middle;margin-left:2mm}
+.doc.eqw .grid6{table-layout:fixed;margin:0}
+.doc.eqw .grid6 th{background:#dbe7f5;font-size:11pt;padding:1.2mm .5mm;width:auto;text-align:center;line-height:1.35}
+.doc.eqw .grid6 th.it{text-align:center}
+.doc.eqw .grid6 td.it{background:#e3e3e3;text-align:left;font-size:11pt;padding:1mm 2mm}
+.doc.eqw .grid6 .mk{text-align:center;font-size:15pt}
+.doc.eqw .grid6 .rm{font-size:8.5pt;text-align:left;padding:1mm 1.5mm;line-height:1.3}
+.doc.eqw .eqfoot{display:flex;justify-content:space-between;gap:6mm;font-size:9.5pt;margin-top:1.5mm}
+.doc.eqw .stamp.doc{right:6mm;top:0}
+.doc.eqw .grid6 th.legacy-unused,.doc.eqw .grid6 td.legacy-unused{width:auto;text-align:center;font-size:10pt;padding:1.6mm 1mm}
+
+
 .doc.eqw .grid6 .it{text-align:left;width:62mm}.doc.eqw .grid6 .rm{width:34mm;text-align:left;font-size:8.5pt}
 .doc.eqw .dsc{font-size:8pt;color:#444;margin-top:.5mm}.doc.eqw .mk{font-size:13pt;width:12mm}.doc.eqw .mk.sm{font-size:8pt}
 .doc.psheet h1{letter-spacing:6mm}.doc.psheet .pl{margin:0 0 3mm;font-size:11pt}
@@ -297,15 +312,20 @@ body.is-home #netBadge{background:rgba(0,0,0,.05)!important;color:var(--sub)!imp
 .hm-sec span{font-size:11px;color:#7a766c;letter-spacing:.06em}
 body.is-home .card{background:var(--tile);border-radius:22px;box-shadow:none}
 .hint a{color:var(--ink);font-weight:700;text-decoration:underline}
+/* 출력 페이지: 실제 A4 크기 상자. 여백 6mm, 브라우저 머리글/바닥글(날짜·주소) 없음 */
+#print .pg{width:210mm;height:296mm;padding:6mm;box-sizing:border-box;overflow:hidden;background:#fff;position:relative}
+#print .pg.land{width:297mm;height:209mm;page:land}
+#print .pg>.doc{transform-origin:top left;max-width:none;width:100%}
+@page land{size:A4 landscape;margin:0}
 @media print{
   @page{size:A4;margin:0}
-  body{background:#fff}
+  html,body{background:#fff!important;margin:0;padding:0}
   body>*:not(#print){display:none!important}
   #print{display:block}
-  .pg{page-break-after:always;padding:9mm 9mm 6mm;box-sizing:border-box}
-  .pg:last-child{page-break-after:auto}
+  #print .pg{page-break-after:always;break-after:page}
+  #print .pg:last-child{page-break-after:auto;break-after:auto}
 }
-.doc{font-size:11pt;color:#000;width:100%;max-width:192mm;margin:0 auto;padding-right:.6mm;background:#fff;box-sizing:border-box}
+.doc{font-size:11pt;color:#000;width:100%;max-width:198mm;margin:0 auto;padding-right:.6mm;background:#fff;box-sizing:border-box}
 .doc h1{text-align:center;font-size:18pt;margin:0 0 2mm}
 .doc .site{text-align:center;font-size:11pt;margin-bottom:2mm}
 .doc table{width:100%;border-collapse:collapse;margin:1mm 0}
@@ -654,11 +674,13 @@ function withGalleryConsent(go){
 /* ---------- printing ---------- */
 /* 각 장을 A4 한 장(인쇄 영역 190x277mm)에 맞게 자동 축소 */
 async function printPages(pages){
-  const P=$('#print');P.innerHTML=pages.map(p=>`<div class="pg">${p}</div>`).join('');
-  P.style.cssText='display:block;position:absolute;left:-10000px;top:0;width:192mm';
+  const P=$('#print');
+  P.innerHTML=pages.map(p=>`<div class="pg${/class="doc eqw/.test(p)?' land':''}">${p}</div>`).join('');
+  P.style.cssText='display:block;position:absolute;left:-10000px;top:0';
   await Promise.all($$('img',P).map(i=>i.complete?0:new Promise(r=>{i.onload=i.onerror=r})));
-  const mm=96/25.4,maxH=282*mm*0.97;
-  $$('.pg',P).forEach(pg=>{pg.style.zoom='';const hgt=pg.scrollHeight;if(hgt>maxH)pg.style.zoom=(maxH/hgt).toFixed(3)});
+  /* 내용이 A4 상자보다 크면 그 장만 비율 축소 */
+  $$('.pg',P).forEach(pg=>{const d=pg.firstElementChild;if(!d)return;d.style.zoom='';
+    const availH=pg.clientHeight-12*96/25.4,h=d.scrollHeight;if(h>availH)d.style.zoom=(availH/h).toFixed(3)});
   P.style.cssText='';setTimeout(()=>window.print(),100);
 }
 function docViolation(v){
@@ -709,7 +731,7 @@ function docAlcoholList(ds){
 }
 
 /* ---------- views ---------- */
-const APP_VER='2026.10.09-7';
+const APP_VER='2026.10.09-8';
 const VIEWS=[['home','홈'],['strike','삼진아웃'],['alcohol','음주측정'],['reg','관리대장'],['settings','설정']];
 /* 하위 화면 → 하단 탭 묶음 */
 const NAVOF={workers:'reg',equip:'reg',eqcheck:'reg',vuln:'reg',records:'settings'};
@@ -1594,28 +1616,27 @@ function eqWeekPhotoForm(eid,mon){
   });
 }
 
-/* 주간 일일점검표 출력 (A4 1장 / 장비 1대) */
+/* 주간 일일점검표 출력 — A4 가로 1장 / 장비 1대 (현장 엑셀 양식과 같은 배치) */
 function docEqWeek(e,mon){
   const days=weekDays(mon),w=eqWeekRec(e.id,mon),legacy=days.map(d=>eqLegacyDay(e.id,d));
   const titles=eqItems().map(i=>i.t);if(w)Object.keys(w.marks||{}).forEach(t=>{if(!titles.includes(t))titles.push(t)});
   legacy.forEach(c=>c&&c.items.forEach(it=>{if(!titles.includes(it.t))titles.push(it.t)}));
-  const desc=Object.fromEntries(eqItems().map(i=>[i.t,i.d]));
   const val=(t,i)=>{const v=w&&w.marks&&w.marks[t]?w.marks[t][i]:'';if(v)return v;const c=legacy[i];const it=c&&c.items.find(x=>x.t===t);return it?it.v:''};
   const sym=v=>v==='X'?'<b>×</b>':MARK_SYM[v]||'';
   const note=t=>{const n=[];if(w&&w.notes&&w.notes[t])n.push(h(w.notes[t]));legacy.forEach((c,i)=>{const it=c&&c.items.find(x=>x.t===t);if(it&&it.note)n.push(`${WD6[i]}: ${h(it.note)}`)});return n.join('<br>')};
-  const dayDone=i=>titles.some(t=>val(t,i));
   const sigSrc=w&&w.sig||(legacy.find(c=>c&&c.sig)||{}).sig;
   const remarks=[w&&w.remark?h(w.remark):'',...legacy.map((c,i)=>c&&c.remark?`${WD6[i]} ${h(c.remark)}`:'')].filter(Boolean);
   const done=eqWeekComplete(e.id,mon);
-  return `<div class="doc eqw">${done?stampHtml('doc'):''}<h1>장비 전담관리자 일일점검표</h1><div class="site">[ ${h(S.site||'현장명')} ] · ${weekLabel(mon)} (${md(days[0])}~${md(days[5])})</div>
-  <table><tr><th>소속협력사</th><td colspan="3">${h(e.company||'')}</td></tr>
-  <tr><th>장비종류</th><td>${h(e.type||'')}</td><th>장비번호</th><td>${h(e.plate||'')}</td></tr>
-  <tr><th>장비 전담관리자</th><td>${h(w&&w.inspector||e.manager||'')}</td><th>(서명)</th><td style="text-align:center">${sigSrc?`<img class="sigimg" src="${sigSrc}">`:''}</td></tr></table>
-  <table class="grid6"><tr><th class="it">점 검 항 목</th>${days.map((d,i)=>`<th>${WD6[i]}<br>(${md(d)})</th>`).join('')}<th class="rm">비 고</th></tr>
-  ${titles.map((t,r)=>`<tr><td class="it">${r+1}. ${h(t)}${desc[t]?`<div class="dsc">${h(desc[t])}</div>`:''}</td>${days.map((d,i)=>`<td class="mk">${sym(val(t,i))}</td>`).join('')}<td class="rm">${note(t)}</td></tr>`).join('')}
-  <tr><td class="it">점검 여부</td>${days.map((d,i)=>`<td class="mk sm">${dayDone(i)?'완료':''}</td>`).join('')}<td class="rm"></td></tr></table>
-  ${remarks.length?`<div class="sec">비고</div><div class="note">${remarks.join('<br>')}</div>`:''}
-  <p style="font-size:9pt;margin:2mm 0 0">○ 적합 · × 부적합(비고에 조치사항) · - 해당없음 · △ 기타의견(비고에 내용) · 빈칸 미점검</p></div>`;
+  const rowH=Math.max(11,Math.min(20,Math.floor(136/Math.max(titles.length,1))));
+  return `<div class="doc eqw">${done?stampHtml('doc'):''}<h1>장비 전담관리자 일일점검표</h1>
+  <div class="eqf"><div><span>■ 소속협력사 :</span><u>${h(e.company||'')}</u></div>
+    <div><span>■ 장비종류 :</span><u>${h(e.type||'')}</u><span style="margin-left:6mm">■ 장비번호 :</span><u>${h(e.plate||'')}</u><span class="wl">${weekLabel(mon)}</span></div>
+    <div><span>■ 장비 전담관리자 :</span><u>${h(w&&w.inspector||e.manager||'')}</u><span class="sg">(서명)${sigSrc?`<img src="${sigSrc}">`:''}</span></div></div>
+  <table class="grid6"><colgroup><col style="width:38%">${days.map(()=>'<col style="width:7.6%">').join('')}<col></colgroup>
+  <tr><th class="it">점 검 항 목</th>${days.map((d,i)=>`<th>${WD6[i]}<br>( ${md(d)} )</th>`).join('')}<th>비 고</th></tr>
+  ${titles.map((t,r)=>`<tr style="height:${rowH}mm"><td class="it">${r+1}. ${h(t)}</td>${days.map((d,i)=>`<td class="mk">${sym(val(t,i))}</td>`).join('')}<td class="rm">${note(t)}</td></tr>`).join('')}
+  </table>
+  <div class="eqfoot"><span>○ 적합 · × 부적합 · - 해당없음 · △ 기타의견 (부적합·기타의견은 비고에 내용)${remarks.length?` &nbsp;|&nbsp; 비고: ${remarks.join(' / ')}`:''}</span><span>${h(S.site||'')}</span></div></div>`;
 }
 
 /* 사진대지: 장비별 주간 사진을 4장씩 한 건으로 (사진마다 항목명 표시) */

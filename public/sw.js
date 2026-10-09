@@ -2,7 +2,7 @@
 // Same-origin files: network first, bypassing the HTTP cache, so a home-screen
 // install picks up new versions as soon as it is online; cache is the offline fallback.
 // Fonts (Google, vendored woff2): cache first — they never change.
-const C='fieldsafety-v19';
+const C='fieldsafety-v20';
 const FILES=['./','index.html','vendor/xlsx.full.min.js','manifest.webmanifest','icon.svg','icon-192.png','icon-512.png','icon-maskable-512.png','apple-touch-icon.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(C).then(c=>c.addAll(FILES.map(f=>new Request(f,{cache:'reload'})))));self.skipWaiting()});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
