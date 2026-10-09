@@ -404,13 +404,15 @@ async function route(req, env, url) {
     await requireAdmin(req, env);
     if (!env.PHOTOS) fail(400, 'R2 저장소가 연결되지 않았습니다');
     if (!/^application\/pdf/.test(req.headers.get('content-type') || '')) fail(400, 'PDF 파일만 올릴 수 있습니다');
-    const buf = await req.arrayBuffer();
-    if (!buf.byteLength) fail(400, '빈 파일입니다');
-    if (buf.byteLength > PDF_MAX) fail(413, 'PDF는 30MB까지 올릴 수 있습니다');
-    if (new TextDecoder().decode(new Uint8Array(buf, 0, 5)) !== '%PDF-') fail(400, 'PDF 파일이 아닙니다');
-    const id = uid();
-    await env.PHOTOS.put(`f/${id}`, buf, { httpMetadata: { contentType: 'application/pdf' } });
-    return json({ id, size: buf.byteLength });
+    // stream straight into R2: buffering a big PDF in the Worker blows the free-plan CPU limit
+    const len = Number(req.headers.get('content-length') || 0);
+    if (!len || !req.body) fail(400, '빈 파일입니다');
+    if (len > PDF_MAX) fail(413, 'PDF는 30MB까지 올릴 수 있습니다');
+    const id = uid(), key = `f/${id}`;
+    await env.PHOTOS.put(key, req.body.pipeThrough(new FixedLengthStream(len)), { httpMetadata: { contentType: 'application/pdf' } });
+    const head = await env.PHOTOS.get(key, { range: { offset: 0, length: 5 } });
+    if (!head || (await head.text()) !== '%PDF-') { await env.PHOTOS.delete(key); fail(400, 'PDF 파일이 아닙니다'); }
+    return json({ id, size: len });
   }
   if ((m = p.match(/^\/api\/file\/([a-f0-9]+)$/)) && M === 'GET') {
     if ((await requireUser(req, env)).role === 'driver') fail(403, '열람 권한이 없습니다');
