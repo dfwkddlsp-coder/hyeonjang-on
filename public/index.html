@@ -379,7 +379,7 @@ function alcFinal(a){let c=a,n;while((n=retestChild(c)))c=n;return c}
 const WORKER_FIELDS={company:['소속업체','협력사명','업체명','소속','업체','협력사','회사'],name:['성명','이름','근로자명'],job:['직종','공종','직책','직무'],gender:['성별'],birth:['생년월일','생일'],phone:['연락처','전화번호','휴대폰','핸드폰'],emergency:['비상연락처'],elderly:['고령근로자','고령자'],foreign:['외국인근로자','외국인'],blood:['혈액형'],helmet:['안전모번호','출입번호','안전모','사번'],inDate:['최초투입일','투입일','입사일','출근일'],hireY:['연도'],hireM:['=월'],hireD:['=일'],eduY:['기초안전보건교육이수'],eduN:['=미이수'],note:['비고']};
 const EQUIP_FIELDS={no:['관리번호','번호'],company:['소속업체','업체명','소속','업체'],type:['장비명','장비종류','기종'],operator:['운전원','조종원','기사'],plate:['차량번호','등록번호'],phone:['운전원연락처','연락처','전화번호'],inDate:['반입일자','반입일'],outDate:['반출일자','반출일'],regCert:['건설기계등록증','등록증'],inspect:['검사기간','검사유효기간','검사일'],bizCert:['사업자등록증','사업자'],license:['운전원면허증','면허증','조종사면허'],moveIns:['동산보험'],insurance:['보험유효기간','보험기간','보험만료'],manager:['전담관리자','관리자'],checklist:['점검표'],note:['비고'],commander:['작업지휘자'],signal:['신호수','유도원']};
 const EQUIP_LABEL={no:'관리번호',company:'소속업체',type:'장비명',operator:'운전원',plate:'차량번호',phone:'운전원 연락처',inDate:'반입일자',outDate:'반출일자',regCert:'건설기계 등록증',inspect:'건설기계 검사기간',bizCert:'사업자 등록증',license:'운전원 면허증',moveIns:'동산보험',insurance:'보험유효기간',manager:'전담관리자',checklist:'점검표',note:'비고',commander:'작업지휘자',signal:'신호수'};
-const WORKER_LABEL={company:'소속업체',name:'성명',job:'직종',gender:'성별',birth:'생년월일',phone:'연락처',emergency:'비상연락처',inDate:'채용일자',elderly:'고령근로자',foreign:'외국인근로자',blood:'혈액형',eduBasic:'기초안전보건교육',helmet:'안전모번호',note:'비고'};
+const WORKER_LABEL={company:'소속업체',name:'성명',job:'직종',gender:'성별',birth:'생년월일',phone:'연락처',emergency:'비상연락처',inDate:'채용일자',elderly:'고령근로자',foreign:'외국인근로자',blood:'혈액형',eduBasic:'기초안전보건교육',note:'비고'};
 
 function buildMap(top,sub,FIELDS){
   const n=Math.max(top.length,sub?sub.length:0);const best={};
@@ -480,10 +480,10 @@ function exportEquip(list){
   list.forEach(e=>aoa.push(keys.map(k=>e[k]||'')));const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,sheet(aoa,keys.map(k=>k==='company'||k==='type'?18:11),['A1:S1']),'장비관리대장');download(wb,`장비 관리대장_${today()}.xlsx`);
 }
-function violationRows(list){return list.map((v,i)=>[i+1,fmtDT(v.at),v.company,v.name,v.job,v.helmet||'',v.type,v.detail||'',v.place||'',`${v.level}차`,v.action.replace(/\n/g,' / '),v.level===2?(v.edu&&v.edu.done?`이수 ${fmtDT(v.edu.at)}`:'미이수'):'',`${v.inspectorOrg||''} ${v.inspector||''}`.trim(),v.violatorRefused?`서명거부(입회:${v.witness||''})`:(v.sigViolator?'서명':'') ,v.void?`무효: ${v.void.reason}`:''])}
+function violationRows(list){return list.map((v,i)=>[i+1,fmtDT(v.at),v.company,v.name,v.job,v.type,v.detail||'',v.place||'',`${v.level}차`,v.action.replace(/\n/g,' / '),v.level===2?(v.edu&&v.edu.done?`이수 ${fmtDT(v.edu.at)}`:'미이수'):'',`${v.inspectorOrg||''} ${v.inspector||''}`.trim(),v.violatorRefused?`서명거부(입회:${v.witness||''})`:(v.sigViolator?'서명':'') ,v.void?`무효: ${v.void.reason}`:''])}
 function exportViolations(list){
-  const wb=XLSX.utils.book_new();const hd=['NO','적발일시','소속업체','성명','직종','안전모번호','위반내용','상세','장소','차수','조치사항','교육이수','점검자','위반자확인','비고'];
-  XLSX.utils.book_append_sheet(wb,sheet([['삼진아웃제 적발 관리대장'],['현장명 :',S.site],hd,...violationRows(list)],[5,16,16,9,10,10,22,20,14,6,40,16,16,16,16],['A1:O1']),'삼진아웃');
+  const wb=XLSX.utils.book_new();const hd=['NO','적발일시','소속업체','성명','직종','위반내용','상세','장소','차수','조치사항','교육이수','점검자','위반자확인','비고'];
+  XLSX.utils.book_append_sheet(wb,sheet([['삼진아웃제 적발 관리대장'],['현장명 :',S.site],hd,...violationRows(list)],[5,16,16,9,10,22,20,14,6,40,16,16,16,16],['A1:N1']),'삼진아웃');
   download(wb,`삼진아웃 적발대장_${today()}.xlsx`);
 }
 function alcRowsOfDay(ds){return A.filter(a=>a.date===ds&&!a.void).sort((a,b)=>a.at.localeCompare(b.at))}
@@ -540,7 +540,7 @@ function compressImg(file,max=1280,q=.72){return new Promise((res,rej)=>{const i
   img.onerror=rej;img.src=url})}
 
 function personPicker(host,onPick,opts={}){
-  host.innerHTML=`<input class="inp big" type="search" name="q_${Date.now()}" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" placeholder="${opts.ph||'이름·업체·안전모·차량번호'}" autocomplete="off"><div class="pick-res"></div>`;
+  host.innerHTML=`<input class="inp big" type="search" name="q_${Date.now()}" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" placeholder="${opts.ph||'이름·업체·직종·차량번호'}" autocomplete="off"><div class="pick-res"></div>`;
   const inp=$('input',host),res=$('.pick-res',host);
   const draw=()=>{const q=norm(inp.value);if(!q){res.innerHTML='';return}
     const ws=W.filter(w=>norm([w.name,w.company,w.job,w.helmet,w.phone].join(' ')).includes(q)).slice(0,8)
@@ -549,7 +549,7 @@ function personPicker(host,onPick,opts={}){
       .map(e=>{const w=W.find(x=>pkey(x.name,x.company)===pkey(e.operator,e.company));return {name:e.operator,company:e.company,job:(w&&w.job)||'장비운전원',helmet:w&&w.helmet,workerId:w&&w.id,equip:e.type,plate:e.plate}});
     const all=[...ws,...es];
     res.innerHTML=all.map((p,i)=>{const k=pkey(p.name,p.company);const n=strikesOf(k).length;const ban=isBanned(k);
-      return `<button type="button" data-i="${i}"><span class="dot ${ban?'d3':n?'d'+Math.min(n,3):'d0'}">${ban?'퇴출':n?n+'회':'—'}</span><span class="m" style="flex:1;min-width:0"><b>${h(p.name)}</b> <span class="muted">${h(p.company||'')}</span><div class="small muted ell">${h(p.job||'')}${p.equip?' · 장비 '+h(p.equip)+' '+h(p.plate||''):''}${p.helmet?' · 안전모 '+h(p.helmet):''}${vulnOf(p.name,p.company)?' · <b style="color:var(--bad)">취약근로자</b>':''}</div></span></button>`}).join('')
+      return `<button type="button" data-i="${i}"><span class="dot ${ban?'d3':n?'d'+Math.min(n,3):'d0'}">${ban?'퇴출':n?n+'회':'—'}</span><span class="m" style="flex:1;min-width:0"><b>${h(p.name)}</b> <span class="muted">${h(p.company||'')}</span><div class="small muted ell">${h(p.job||'')}${p.equip?' · 장비 '+h(p.equip)+' '+h(p.plate||''):''}${vulnOf(p.name,p.company)?' · <b style="color:var(--bad)">취약근로자</b>':''}</div></span></button>`}).join('')
       +`<button type="button" data-new="1"><span class="dot d0"><i class="i i-plus"></i></span><span><b>직접 입력</b> <span class="muted">"${h(inp.value)}" 대장에 없는 사람</span></span></button>`;
     $$('button',res).forEach(b=>b.onclick=()=>{res.innerHTML='';if(b.dataset.new){manualPerson(inp.value,onPick)}else onPick(all[+b.dataset.i]);inp.value=''});
   };
@@ -557,13 +557,27 @@ function personPicker(host,onPick,opts={}){
   return inp;
 }
 function manualPerson(name,onPick){
-  openModal('대상자 직접 입력',`<label class="f">성명 *</label><input class="inp" id="mpN" value="${h(name)}"><label class="f">소속업체 *</label><input class="inp" id="mpC" list="companyList"><label class="f">직종</label><input class="inp" id="mpJ"><label class="f">안전모번호</label><input class="inp" id="mpH">
+  openModal('대상자 직접 입력',`<label class="f">성명 *</label><input class="inp" id="mpN" value="${h(name)}"><label class="f">소속업체 *</label>${comboHtml('mpC','company','','업체명 직접 입력')}<label class="f">직종</label>${comboHtml('mpJ','job','','직종 직접 입력')}
   <label class="row" style="margin-top:12px"><input type="checkbox" id="mpAdd" checked style="width:22px;height:22px"> 근로자 관리대장에도 추가</label><div style="margin-top:14px"><button class="btn" id="mpOk" style="width:100%">확인</button></div>${companyDatalist()}`,b=>{
-    $('#mpOk',b).onclick=async()=>{const p={name:$('#mpN').value.trim(),company:$('#mpC').value.trim(),job:$('#mpJ').value.trim(),helmet:$('#mpH').value.trim()};
+    bindCombos(b);
+    $('#mpOk',b).onclick=async()=>{const p={name:$('#mpN').value.trim(),company:$('#mpC').value.trim(),job:$('#mpJ').value.trim()};
       if(!p.name||!p.company)return toast('성명과 소속업체를 입력하세요');
       if($('#mpAdd').checked){const w={id:uid(),...p,created:nowLocal(),src:'직접입력'};await save('workers',w);p.workerId=w.id}
       closeModal();onPick(p)}});
 }
+/* 업체·직종 선택칸: 근로자 대장(+장비·취약근로자·기존 기록)에 있는 값에서 고르고, 없으면 직접 입력 */
+function choices(kind){const set=new Set();const add=v=>{v=String(v||'').trim();if(v)set.add(v)};
+  if(kind==='company'){W.forEach(w=>add(w.company));E.forEach(e=>add(e.company));VU.forEach(p=>add(p.company))}
+  else{W.forEach(w=>add(w.job));V.forEach(v=>add(v.job));A.forEach(a=>add(a.job))}
+  return [...set].sort((a,b)=>a.localeCompare(b,'ko'))}
+function comboHtml(id,kind,value,ph,attrs=''){
+  value=String(value||'').trim();const opts=choices(kind);
+  if(!opts.length)return `<input class="inp" id="${id}" value="${h(value)}" placeholder="${h(ph)}" ${attrs}>`;
+  const custom=!!value&&!opts.includes(value);
+  return `<div class="combo"><select class="inp" data-combo-for="${id}"><option value="">선택하세요</option>${opts.map(o=>`<option value="${h(o)}" ${o===value?'selected':''}>${h(o)}</option>`).join('')}<option value="__custom" ${custom?'selected':''}>직접 입력…</option></select>
+    <input class="inp" id="${id}" value="${h(value)}" placeholder="${h(ph)}" ${attrs} style="margin-top:6px${custom?'':';display:none'}"></div>`}
+function bindCombos(root=document){$$('[data-combo-for]',root).forEach(sel=>{const inp=$('#'+sel.dataset.comboFor,root)||document.getElementById(sel.dataset.comboFor);if(!inp)return;
+  sel.onchange=()=>{if(sel.value==='__custom'){inp.style.display='';inp.value='';inp.focus()}else{inp.style.display='none';inp.value=sel.value}}})}
 function companyDatalist(){const set=new Set([...W.map(w=>w.company),...E.map(e=>e.company)].filter(Boolean));return `<datalist id="companyList">${[...set].map(c=>`<option value="${h(c)}">`).join('')}</datalist>`}
 const lvDot=l=>`<span class="dot d${l}">${l}차</span>`;
 const stickerHtml=(l,date)=>{const c=['','var(--l1)','var(--l2)','var(--l3)'][l];return `<div class="sticker" style="background:${c};color:${l===1?'#4a3900':'#fff'}"><div class="a">${l}차 위반</div><div class="b">${date.slice(2).replace(/-/g,'.')}</div></div>`};
@@ -594,7 +608,7 @@ function docViolation(v){
   return `<div class="doc"><h1>삼진아웃제 위반 적발 확인서</h1><div class="site">[ ${h(S.site||'현장명')} ]</div>
   <div class="sec">1. 위반자 인적사항</div>
   <table><tr><th>소속업체</th><td>${h(v.company)}</td><th>성명</th><td>${h(v.name)}</td></tr>
-  <tr><th>직종</th><td>${h(v.job)}</td><th>안전모번호</th><td>${h(v.helmet||'')}</td></tr></table>
+  <tr><th>직종</th><td colspan="3">${h(v.job)}</td></tr></table>
   <div class="sec">2. 적발 내용</div>
   <table><tr><th>적발일시</th><td>${fmtDT(v.at)}</td><th>적발장소</th><td>${h(v.place||'')}</td></tr>
   <tr><th>위반내용</th><td colspan="3">${h(v.type)}${v.detail?'<br>'+nl(v.detail):''}</td></tr>
@@ -637,7 +651,7 @@ function docAlcoholList(ds){
 }
 
 /* ---------- views ---------- */
-const APP_VER='2026.10.09-2';
+const APP_VER='2026.10.09-3';
 const VIEWS=[['home','홈'],['strike','삼진아웃'],['alcohol','음주측정'],['reg','관리대장'],['settings','설정']];
 /* 하위 화면 → 하단 탭 묶음 */
 const NAVOF={workers:'reg',equip:'reg',vuln:'reg',records:'settings'};
@@ -733,11 +747,12 @@ function strikeForm(preset){
   };
   const pick=p=>{st.person=p;const k=pkey(p.name,p.company);const prev=strikesOf(k);st.autoLevel=Math.min(prev.length+1,3);st.level=st.autoLevel;
     $('#pp').style.display='none';
-    $('#who').innerHTML=`<div class="who"><div style="flex:1"><div class="nm">${h(p.name)}</div><div class="muted">${h(p.company)} · ${h(p.job||'')}${p.helmet?' · 안전모 '+h(p.helmet):''}</div>
+    $('#who').innerHTML=`<div class="who"><div style="flex:1"><div class="nm">${h(p.name)}</div><div class="muted">${h(p.company)} · ${h(p.job||'')}</div>
      ${isBanned(k)?'<div class="badge b3" style="margin-top:6px">이미 퇴출 처리된 근로자</div>':''}${vulnBadge(p.name,p.company)}
      ${prev.length?`<div class="small" style="margin-top:6px">이전 적발: ${prev.map(v=>`${v.date} ${h(v.type)} (${v.level}차)`).join('<br>')}</div>`:'<div class="small muted" style="margin-top:6px">이전 적발 없음</div>'}</div>
      <button class="btn ghost sm" id="chg">변경</button></div>
-     <div class="grid g2"><div><label class="f">직종</label><input class="inp" id="pJob" value="${h(p.job||'')}"></div><div><label class="f">안전모번호</label><input class="inp" id="pHel" value="${h(p.helmet||'')}"></div></div>`;
+     <div class="grid g2"><div><label class="f">소속업체</label>${comboHtml('pCo','company',p.company,'업체명 직접 입력')}</div><div><label class="f">직종</label>${comboHtml('pJob','job',p.job,'직종 직접 입력')}</div></div>`;
+    bindCombos($('#who'));
     $('#chg').onclick=()=>{$('#who').innerHTML='';$('#pp').style.display='block';$('#lvCard').style.display='none';st.person=null};
     $('#action').value=S.levels[st.level-1].act;setLevel();
   };
@@ -755,7 +770,7 @@ function strikeForm(preset){
     const refused=$('#refuse').checked;if(!refused&&sv.isEmpty())return toast('위반자 서명 또는 "서명 거부"를 선택하세요');
     if(refused&&!$('#witness').value.trim())return toast('서명 거부 시 입회자를 입력하세요');
     const p=st.person,at=$('#at').value||nowLocal();
-    const v={id:uid(),at,date:at.slice(0,10),name:p.name,company:p.company,job:$('#pJob').value.trim(),helmet:$('#pHel').value.trim(),workerId:p.workerId||'',pkey:pkey(p.name,p.company),
+    const v={id:uid(),at,date:at.slice(0,10),name:p.name,company:$('#pCo').value.trim()||p.company,job:$('#pJob').value.trim(),workerId:p.workerId||'',pkey:pkey(p.name,$('#pCo').value.trim()||p.company),
       type:st.type,detail:$('#detail').value.trim(),place:$('#place').value.trim(),photos:st.photos,level:st.level,autoLevel:st.autoLevel,action:$('#action').value.trim(),
       inspectorOrg:$('#iOrg').value.trim(),inspector:$('#iName').value.trim(),sigInspector:si.data(),sigViolator:refused?'':sv.data(),violatorRefused:refused,witness:refused?$('#witness').value.trim():'',
       edu:st.level===2?{done:false}:null,created:nowLocal(),linkedAlcohol:preset&&preset.alcId||''};
@@ -791,6 +806,7 @@ R.alcohol=()=>{
   V$().innerHTML=`<h1>음주측정</h1>
   <div class="card"><label class="f">측정 대상자</label><div id="ap"></div><div id="aform"></div></div>
   ${pend.length?`<h2>재측정 대기 (10분 후)</h2><div class="card list" id="pendL">${pend.map(alcItem).join('')}</div>`:''}
+  ${alcBadSection()}
   <div class="row" style="margin:16px 0 10px"><h2 style="margin:0;flex:1">측정 기록</h2><input type="date" class="inp" id="ad" value="${ds}" style="width:auto"></div>
   <div class="grid g4" style="margin-bottom:10px"><div class="stat"><div class="t">측정인원</div><div class="n">${base.length}</div></div><div class="stat"><div class="t">양호</div><div class="n" style="color:var(--ok)">${base.filter(a=>!isAlcBad(alcFinal(a))&&alcFinal(a).judge!=='재측정').length}</div></div><div class="stat"><div class="t">적발</div><div class="n" style="color:var(--bad)">${base.filter(a=>isAlcBad(alcFinal(a))).length}</div></div></div>
   <div class="card list ph-only">${rows.length?rows.map(a=>`<div class="it" data-aid="${a.id}"><span class="badge ${judgeCls(a.judge)}">${a.judge}</span><div class="m"><b>${h(a.name)}</b>${a.retestOf?' <span class="small muted">(재측정)</span>':''} <span class="muted small">${h(a.company)}</span>
@@ -816,8 +832,9 @@ function alcForm(p,parent){
    <div class="grid g2" style="margin-top:12px"><div><label class="f">측정결과 (%)</label><input class="inp big" id="av" inputmode="decimal" placeholder="0.000" style="font-size:32px;text-align:center"></div>
    <div><label class="f">판정</label><div class="judge" id="aj" style="background:var(--chip)">—</div></div></div>
    <div class="row" style="margin-top:10px"><button class="btn ok" id="a0" style="flex:1">0.000 (정상) 바로 저장</button><button class="btn bad" id="ar">측정 거부</button></div>
-   <div class="grid g2"><div><label class="f">직종</label><input class="inp" id="aJob" value="${h(p.job||'')}"></div><div><label class="f">측정인</label><input class="inp" id="am" value="${h(S.inspector)}"></div></div>
+   <div class="grid g2"><div><label class="f">소속업체</label>${comboHtml('aCo','company',p.company,'업체명 직접 입력')}</div><div><label class="f">직종</label>${comboHtml('aJob','job',p.job,'직종 직접 입력')}</div><div><label class="f">측정인</label><input class="inp" id="am" value="${h(S.inspector)}"></div></div>
    <button class="btn xl" id="as" style="margin-top:12px">저장</button>`;
+  bindCombos($('#aform'));
   const cancel=()=>{$('#aform').innerHTML='';$('#ap').style.display='block';$('#ap input').focus()};
   $('#ac').onclick=cancel;
   const show=()=>{const v=parseFloat($('#av').value);if(isNaN(v)){$('#aj').textContent='—';$('#aj').className='judge';return}
@@ -827,7 +844,7 @@ function alcForm(p,parent){
     if(!$('#am').value.trim())return toast('측정인 성명을 입력하세요');
     if(!refused&&(isNaN(val)||val<0||val>1))return toast('측정값을 확인하세요 (예: 0.012)');
     const at=nowLocal();const j=judge(val,refused,!!parent);
-    const a={id:uid(),at,date:at.slice(0,10),name:p.name,company:p.company,job:$('#aJob').value.trim(),equip:p.equip||'',plate:p.plate||'',workerId:p.workerId||'',pkey:k,
+    const a={id:uid(),at,date:at.slice(0,10),name:p.name,company:$('#aCo').value.trim()||p.company,job:$('#aJob').value.trim(),equip:p.equip||'',plate:p.plate||'',workerId:p.workerId||'',pkey:k,
       value:refused?null:val,refused,judge:j,action:JUDGE_ACT[j],measurer:$('#am').value.trim(),follow:'',retestOf:parent?parent.id:'',created:at};
     if(isAlcBad(a)){a.badNo=prevBadN+1;if(a.badNo>=S.alc.outCount){a.out=true;a.action+=` / ${a.badNo}회 적발 – 영구퇴출`}}
     await save('alcohol',a);
@@ -871,6 +888,14 @@ function alcNotice(id){
     };
   });
 }
+/* 적발자 · 측정결과 통지서: 최근 30일 적발 + 날짜와 상관없이 통지서 미작성 */
+function alcBadSection(){
+  const bad=A.filter(a=>!a.void&&isAlcBad(a)&&(!a.notice||a.date>=addDays(today(),-30))).sort((x,y)=>y.at.localeCompare(x.at)).slice(0,50);
+  const no=bad.filter(a=>!a.notice).length;
+  return `<div class="row" style="margin:16px 0 8px"><h2 style="margin:0;flex:1">적발자 · 측정결과 통지서</h2>${no?`<span class="badge bbad">미작성 ${no}</span>`:''}</div>
+  <div class="hint small" style="margin-bottom:8px">측정값이 기준 이상이면 저장할 때 통지서 화면이 자동으로 열립니다. 그때 못 했으면 아래 <b>[통지서 작성]</b>을 누르세요. 근로자·측정자 서명까지 받으면 기록으로 남고 출력할 수 있습니다.</div>
+  <div class="card list">${bad.length?bad.map(a=>`<div class="it" data-aid="${a.id}"><span class="badge ${judgeCls(a.judge)}">${a.judge}</span><div class="m"><b>${h(a.name)}</b> <span class="muted small">${h(a.company)}</span><div class="small muted ell">${fmtDT(a.at)} · ${a.refused?'측정 거부':f3(a.value)+'%'}${a.badNo?' · '+a.badNo+'회 적발':''}${a.out?' · 영구퇴출':''}${a.notice?' · 통지서 완료':''}</div></div>${a.notice?`<button class="btn sm line" data-np="${a.id}"><i class="i i-print"></i> 출력</button>`:`<button class="btn sm bad" data-nw="${a.id}"><i class="i i-pen"></i> 통지서 작성</button>`}</div>`).join(''):'<div class="empty">최근 30일 적발자 없음</div>'}</div>`;
+}
 function showAlcohol(id){
   const a=A.find(x=>x.id===id);if(!a)return;const ch=retestChild(a);const par=a.retestOf&&A.find(x=>x.id===a.retestOf);
   openModal(`음주측정 · ${a.name}`,`<div class="judge badge ${judgeCls(a.judge)}" style="display:block;margin-bottom:12px">${a.refused?'측정 거부':f3(a.value)+'%'} · ${a.judge}${a.badNo?` · ${a.badNo}회 적발`:''}${a.out?' · 영구퇴출':''}</div>
@@ -897,8 +922,8 @@ R.workers=()=>{
   V$().innerHTML=`<h1>근로자 관리대장 <span class="badge">${W.length}명</span></h1>
   <div class="card"><div class="row">${isAdmin()?'<label class="btn"><i class="i i-import"></i> 엑셀 불러오기<input type="file" accept=".xls,.xlsx,.csv" multiple hidden id="wf"></label>':''}<button class="btn ghost" id="wt">양식 다운로드</button><button class="btn ghost" id="wa"><i class="i i-plus"></i> 직접 추가</button><button class="btn line" id="wx">엑셀 저장</button></div>
   <div class="small muted" style="margin-top:8px">업체별 작성 양식을 여러 개 한 번에 올려도 됩니다. 같은 성명+생년월일은 자동 병합.</div></div>
-  <div class="row" style="margin-bottom:10px"><input class="inp grow" id="wq" type="search" placeholder="성명 · 업체 · 직종 · 안전모번호" value="${h(q)}"><select class="inp" id="wc" style="width:auto;max-width:220px"><option value="">전체 업체</option>${comps.map(c=>`<option ${c===co?'selected':''}>${h(c)}</option>`).join('')}</select></div>
-  <div class="card list">${list.length?list.slice(0,400).map(w=>{const k=pkey(w.name,w.company);const n=strikesOf(k).length;const ban=isBanned(k);return `<div class="it" data-wid="${w.id}"><span class="dot ${ban?'d3':n?'d'+Math.min(n,3):'d0'}">${ban?'퇴출':n?n+'회':'—'}</span><div class="m"><b>${h(w.name)}</b> <span class="muted">${h(w.company||'')}</span>${vulnOf(w.name,w.company)?' <span class="badge bbad"><i class="i i-heart"></i> 취약</span>':''}<div class="small muted ell">${h(w.job||'')}${w.helmet?' · 안전모 '+h(w.helmet):''}${w.phone?' · '+h(w.phone):''}</div></div></div>`}).join('')+(list.length>400?`<div class="empty">${list.length-400}명 더 있음 — 검색으로 좁히세요</div>`:''):'<div class="empty">근로자 없음. 양식을 내려받아 작성 후 불러오세요.</div>'}</div>`;
+  <div class="row" style="margin-bottom:10px"><input class="inp grow" id="wq" type="search" placeholder="성명 · 업체 · 직종" value="${h(q)}"><select class="inp" id="wc" style="width:auto;max-width:220px"><option value="">전체 업체</option>${comps.map(c=>`<option ${c===co?'selected':''}>${h(c)}</option>`).join('')}</select></div>
+  <div class="card list">${list.length?list.slice(0,400).map(w=>{const k=pkey(w.name,w.company);const n=strikesOf(k).length;const ban=isBanned(k);return `<div class="it" data-wid="${w.id}"><span class="dot ${ban?'d3':n?'d'+Math.min(n,3):'d0'}">${ban?'퇴출':n?n+'회':'—'}</span><div class="m"><b>${h(w.name)}</b> <span class="muted">${h(w.company||'')}</span>${vulnOf(w.name,w.company)?' <span class="badge bbad"><i class="i i-heart"></i> 취약</span>':''}<div class="small muted ell">${h(w.job||'')}${w.phone?' · '+h(w.phone):''}</div></div></div>`}).join('')+(list.length>400?`<div class="empty">${list.length-400}명 더 있음 — 검색으로 좁히세요</div>`:''):'<div class="empty">근로자 없음. 양식을 내려받아 작성 후 불러오세요.</div>'}</div>`;
   $('#wq').oninput=e=>{R.workers.q=e.target.value;clearTimeout(R.workers.t);R.workers.t=setTimeout(()=>{R.workers();const i=$('#wq');i.focus();i.setSelectionRange(i.value.length,i.value.length)},250)};
   $('#wc').onchange=e=>{R.workers.co=e.target.value;R.workers()};
   $('#wt').onclick=tplWorkers;$('#wx').onclick=()=>exportWorkers(list);$('#wa').onclick=()=>editWorker();
@@ -916,8 +941,9 @@ function importDialog(kind,files){
 }
 function editWorker(id){
   const w=id?W.find(x=>x.id===id):{};
-  openModal(id?'근로자 수정':'근로자 추가',Object.entries(WORKER_LABEL).map(([k,l])=>`<label class="f">${l}${k==='name'||k==='company'?' *':''}</label><input class="inp" data-k="${k}" value="${h(w[k]||'')}" ${k==='company'?'list="companyList"':''}>`).join('')+companyDatalist()+
+  openModal(id?'근로자 수정':'근로자 추가',Object.entries(WORKER_LABEL).map(([k,l])=>`<label class="f">${l}${k==='name'||k==='company'?' *':''}</label>${k==='company'||k==='job'?comboHtml('ew_'+k,k,w[k],l+' 직접 입력',`data-k="${k}"`):`<input class="inp" data-k="${k}" value="${h(w[k]||'')}">`}`).join('')+companyDatalist()+
    `${id?`<label class="row" style="margin-top:12px"><input type="checkbox" id="wb" ${w.banned?'checked':''} style="width:22px;height:22px"> 퇴출 상태</label>`:''}<div class="row" style="margin-top:14px"><button class="btn" id="ws" style="flex:1">저장</button>${id&&isAdmin()?'<button class="btn bad" id="wd">삭제</button>':''}</div>`,b=>{
+    bindCombos(b);
     $('#ws',b).onclick=async()=>{const o={...w,id:w.id||uid()};$$('[data-k]',b).forEach(i=>o[i.dataset.k]=i.value.trim());if(!o.name||!o.company)return toast('성명과 소속업체는 필수');if(id)o.banned=$('#wb').checked;if(!id)o.created=nowLocal();await save('workers',o);closeModal();R[cur]()};
     const wd=$('#wd',b);if(wd)wd.onclick=async()=>{if(!confirm(`${w.name} 근로자를 대장에서 삭제할까요? (적발·측정 기록은 유지)`))return;await remove('workers',id);closeModal();R[cur]()};
   });
@@ -995,8 +1021,8 @@ R.records=()=>{
   $('#rf').onchange=e=>{R.records.from=e.target.value;R.records()};$('#rt').onchange=e=>{R.records.to=e.target.value;R.records()};
   $$('[data-ty]').forEach(b=>b.onclick=()=>{R.records.ty=b.dataset.ty;R.records()});
   $('#rx').onclick=()=>{
-    const wb=XLSX.utils.book_new();const hd=['NO','적발일시','소속업체','성명','직종','안전모번호','위반내용','상세','장소','차수','조치사항','교육이수','점검자','위반자확인','비고'];
-    XLSX.utils.book_append_sheet(wb,sheet([[`삼진아웃제 적발 관리대장 (${from} ~ ${to})`],['현장명 :',S.site],hd,...violationRows(vs.sort((a,b)=>a.at.localeCompare(b.at)))],[5,16,16,9,10,10,22,20,14,6,40,16,16,16,16],['A1:O1']),'삼진아웃');
+    const wb=XLSX.utils.book_new();const hd=['NO','적발일시','소속업체','성명','직종','위반내용','상세','장소','차수','조치사항','교육이수','점검자','위반자확인','비고'];
+    XLSX.utils.book_append_sheet(wb,sheet([[`삼진아웃제 적발 관리대장 (${from} ~ ${to})`],['현장명 :',S.site],hd,...violationRows(vs.sort((a,b)=>a.at.localeCompare(b.at)))],[5,16,16,9,10,22,20,14,6,40,16,16,16,16],['A1:N1']),'삼진아웃');
     const ah=['NO','측정일시','소속/업체명','직종','성명','장비','차량번호','측정결과(%)','판정','조치사항','측정인','사후조치','확인서','비고'];
     XLSX.utils.book_append_sheet(wb,sheet([[`음주측정 기록 (${from} ~ ${to})`],['현장명 :',S.site],ah,...as.sort((a,b)=>a.at.localeCompare(b.at)).map((a,i)=>[i+1,fmtDT(a.at),a.company,a.job,a.name+(a.retestOf?' (재측정)':''),a.equip,a.plate,a.refused?'거부':a.value.toFixed(3),a.judge,a.action,a.measurer,a.follow||'',a.notice?'작성':'',a.void?'무효: '+a.void.reason:''])],[5,16,16,10,12,14,12,10,9,22,10,24,7,14],['A1:N1']),'음주측정');
     download(wb,`안전관리기록_${from}_${to}.xlsx`)};
