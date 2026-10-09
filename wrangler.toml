@@ -19,5 +19,9 @@ migrations_dir = "migrations"
 binding = "PHOTOS"
 bucket_name = "hyeonjang-on-photos"
 
+# 매주 월요일 03:00 KST (일요일 18:00 UTC) 서버 자동 백업
+[triggers]
+crons = ["0 18 * * SUN"]
+
 [observability]
 enabled = true

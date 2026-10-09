@@ -22,7 +22,40 @@ export default {
       return json({ error: '서버 오류' }, 500);
     }
   },
+  // 매주 월요일 03:00(한국시간) 자동 백업 → R2 backups/
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(runBackup(env, 'auto'));
+  },
 };
+
+/* ---------- backups: all live records (photos already live in R2) ---------- */
+const BACKUP_KEEP = 12;
+async function runBackup(env, kind) {
+  if (!env.PHOTOS) return null;
+  const rows = (await env.DB.prepare('SELECT store,id,data FROM docs WHERE deleted=0').all()).results;
+  const users = (await env.DB.prepare('SELECT id,login_id,name,org,title,role,active,created_at FROM users').all()).results;
+  const out = { app: 'fieldsafety', v: 2, source: 'server', at: new Date(now() + 9 * 3600e3).toISOString().replace('T', ' ').slice(0, 16), users };
+  for (const r of rows) {
+    const d = JSON.parse(r.data);
+    if (r.store === 'settings') { out.settings = d; continue; }
+    (out[r.store] = out[r.store] || []).push({ ...d, id: r.id });
+  }
+  const stamp = out.at.replace(/[-: ]/g, '').slice(0, 12);
+  const key = `backups/${stamp}-${kind}.json`;
+  await env.PHOTOS.put(key, JSON.stringify(out), { httpMetadata: { contentType: 'application/json' } });
+  // 자동 백업은 최근 ${BACKUP_KEEP}개만 보관 (수동 백업은 지우지 않음)
+  const list = await env.PHOTOS.list({ prefix: 'backups/' });
+  const autos = list.objects.map((o) => o.key).filter((k) => k.endsWith('-auto.json')).sort();
+  for (const k of autos.slice(0, Math.max(0, autos.length - BACKUP_KEEP))) await env.PHOTOS.delete(k);
+  return key;
+}
+
+/* 취약근로자(건강정보) 열람 범위: 운영자만(기본) 또는 전체 — 현장 설정 vulnScope */
+async function vulnAllowed(env, u) {
+  if (u.role === 'admin') return true;
+  const r = await env.DB.prepare("SELECT data FROM docs WHERE store='settings' AND id='shared' AND deleted=0").first();
+  try { return !!r && JSON.parse(r.data).vulnScope === 'all'; } catch { return false; }
+}
 
 class HttpError extends Error { constructor(status, msg) { super(msg); this.status = status; } }
 const fail = (status, msg) => { throw new HttpError(status, msg); };
@@ -244,10 +277,11 @@ async function route(req, env, url) {
 
   /* --- data sync --- */
   if (p === '/api/sync' && M === 'GET') {
-    await requireUser(req, env);
+    const su = await requireUser(req, env);
+    const hideVuln = !(await vulnAllowed(env, su));
     const since = Number(url.searchParams.get('since') || 0);
     const LIMIT = 300;
-    const r = await env.DB.prepare('SELECT store,id,data,deleted,updated_at,created_by,updated_by FROM docs WHERE updated_at>? ORDER BY updated_at LIMIT ?').bind(since, LIMIT + 1).all();
+    const r = await env.DB.prepare(`SELECT store,id,data,deleted,updated_at,created_by,updated_by FROM docs WHERE updated_at>? ${hideVuln ? "AND store<>'vuln'" : ''} ORDER BY updated_at LIMIT ?`).bind(since, LIMIT + 1).all();
     const rows = r.results.slice(0, LIMIT);
     return json({
       docs: rows.map((d) => ({ store: d.store, id: d.id, deleted: !!d.deleted, updatedAt: d.updated_at, data: d.deleted ? null : JSON.parse(d.data) })),
@@ -268,6 +302,9 @@ async function route(req, env, url) {
     for (const d of docs) {
       if (!STORES.has(d.store) || typeof d.id !== 'string' || !d.id || !d.data || typeof d.data !== 'object') fail(400, '잘못된 기록');
       if (d.store === 'settings' && u.role !== 'admin') fail(403, '현장 설정은 운영자만 바꿀 수 있습니다');
+    }
+    if (u.role !== 'admin' && docs.some((d) => d.store === 'vuln') && !(await vulnAllowed(env, u))) fail(403, '취약근로자 정보는 운영자만 다룰 수 있습니다');
+    for (const d of docs) {
     }
 
     // Free-plan D1 allows ~50 queries per request, so everything below is set-based:
@@ -344,6 +381,25 @@ async function route(req, env, url) {
     if (rows.length) await env.DB.prepare('DELETE FROM blobs WHERE id IN (SELECT value FROM json_each(?))').bind(JSON.stringify(rows.map((r) => r.id))).run();
     const left = await env.DB.prepare('SELECT COUNT(*) AS n FROM blobs').first();
     return json({ moved: rows.length, remaining: left.n });
+  }
+
+  if (p === '/api/admin/backups' && M === 'GET') {
+    await requireAdmin(req, env);
+    if (!env.PHOTOS) return json({ backups: [] });
+    const list = await env.PHOTOS.list({ prefix: 'backups/' });
+    return json({ backups: list.objects.map((o) => ({ name: o.key.slice(8), size: o.size })).sort((a, b) => b.name.localeCompare(a.name)) });
+  }
+  if (p === '/api/admin/backups' && M === 'POST') {
+    await requireAdmin(req, env);
+    if (!env.PHOTOS) fail(400, 'R2 저장소가 연결되지 않았습니다');
+    const key = await runBackup(env, 'manual');
+    return json({ name: key.slice(8) });
+  }
+  if ((m = p.match(/^\/api\/admin\/backups\/([0-9]{12}-(?:auto|manual)\.json)$/)) && M === 'GET') {
+    await requireAdmin(req, env);
+    const obj = env.PHOTOS && await env.PHOTOS.get('backups/' + m[1]);
+    if (!obj) fail(404, '백업이 없습니다');
+    return new Response(obj.body, { headers: { 'content-type': 'application/json; charset=utf-8', 'content-disposition': `attachment; filename="hyeonjangON_backup_${m[1]}"`, 'cache-control': 'no-store' } });
   }
 
   fail(404, '없는 주소');

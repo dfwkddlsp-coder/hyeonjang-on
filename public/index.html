@@ -430,6 +430,7 @@ const DEF={
   vulnAge:55,bp:{warn:[140,90],stop:[160,100]},
   eqItems:'안전벨트 / 안전레버|좌석 안전벨트는 운행 중 상시 착용하고 안전레버 하강 시 조종이 불가할 것\n버켓 안전핀 / 훅해지장치|규정된 버켓을 사용하고 안전핀은 정상적으로 체결되어 있을 것, 훅해지장치가 있을 것\n조종장치 / 제동장치|브레이크, 클러치 및 조종장치는 손상 및 변형이 없으며 정상 작동될 것\n장비실명제 부착상태|장비실명제(허가증)가 부착되어 있고 해당 운전원이 실제 운전을 하고 있는지 확인\n협착방지봉 / 후방카메라·센서·후사경·경보기·조명|협착방지봉 부착상태, 후방카메라·센서·후사경·경보기·조명 정상작동 여부\n트랙 / 차륜|트랙 또는 차륜(타이어)의 균열·변형·파손 등 주행장치 이상이 없을 것 (손상이 심하면 타이어 교체 지시 및 확인)\n작업구역 통제|안전시설물 등으로 작업구역을 설정하고 유도자를 배치할 것 (장비 1대당 유도자 1명 이상)',
   eqCheckItems:'작업계획서 작성여부\n장비 실명제 부착상태\n백호 버킷 이탈방진핀 체결상태 (인식웨빙띠 설치)\n백호 훅 해지장치 설치상태\n크레인등 양중장비 권과방지장치 부착상태\n신호수 배치 및 복장상태 (깃발,호루라기,신호봉,적색조끼 및 안전모)\n후방카메라 작동상태\n후진경고음 작동상태\n타이어 마모상태\n장비후면 접근금지표지 및 협착방지봉 부착상태\n작업장구획 및 안전표지 부착상태\n작업장 정리정돈 상태\n주변 위험요소 방치 여부',
+  vulnScope:'admin',
   alcMode:'site',
   alc:{retest:0.020,stop:0.050,detect:0.001,day:0.030,outCount:2},
   alcMsg:'음주적발 알림\n1. 협력사명 : {업체}\n2. 측정일시 : {일시}\n3. {성명}({직종})\n4. 혈중 알코올 농도 {수치}\n5. 조치 : 🚫{조치}\n\n기준 : \n{기준}\n\n해당인원이 현장에서 작업하지 않도록 각별한 관리 부탁드리며 작업 중 적발 시 영구 퇴출 등 불이익이 발생할 수 있으니 참고해주시기 바랍니다.\n\n모든 관리자께서는 해당인원이 현장에서 작업할 시 작업중지 및 안전보건팀에 연락해주시기 바랍니다.'
@@ -756,7 +757,7 @@ function docAlcoholList(ds){
 }
 
 /* ---------- views ---------- */
-const APP_VER='2026.10.09-13';
+const APP_VER='2026.10.09-14';
 const VIEWS=[['home','홈'],['strike','삼진아웃'],['alcohol','음주측정'],['reg','관리대장'],['settings','설정']];
 /* 하위 화면 → 하단 탭 묶음 */
 const NAVOF={workers:'reg',equip:'reg',eqcheck:'reg',vuln:'reg',records:'settings'};
@@ -786,7 +787,7 @@ R.home=()=>{
   <div class="hm-grid">
    ${tile(1,'strike','삼진아웃','three strikes out','warning · education · exit',vt.length,`오늘 적발 <b>${vt.length}</b>건<br>퇴출 <b>${banned.size}</b> · 교육 미이수 <b>${eduPend.length}</b>`,false,true)}
    ${tile(2,'alcohol','음주측정','alcohol check','breath test',atBad.length,`오늘 측정 <b>${at.length}</b>명 · 적발 <b>${atBad.length}</b><br>${noNotice.length?`통지서 미작성 <b>${noNotice.length}</b>`:'통지서 모두 작성됨'}`)}
-   ${tile(3,'vuln','취약근로자','vulnerable workers','health care',vuNo.length,`관리 <b>${vuAct.length}</b>명 · 고혈압 <b>${vuAct.filter(p=>vulnTags(p).includes('고혈압')).length}</b><br>사후상담 미실시 <b>${vuNo.length}</b>`)}
+   ${vulnVisible()?tile(3,'vuln','취약근로자','vulnerable workers','health care',vuNo.length,`관리 <b>${vuAct.length}</b>명 · 고혈압 <b>${vuAct.filter(p=>vulnTags(p).includes('고혈압')).length}</b><br>사후상담 미실시 <b>${vuNo.length}</b>`):tile(3,'vuln','취약근로자','vulnerable workers','health care',null,`건강정보 보호를 위해<br><b>운영자만</b> 열람합니다`)}
    ${tile(4,'workers','근로자','worker register','people',null,`등록 <b>${W.length}</b>명<br>업체 <b>${new Set(W.map(w=>w.company)).size}</b>곳`)}
    ${tile(5,'equip','장비','equipment register','machines',expE.length,`등록 <b>${E.length}</b>대<br>서류 만료·임박 <b>${expE.length}</b>`)}
    ${(()=>{const iu=E.filter(e=>!e.outDate),dn=iu.filter(e=>eqCheckOf(e.id,today())).length,mt=iu.filter(e=>isMine(e)&&!eqCheckOf(e.id,today())).length;return tile(6,'eqcheck','장비점검','daily inspection','',iu.length-dn,`오늘 점검 <b>${dn}</b>/${iu.length}대<br>${mt?`내 담당 미점검 <b>${mt}</b>`:'사진대지 · 주간 점검표'}`,true)})()}
@@ -1175,6 +1176,9 @@ R.settings=()=>{
    <label class="f" style="margin-top:14px">장비 주간 사진 항목 — "항목|설명" (맨 앞 '점검사진'은 자동)</label>
    <textarea class="inp" id="sEq" style="min-height:180px;font-size:14px">${h(S.eqItems||DEF.eqItems)}</textarea>
    <div class="small muted" style="margin-top:6px">기본값: 장비전담제 장비점검방법 10~16쪽.</div></div>
+  <div class="card"><b>취약근로자 열람 범위</b>
+   <select class="inp" id="sVs" style="margin-top:8px"><option value="admin" ${S.vulnScope!=='all'?'selected':''}>운영자만 (권장 — 건강정보 보호)</option><option value="all" ${S.vulnScope==='all'?'selected':''}>모든 사용자</option></select>
+   <div class="small muted" style="margin-top:6px">검진 결과·혈압은 개인정보보호법상 민감정보입니다. '운영자만'이면 서버가 다른 사용자에게 아예 보내지 않고, 이미 받은 기기에서도 지워집니다.</div></div>
   <div class="card"><b>취약근로자 기준</b>
    <div class="grid g2"><div><label class="f">고령 분류 연령 (세 이상)</label><input class="inp" id="sVa" inputmode="numeric" value="${S.vulnAge}"></div><div></div>
    <div><label class="f">혈압 주의 (수축기/이완기 이상)</label><input class="inp" id="sBw" value="${S.bp.warn.join('/')}"></div><div><label class="f">혈압 위험 (수축기/이완기 이상)</label><input class="inp" id="sBs" value="${S.bp.stop.join('/')}"></div></div></div>
@@ -1187,7 +1191,7 @@ R.settings=()=>{
   <button class="btn xl" id="sSave">저장</button>
   </section><section class="st" data-st="data">
   <div class="card"><b>데이터</b><div style="height:6px"></div><div class="small muted">근로자 ${W.length} · 장비 ${E.length} · 삼진아웃 ${V.length} · 음주측정 ${A.length} · 취약근로자 ${VU.length}</div>
-  ${SERVER&&adm?'<div class="hint small" id="stoBox" style="margin-top:10px">저장소 상태 확인 중…</div>':''}
+  ${SERVER&&adm?'<div class="hint small" id="stoBox" style="margin-top:10px">저장소 상태 확인 중…</div><div class="hint small" id="bkBox" style="margin-top:10px">백업 목록 확인 중…</div>':''}
   ${adm?'<div class="row" style="margin-top:10px"><button class="btn line" id="dW">근로자 대장 비우기</button><button class="btn line" id="dE">장비 대장 비우기</button></div>':''}${SERVER?'<button class="btn sm line" id="syncNow" style="margin-top:10px">지금 동기화</button>':''}</div>
   <div class="card small muted">앱 설치: 크롬/사파리 메뉴 → "홈 화면에 추가". 인터넷 없이도 동작합니다.<br>버전 ${APP_VER} · 인터넷에 연결되어 있으면 새 버전을 자동으로 받습니다.</div>
   </section>`;
@@ -1207,7 +1211,7 @@ R.settings=()=>{
     if(!adm||R.settings.tab==='me'){if(await saveMine()){await saveSettings();toast('저장됨')}return}
     const r=parseFloat($('#sR').value),t=parseFloat($('#sT').value),dt=parseFloat($('#sDt').value),dy=parseFloat($('#sDy').value),oc=parseInt($('#sOc').value);if(!(r>0&&t>r&&dt>0&&dy>dt&&oc>=1))return toast('음주 기준값을 확인하세요');
     const bpP=v=>{const m=String(v).match(/(\d{2,3})\s*\/\s*(\d{2,3})/);return m?[+m[1],+m[2]]:null};const bw=bpP($('#sBw').value),bs=bpP($('#sBs').value),va=parseInt($('#sVa').value);
-    if(!bw||!bs||!(va>0))return toast('취약근로자 기준값을 확인하세요 (예: 140/90)');S.bp={warn:bw,stop:bs};S.vulnAge=va;S.eqItems=$('#sEq').value.split('\n').map(x=>x.trim()).filter(Boolean).join('\n')||DEF.eqItems;S.eqCheckItems=$('#sEqC').value.split('\n').map(x=>x.trim()).filter(Boolean).join('\n')||DEF.eqCheckItems;
+    if(!bw||!bs||!(va>0))return toast('취약근로자 기준값을 확인하세요 (예: 140/90)');S.bp={warn:bw,stop:bs};S.vulnAge=va;S.vulnScope=$('#sVs').value==='all'?'all':'admin';S.eqItems=$('#sEq').value.split('\n').map(x=>x.trim()).filter(Boolean).join('\n')||DEF.eqItems;S.eqCheckItems=$('#sEqC').value.split('\n').map(x=>x.trim()).filter(Boolean).join('\n')||DEF.eqCheckItems;
     const pin=$('#sN').value.trim();if(pin&&!/^\d{4,6}$/.test(pin))return toast('PIN은 숫자 4~6자리');
     if($('#sI').value.trim()&&!(await saveMine()))return;
     Object.assign(S,{site:$('#sS').value.trim(),periodMonths:+$('#sP').value,pin,alc:{retest:r,stop:t,detect:dt,day:dy,outCount:oc},alcMode:$('#sAm').value,alcMsg:$('#sMsg').value,
@@ -1217,6 +1221,15 @@ R.settings=()=>{
   const clearReg=async(store,msg)=>{if(!confirm(msg))return;try{if(SERVER)await pushImport(store,[],true);else{await DB.putMany(store,[],true);if(store==='workers')W=[];else E=[]}R.settings()}catch(x){toast(x.message)}};
   if($('#dW'))$('#dW').onclick=()=>clearReg('workers','근로자 대장을 모두 지웁니다. (적발·측정 기록은 유지) 계속할까요?');
   if($('#dE'))$('#dE').onclick=()=>clearReg('equipment','장비 대장을 모두 지웁니다. 계속할까요?');
+  const bkBox=$('#bkBox');
+  const loadBk=async()=>{if(!bkBox)return;try{const r=await api('admin/backups');const fmt=n=>`${n.slice(0,4)}.${n.slice(4,6)}.${n.slice(6,8)} ${n.slice(8,10)}:${n.slice(10,12)}`;
+    bkBox.innerHTML=`<div class="row"><b class="grow">서버 자동 백업</b><button class="btn sm" id="bkNow">지금 백업</button></div>
+      <div style="margin:4px 0 6px">매주 월요일 새벽 3시 자동 저장 · 최근 12주 보관 (사진은 R2에 그대로 보관)</div>
+      ${r.backups.length?r.backups.slice(0,15).map(b=>`<div class="row" style="padding:4px 0;border-top:1px solid var(--line)"><span class="grow">${fmt(b.name)} ${b.name.includes('manual')?'(수동)':'(자동)'} · ${Math.max(1,Math.round(b.size/1024))}KB</span><a class="btn sm line" href="/api/admin/backups/${b.name}" download>받기</a></div>`).join(''):'<div class="muted">아직 백업 없음</div>'}
+      <div class="muted" style="margin-top:6px">받은 파일은 기록·보고 탭의 [백업 복원]으로 되돌릴 수 있습니다.</div>`;
+    $('#bkNow').onclick=async()=>{const b=$('#bkNow');b.disabled=true;b.textContent='백업 중…';try{await api('admin/backups',{});toast('백업 완료')}catch(e){toast(e.message)}loadBk()};
+  }catch(e){bkBox.textContent='백업 목록을 불러오지 못했습니다'}};
+  if(R.settings.tab==='data')loadBk();
   const stoBox=$('#stoBox');
   const loadSto=async()=>{if(!stoBox)return;try{const r=await api('admin/storage');const mb=b=>(b/1048576).toFixed(1)+'MB';
     stoBox.innerHTML=`<b>서버 저장소</b><br>사진 저장: ${r.r2?'<b>R2 저장소</b> (무료 10GB)':'데이터베이스 (무료 500MB 중 일부)'}<br>데이터베이스 안 사진: ${r.d1Blobs}장 · ${mb(r.d1BlobBytes)} &nbsp;|&nbsp; 기록: ${r.docs}건 · ${mb(r.docBytes)}${r.r2&&r.d1Blobs?`<br><button class="btn sm" id="stoMove" style="margin-top:8px">데이터베이스 사진 ${r.d1Blobs}장 → R2로 옮기기</button>`:''}`;
@@ -1293,6 +1306,7 @@ function vulnItem(p,tags){tags=tags||vulnTags(p);const c=(p.consults||[]).slice(
    <div class="chips" style="gap:4px;margin:4px 0">${tags.map(t=>`<span class="badge ${tagCls(t)}">${t}</span>`).join('')}</div>
    <div class="small muted ell">${c?`사후상담 ${c.date}`:'<b style="color:var(--bad)">사후상담 미실시</b>'}${b?` · 혈압 ${b.sys}/${b.dia} <span class="badge ${bpCls(b.judge)}">${b.judge}</span> ${fmtDT(b.at).slice(5)}`:''}</div></div></div>`}
 R.vuln=()=>{
+  if(!vulnVisible()){V$().innerHTML='<h1>취약근로자</h1><div class="card empty">취약근로자(건강검진·혈압) 정보는 개인 건강정보 보호를 위해 <b>운영자만</b> 열람할 수 있습니다.</div>';return}
   const q=R.vuln.q||'',tag=R.vuln.tag||'',ret=!!R.vuln.ret;
   const base=VU.filter(p=>ret||!p.retired);const T=new Map(base.map(p=>[p.id,vulnTags(p)]));
   const tags=['고혈압','소음성난청','고령','유소견(D)','특검대상','상담·진료필요','당뇨','분진'].filter(t=>base.some(p=>T.get(p.id).includes(t)));
@@ -1415,7 +1429,7 @@ function editUser(u){const nu=!u;u=u||{};
   })}
 let SERVER=false,ME=null;
 const isAdmin=()=>!SERVER||(ME&&ME.role==='admin');
-const SHARED_KEYS=['site','periodMonths','vtypes','levels','alcMode','alc','alcMsg','vulnAge','bp','eqItems','eqCheckItems'];
+const SHARED_KEYS=['site','periodMonths','vtypes','levels','alcMode','alc','alcMsg','vulnAge','bp','eqItems','eqCheckItems','vulnScope'];
 async function api(path,body){
   const r=await fetch('/api/'+path,{method:body!==undefined?'POST':'GET',credentials:'same-origin',headers:body!==undefined?{'content-type':'application/json'}:{},body:body!==undefined?JSON.stringify(body):undefined});
   let j=null;try{j=await r.json()}catch(e){}
@@ -1425,7 +1439,10 @@ async function api(path,body){
 const kvGet=async k=>{const r=await DB.req(DB.st('kv','readonly').get(k));return r?r.v:undefined};
 const kvSet=(k,v)=>DB.put('kv',{k,v});
 function applyMe(u){ME=u;Object.assign(S,{inspector:u.name,inspectorOrg:u.org||'',myRole:u.title||'',mySig:u.sig||''})}
-function applyShared(d){for(const k of SHARED_KEYS)if(d[k]!==undefined)S[k]=k==='alc'?Object.assign({},DEF.alc,d[k]):d[k];$('#siteName').textContent=S.site||''}
+function applyShared(d){for(const k of SHARED_KEYS)if(d[k]!==undefined)S[k]=k==='alc'?Object.assign({},DEF.alc,d[k]):d[k];$('#siteName').textContent=S.site||'';purgeVulnIfHidden()}
+/* 열람 권한이 없으면 이 기기에 받아둔 취약근로자 정보도 지움 */
+const vulnVisible=()=>!SERVER||isAdmin()||S.vulnScope==='all';
+function purgeVulnIfHidden(){if(vulnVisible()||!VU.length)return;VU=[];DB.putMany('vuln',[],true).catch(()=>{})}
 function sharedDoc(){const o={id:'shared'};for(const k of SHARED_KEYS)o[k]=S[k];return o}
 async function queueShared(){await DB.put('outbox',{k:'settings|shared',store:'settings',id:'shared',data:sharedDoc(),ts:Date.now()});Sync.soon()}
 async function applyDoc(d){
@@ -1712,7 +1729,7 @@ function segBar(items,active){
   if(h1)h1.insertAdjacentHTML('afterend',html);else V$().insertAdjacentHTML('afterbegin',html);
   $$('[data-seg]',V$()).forEach(b=>b.onclick=()=>{const [v,t]=b.dataset.seg.split(':');go(v,t)});
 }
-for(const k of ['workers','equip','eqcheck','vuln']){const f=R[k];R[k]=(...a)=>{f(...a);segBar(REG_TABS,k)}}
+for(const k of ['workers','equip','eqcheck','vuln']){const f=R[k];R[k]=(...a)=>{f(...a);segBar(REG_TABS.filter(t=>t[0]!=='vuln'||vulnVisible()),k)}}
 {const f=R.records;R.records=(...a)=>{f(...a);segBar(setTabs(),'records')}}
 {const f=R.settings;R.settings=(tab)=>{
   const tabs=setTabs().map(x=>x[0]);if(typeof tab==='string')R.settings.tab=tab;
@@ -1731,7 +1748,7 @@ function lockScreen(){return new Promise(res=>{if(!S.pin)return res();const d=do
   await lockScreen();
   $('#siteName').textContent=S.site;renderNav();badge();
   addEventListener('online',()=>{badge();Sync.run()});addEventListener('offline',badge);
-  if(SERVER){Sync.run();setInterval(()=>{if(document.visibilityState==='visible')Sync.run()},30000);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')Sync.run()})}
+  if(SERVER){purgeVulnIfHidden();Sync.run();setInterval(()=>{if(document.visibilityState==='visible')Sync.run()},30000);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')Sync.run()})}
   let v='home';try{v=sessionStorage.getItem('v')||'home'}catch(e){}go(R[v]?v:'home');
   if('serviceWorker' in navigator&&location.protocol.startsWith('http')){
     /* 새 버전 자동 적용: 열 때·다시 볼 때 확인. 입력 중이면 끊지 않고 상단에 '업데이트' 버튼만 띄움 */
