@@ -14,5 +14,10 @@ database_name = "hyeonjang-on-db"
 database_id = "d162e0f7-aeb4-48f3-8fec-06616d22c6cc"
 migrations_dir = "migrations"
 
+# 사진·서명 저장소 (비공개). 연결되면 새 사진은 여기로, 예전 사진은 설정→데이터·앱에서 옮김
+[[r2_buckets]]
+binding = "PHOTOS"
+bucket_name = "hyeonjang-on-photos"
+
 [observability]
 enabled = true
