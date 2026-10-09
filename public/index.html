@@ -94,7 +94,8 @@ textarea.inp{min-height:84px;resize:vertical}
 .who .nm{font-size:22px;font-weight:800}
 .sig{border:1.5px dashed #9aa7b7;border-radius:12px;background:#fff;overflow:hidden}
 .sig-h{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:#f7f9fb;border-bottom:1px solid var(--line);font-weight:700;font-size:14px}
-.sig canvas{display:block;width:100%;height:170px;touch-action:none;background:#fff}
+.sig canvas{display:block;width:100%;height:170px;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;background:#fff}
+html.no-scroll,html.no-scroll body{overflow:hidden;overscroll-behavior:none}
 .photos{display:flex;gap:8px;flex-wrap:wrap}
 .photos .ph{position:relative;width:96px;height:96px;border-radius:10px;overflow:hidden;background:#ddd}
 .photos .ph img{width:100%;height:100%;object-fit:cover}
@@ -111,7 +112,7 @@ table.t tr.click:hover td{background:#f8fafc}
 .exp-bad{color:var(--bad);font-weight:700}.exp-warn{color:var(--warn);font-weight:700}
 .modal{position:fixed;inset:0;background:rgba(10,20,30,.45);z-index:50;display:flex;align-items:flex-end;justify-content:center}
 .modal.hidden{display:none}
-.sheet{background:var(--bg);width:100%;max-width:820px;max-height:94vh;overflow:auto;border-radius:18px 18px 0 0;padding:0 16px 24px}
+.sheet{background:var(--bg);width:100%;max-width:820px;max-height:94vh;overflow:auto;overscroll-behavior:contain;border-radius:18px 18px 0 0;padding:0 16px 24px}
 @media (min-width:761px){.modal{align-items:center}.sheet{border-radius:18px}}
 .sheet-h{position:sticky;top:0;background:var(--bg);display:flex;justify-content:space-between;align-items:center;padding:14px 0;z-index:2;font-size:18px}
 .x{border:0;background:var(--chip);width:40px;height:40px;border-radius:50%;font-size:18px;cursor:pointer}
@@ -209,7 +210,8 @@ table.t tr.click:hover td{background:#f8fafc}
 .doc.eqw .eqf{font-size:11pt;line-height:1.75;margin-bottom:1.5mm}
 .doc.eqw .eqf u{display:inline-block;min-width:52mm;text-decoration:none;border-bottom:1px solid #000;padding:0 2mm;margin-left:1mm}
 .doc.eqw .eqf .wl{float:right;font-weight:700}
-.doc.eqw .eqf .sg{margin-left:3mm;position:relative}.doc.eqw .eqf .sg img{height:11mm;vertical-align:middle;margin-left:2mm}
+.doc.eqw .eqf .sg{margin-left:3mm;position:relative;display:inline-block;min-width:16mm;text-align:center}
+.doc.eqw .eqf .sg img{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);height:12mm;max-width:40mm;mix-blend-mode:multiply;pointer-events:none}
 .doc.eqw .grid6{table-layout:fixed;margin:0}
 .doc.eqw .grid6 th{background:#dceaf7;font-size:11pt;padding:1.2mm .5mm;width:auto;text-align:center;line-height:1.35}
 .doc.eqw .grid6 th.it{text-align:center}
@@ -601,8 +603,8 @@ function exportAlcohol(from,to){
 }
 
 /* ---------- UI primitives ---------- */
-function openModal(title,html,onMount){$('#mTitle').textContent=title;$('#mBody').innerHTML=html;$('#modal').classList.remove('hidden');onMount&&onMount($('#mBody'))}
-function closeModal(){$('#modal').classList.add('hidden');$('#mBody').innerHTML=''}
+function openModal(title,html,onMount){document.documentElement.classList.add('no-scroll');$('#mTitle').textContent=title;$('#mBody').innerHTML=html;$('#modal').classList.remove('hidden');onMount&&onMount($('#mBody'))}
+function closeModal(){document.documentElement.classList.remove('no-scroll');$('#modal').classList.add('hidden');$('#mBody').innerHTML=''}
 $('#mClose').onclick=closeModal;
 $('#modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal()});
 
@@ -620,6 +622,10 @@ function sigPad(host,label,preset){
   const clear=()=>{ctx.clearRect(0,0,cv.width,cv.height);empty=true;tag('')};
   $('button',host).onclick=clear;
   cv.addEventListener('pointerdown',()=>tag(''),{capture:true});
+  /* iOS: 손가락이 서명칸 위에 있는 동안은 페이지·창이 절대 스크롤되지 않게 */
+  ['touchstart','touchmove','touchend'].forEach(t=>cv.addEventListener(t,e=>{if(e.cancelable)e.preventDefault()},{passive:false}));
+  cv.addEventListener('pointerdown',()=>document.documentElement.classList.add('no-scroll'));
+  ['pointerup','pointercancel'].forEach(t=>cv.addEventListener(t,()=>{if($('#modal').classList.contains('hidden'))document.documentElement.classList.remove('no-scroll')}));
   return {isEmpty:()=>empty,data:()=>empty?'':cv.toDataURL('image/png'),clear,useMine:()=>{clear();if(S.mySig)drawImg(S.mySig)}};
 }
 function compressImg(file,max=1280,q=.72){return new Promise((res,rej)=>{const img=new Image(),url=URL.createObjectURL(file);
@@ -741,7 +747,7 @@ function docAlcoholList(ds){
 }
 
 /* ---------- views ---------- */
-const APP_VER='2026.10.09-10';
+const APP_VER='2026.10.09-11';
 const VIEWS=[['home','홈'],['strike','삼진아웃'],['alcohol','음주측정'],['reg','관리대장'],['settings','설정']];
 /* 하위 화면 → 하단 탭 묶음 */
 const NAVOF={workers:'reg',equip:'reg',eqcheck:'reg',vuln:'reg',records:'settings'};
