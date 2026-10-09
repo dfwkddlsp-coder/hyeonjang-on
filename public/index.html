@@ -157,6 +157,7 @@ table.t tr.click:hover td{background:#f8fafc}
 .i-check{--m:url("data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M5%2012.5l4.5%204.5L19%207.5%22%2F%3E%3C%2Fsvg%3E")}
 .i-x{--m:url("data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M6%206l12%2012%22%2F%3E%3Cpath%20d%3D%22M18%206L6%2018%22%2F%3E%3C%2Fsvg%3E")}
 .i-reg{--m:url("data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M4%206.5A2.5%202.5%200%200%201%206.5%204H20v14H6.5A2.5%202.5%200%200%200%204%2020.5z%22%2F%3E%3Cpath%20d%3D%22M4%2020.5V6.5%22%2F%3E%3Cpath%20d%3D%22M9%208.5h7%22%2F%3E%3Cpath%20d%3D%22M9%2012h5%22%2F%3E%3C%2Fsvg%3E")}
+.i-plans{--m:url("data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M14%202.5H6.5a2%202%200%200%200-2%202v15a2%202%200%200%200%202%202h11a2%202%200%200%200%202-2V8z%22%2F%3E%3Cpath%20d%3D%22M14%202.5V8h5.5%22%2F%3E%3Cpath%20d%3D%22M8.5%2013h7M8.5%2017h5%22%2F%3E%3C%2Fsvg%3E")}
 .i-eqcheck{--m:url("data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Crect%20x%3D%225%22%20y%3D%224%22%20width%3D%2214%22%20height%3D%2217%22%20rx%3D%222%22%2F%3E%3Cpath%20d%3D%22M9%202.5h6v3.5H9z%22%2F%3E%3Cpath%20d%3D%22M8.5%2013l2.5%202.5%204.5-5%22%2F%3E%3C%2Fsvg%3E")}
 .x .i{width:20px;height:20px}
 /* 장비 일일점검 */
@@ -401,8 +402,8 @@ function expCell(s){const st=expState(s);if(!s)return '';return `<span class="${
 
 /* ---------- storage ---------- */
 const DB={db:null,
-  open(){return new Promise((res,rej)=>{const r=indexedDB.open('fieldsafety',4);
-    r.onupgradeneeded=()=>{const d=r.result;['workers','equipment','violations','alcohol','vuln','eqchecks'].forEach(s=>{if(!d.objectStoreNames.contains(s))d.createObjectStore(s,{keyPath:'id'})});if(!d.objectStoreNames.contains('kv'))d.createObjectStore('kv',{keyPath:'k'});if(!d.objectStoreNames.contains('outbox'))d.createObjectStore('outbox',{keyPath:'k'})};
+  open(){return new Promise((res,rej)=>{const r=indexedDB.open('fieldsafety',5);
+    r.onupgradeneeded=()=>{const d=r.result;['workers','equipment','violations','alcohol','vuln','eqchecks','plans'].forEach(s=>{if(!d.objectStoreNames.contains(s))d.createObjectStore(s,{keyPath:'id'})});if(!d.objectStoreNames.contains('kv'))d.createObjectStore('kv',{keyPath:'k'});if(!d.objectStoreNames.contains('outbox'))d.createObjectStore('outbox',{keyPath:'k'})};
     r.onsuccess=()=>{this.db=r.result;res()};r.onerror=()=>rej(r.error)})},
   req(r){return new Promise((res,rej)=>{r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})},
   st(s,m){return this.db.transaction(s,m).objectStore(s)},
@@ -411,8 +412,8 @@ const DB={db:null,
   del(s,id){return this.req(this.st(s,'readwrite').delete(id))},
   putMany(s,arr,clear){return new Promise((res,rej)=>{const t=this.db.transaction(s,'readwrite');const o=t.objectStore(s);if(clear)o.clear();arr.forEach(x=>o.put(x));t.oncomplete=res;t.onerror=()=>rej(t.error)})}
 };
-let W=[],E=[],V=[],A=[],VU=[],EC=[];
-const STORE={workers:()=>W,equipment:()=>E,violations:()=>V,alcohol:()=>A,vuln:()=>VU,eqchecks:()=>EC};
+let W=[],E=[],V=[],A=[],VU=[],EC=[],PL=[];
+const STORE={workers:()=>W,equipment:()=>E,violations:()=>V,alcohol:()=>A,vuln:()=>VU,eqchecks:()=>EC,plans:()=>PL};
 function memPut(store,obj){const arr=STORE[store]();const i=arr.findIndex(x=>x.id===obj.id);if(i>=0)arr[i]=obj;else arr.push(obj)}
 function memDel(store,id){const arr=STORE[store]();const i=arr.findIndex(x=>x.id===id);if(i>=0)arr.splice(i,1)}
 /* 서버 모드: 기기에 먼저 저장 → 전송 대기함(outbox) → 연결되면 서버로. 인터넷이 없어도 입력은 계속 됩니다 */
@@ -757,10 +758,10 @@ function docAlcoholList(ds){
 }
 
 /* ---------- views ---------- */
-const APP_VER='2026.10.09-15';
+const APP_VER='2026.10.09-16';
 const VIEWS=[['home','홈'],['strike','삼진아웃'],['alcohol','음주측정'],['reg','관리대장'],['settings','설정']];
 /* 하위 화면 → 하단 탭 묶음 */
-const NAVOF={workers:'reg',equip:'reg',eqcheck:'reg',vuln:'reg',records:'settings'};
+const NAVOF={plans:'home',workers:'reg',equip:'reg',eqcheck:'reg',vuln:'reg',records:'settings'};
 const REG_TABS=[['workers','근로자'],['equip','장비'],['eqcheck','장비점검'],['vuln','취약근로자']];
 let lastReg='workers';
 let cur='home';
@@ -768,6 +769,35 @@ function go(v,arg,fromPop){if(v==='reg')v=lastReg;if(NAVOF[v]==='reg')lastReg=v;
 function renderNav(){$('#nav').innerHTML=VIEWS.map(([v,t])=>`<button data-v="${v}"><span class="ni"><i class="i i-${v}"></i></span>${t}</button>`).join('');$$('#nav button').forEach(b=>b.onclick=()=>go(b.dataset.v))}
 const R={};
 const V$=()=>$('#view');
+
+/* ---------- 현장 운영안 (PDF) — 운영자가 올리고 모든 사용자가 열람 ---------- */
+const plansSorted=()=>[...PL].sort((a,b)=>String(b.at).localeCompare(String(a.at)));
+const fmtSize=n=>n>=1048576?(n/1048576).toFixed(1)+'MB':Math.max(1,Math.round(n/1024))+'KB';
+const planUrl=p=>`/api/file/${p.fileId}?n=${encodeURIComponent(p.title)}`;
+R.plans=()=>{
+  const pl=plansSorted();
+  V$().innerHTML=`<h1>현장 운영안</h1>
+  ${isAdmin()&&SERVER?`<div class="card"><b>PDF 올리기</b> <span class="small muted">운영자만 · 30MB까지</span>
+    <label class="f">제목</label><input class="inp" id="plT" placeholder="예) 2026년 10월 현장 운영안">
+    <label class="f">PDF 파일</label><input class="inp" id="plF" type="file" accept="application/pdf,.pdf">
+    <button class="btn" id="plUp" style="margin-top:10px">올리기</button></div>`:''}
+  ${!SERVER?'<div class="hint">현장 운영안은 서버에 로그인해서 사용할 때만 볼 수 있습니다.</div>':''}
+  <div class="card list">${pl.map(p=>`<div class="it"><span class="dot d0"><i class="i i-plans"></i></span><div class="m"><b>${h(p.title)}</b><div class="small muted ell">${fmtDT(p.at)} · ${h(p.by||'')} · ${fmtSize(p.size||0)}</div></div>
+    <a class="btn sm" href="${planUrl(p)}" target="_blank" rel="noopener">열기</a>${isAdmin()?`<button class="btn sm line" data-pdel="${h(p.id)}">삭제</button>`:''}</div>`).join('')||'<div class="empty">아직 올린 운영안이 없습니다</div>'}</div>`;
+  const f=$('#plF');if(f)f.onchange=()=>{const t=$('#plT');if(f.files[0]&&!t.value.trim())t.value=f.files[0].name.replace(/\.pdf$/i,'')};
+  const up=$('#plUp');if(up)up.onclick=async()=>{
+    const file=f.files[0],title=$('#plT').value.trim();
+    if(!file)return toast('PDF 파일을 고르세요');if(!title)return toast('제목을 입력하세요');
+    if(!/pdf$/i.test(file.type)&&!/\.pdf$/i.test(file.name))return toast('PDF 파일만 올릴 수 있습니다');
+    if(file.size>30*1048576)return toast('PDF는 30MB까지 올릴 수 있습니다');
+    if(!navigator.onLine)return toast('올리기는 인터넷 연결이 필요합니다');
+    up.disabled=true;up.textContent='올리는 중…';
+    try{const r=await fetch('/api/admin/files',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/pdf'},body:file});
+      const j=await r.json().catch(()=>null);if(!r.ok||!j)throw new Error((j&&j.error)||'HTTP '+r.status);
+      await save('plans',{id:uid(),title,fileId:j.id,size:j.size,name:file.name,at:nowLocal(),by:S.inspector||''});await Sync.run();toast('올렸습니다');R.plans()}
+    catch(x){toast(x.message);up.disabled=false;up.textContent='올리기'}};
+  $$('[data-pdel]').forEach(b=>b.onclick=async()=>{const p=PL.find(x=>x.id===b.dataset.pdel);if(!p||!confirm(`「${p.title}」을(를) 삭제할까요?\nPDF 파일도 서버에서 지워집니다.`))return;try{await remove('plans',p.id);toast('삭제했습니다');R.plans()}catch(x){toast(x.message)}});
+};
 
 R.home=()=>{
   const t=today();const vt=V.filter(v=>v.date===t&&!v.void);const at=A.filter(a=>a.date===t&&!a.void&&!a.retestOf);const atBad=at.filter(a=>isAlcBad(alcFinal(a)));
@@ -791,7 +821,7 @@ R.home=()=>{
    ${tile(4,'workers','근로자','worker register','people',null,`등록 <b>${W.length}</b>명<br>업체 <b>${new Set(W.map(w=>w.company)).size}</b>곳`)}
    ${tile(5,'equip','장비','equipment register','machines',expE.length,`등록 <b>${E.length}</b>대<br>서류 만료·임박 <b>${expE.length}</b>`)}
    ${(()=>{const iu=E.filter(e=>!e.outDate),dn=iu.filter(e=>eqCheckOf(e.id,today())).length,mt=iu.filter(e=>isMine(e)&&!eqCheckOf(e.id,today())).length;return tile(6,'eqcheck','장비점검','daily inspection','',iu.length-dn,`오늘 점검 <b>${dn}</b>/${iu.length}대<br>${mt?`내 담당 미점검 <b>${mt}</b>`:'사진대지 · 주간 점검표'}`,true)})()}
-   ${tile(7,'settings','설정','settings','setup',null,`현장명 · 점검자 · 기준`)}
+   ${(()=>{const pl=plansSorted();return tile(7,'plans','현장 운영안','site plan','pdf',null,pl.length?`등록 <b>${pl.length}</b>건<br>${h(pl[0].title)}`:'운영 계획·기준 문서<br>PDF 열람')})()}
   </div>
   ${noNotice.length?`<div class="hm-sec"><h2>통지서 미작성</h2><span>alcohol notice</span></div><div class="card list">${noNotice.map(alcItem).join('')}</div>`:''}
   ${pend.length?`<div class="hm-sec"><h2>재측정 대기</h2><span>retest</span></div><div class="card list">${pend.map(alcItem).join('')}</div>`:''}
@@ -1513,7 +1543,7 @@ async function authGate(){
   else if(!u)u=await authScreen('login');
   if(u.mustChange)u=await authScreen('pw');
   const prev=await kvGet('me');let reset=false;
-  if(!prev||prev.id!==u.id){for(const s of ['workers','equipment','violations','alcohol','vuln','eqchecks','outbox'])await DB.putMany(s,[],true);await kvSet('lastSync',0);reset=true}
+  if(!prev||prev.id!==u.id){for(const s of ['workers','equipment','violations','alcohol','vuln','eqchecks','plans','outbox'])await DB.putMany(s,[],true);await kvSet('lastSync',0);reset=true}
   await kvSet('me',u);applyMe(u);return reset;
 }
 async function logout(){try{await api('logout',{})}catch(e){}await kvSet('me',null);location.reload()}
@@ -1739,7 +1769,7 @@ for(const k of ['workers','equip','eqcheck','vuln']){const f=R[k];R[k]=(...a)=>{
   segBar(setTabs(),'settings:'+t);if(t==='users'&&typeof loadUsers==='function')loadUsers()}}
 
 /* ---------- boot ---------- */
-async function loadAll(){[W,E,V,A,VU,EC]=await Promise.all(['workers','equipment','violations','alcohol','vuln','eqchecks'].map(s=>DB.all(s)))}
+async function loadAll(){[W,E,V,A,VU,EC,PL]=await Promise.all(['workers','equipment','violations','alcohol','vuln','eqchecks','plans'].map(s=>DB.all(s)))}
 function lockScreen(){return new Promise(res=>{if(!S.pin)return res();const d=document.createElement('div');d.className='lock';d.innerHTML=`<img src="icon.svg" alt="" style="width:84px;height:84px;border-radius:20px;box-shadow:0 0 0 3px rgba(255,255,255,.25)"><div style="font-size:28px;font-weight:900">현장ON</div><div style="opacity:.8;font-size:14px;margin-top:-6px">습관이 된 노력을 실력이라 한다.</div><div style="margin-top:10px">PIN 입력</div><input class="inp" type="password" inputmode="numeric" maxlength="6" autofocus>`;document.body.appendChild(d);const i=$('input',d);i.focus();i.oninput=()=>{if(i.value===S.pin){d.remove();res()}else if(i.value.length>=S.pin.length){i.value='';i.style.outline='3px solid #f66'}}})}
 
 (async()=>{

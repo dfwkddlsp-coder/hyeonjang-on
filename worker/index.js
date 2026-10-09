@@ -4,7 +4,8 @@
 // Roles: 'admin' (운영자) manages users, shared settings, register imports, deletes and voids.
 //        'user' can read everything and create/update records.
 
-const STORES = new Set(['workers', 'equipment', 'violations', 'alcohol', 'vuln', 'eqchecks', 'settings']);
+const STORES = new Set(['workers', 'equipment', 'violations', 'alcohol', 'vuln', 'eqchecks', 'plans', 'settings']);
+const PDF_MAX = 30 * 1024 * 1024; // 현장 운영안 PDF 한 파일 최대 크기
 const REGISTER_STORES = new Set(['workers', 'equipment', 'vuln']);
 const SESSION_DAYS = 30;
 const PBKDF2_ITER = 20000; // keeps login under the free-plan CPU budget
@@ -306,6 +307,7 @@ async function route(req, env, url) {
     for (const d of docs) {
       if (!STORES.has(d.store) || typeof d.id !== 'string' || !d.id || !d.data || typeof d.data !== 'object') fail(400, '잘못된 기록');
       if (d.store === 'settings' && u.role !== 'admin') fail(403, '현장 설정은 운영자만 바꿀 수 있습니다');
+      if (d.store === 'plans' && u.role !== 'admin') fail(403, '현장 운영안은 운영자만 올릴 수 있습니다');
     }
     if (u.role !== 'admin' && docs.some((d) => d.store === 'vuln') && !(await vulnAllowed(env, u))) fail(403, '취약근로자 정보는 운영자·관리자만 다룰 수 있습니다');
     for (const d of docs) {
@@ -353,9 +355,35 @@ async function route(req, env, url) {
     const u = await requireAdmin(req, env);
     const b = await body(req);
     if (!STORES.has(b.store) || b.store === 'settings' || !b.id) fail(400, '잘못된 요청');
+    if (b.store === 'plans' && env.PHOTOS) { // 운영안 문서를 지우면 PDF 파일도 지움
+      const r = await env.DB.prepare("SELECT data FROM docs WHERE store='plans' AND id=?").bind(b.id).first();
+      let f = ''; try { f = r ? JSON.parse(r.data).fileId : ''; } catch {}
+      if (/^[a-f0-9]+$/.test(f || '')) await env.PHOTOS.delete(`f/${f}`);
+    }
     const t = await stampBase(env);
     await env.DB.prepare('UPDATE docs SET deleted=1, data=\'{}\', updated_at=?, updated_by=? WHERE store=? AND id=?').bind(t, u.id, b.store, b.id).run();
     return json({ ok: true, updatedAt: t });
+  }
+
+  /* --- 현장 운영안 PDF: 운영자 업로드, 로그인한 모든 사용자 열람 --- */
+  if (p === '/api/admin/files' && M === 'POST') {
+    await requireAdmin(req, env);
+    if (!env.PHOTOS) fail(400, 'R2 저장소가 연결되지 않았습니다');
+    if (!/^application\/pdf/.test(req.headers.get('content-type') || '')) fail(400, 'PDF 파일만 올릴 수 있습니다');
+    const buf = await req.arrayBuffer();
+    if (!buf.byteLength) fail(400, '빈 파일입니다');
+    if (buf.byteLength > PDF_MAX) fail(413, 'PDF는 30MB까지 올릴 수 있습니다');
+    if (new TextDecoder().decode(new Uint8Array(buf, 0, 5)) !== '%PDF-') fail(400, 'PDF 파일이 아닙니다');
+    const id = uid();
+    await env.PHOTOS.put(`f/${id}`, buf, { httpMetadata: { contentType: 'application/pdf' } });
+    return json({ id, size: buf.byteLength });
+  }
+  if ((m = p.match(/^\/api\/file\/([a-f0-9]+)$/)) && M === 'GET') {
+    await requireUser(req, env);
+    const obj = env.PHOTOS && await env.PHOTOS.get(`f/${m[1]}`);
+    if (!obj) fail(404, '파일이 없습니다');
+    const name = (url.searchParams.get('n') || '현장운영안').replace(/[\\/:*?"<>|\r\n]/g, '_').slice(0, 80);
+    return new Response(obj.body, { headers: { 'content-type': 'application/pdf', 'content-disposition': `inline; filename*=UTF-8''${encodeURIComponent(name.endsWith('.pdf') ? name : name + '.pdf')}`, 'cache-control': 'private, max-age=3600' } });
   }
 
   if ((m = p.match(/^\/api\/blob\/([a-f0-9]+)$/)) && M === 'GET') {
