@@ -51,12 +51,29 @@ async function runBackup(env, kind) {
   return key;
 }
 
-/* 권한: admin 운영자(전부) · manager 관리자(전체 열람·등록, 삭제/설정/사용자관리 불가) · user 사용자 */
-const ROLES = ['admin', 'manager', 'user'];
+/* 권한: admin 운영자(전부) · manager 관리자(전체 열람·등록, 삭제/설정/사용자관리 불가) · user 사용자
+   · driver 장비운전원(본인 장비의 장비점검만) */
+const ROLES = ['admin', 'manager', 'user', 'driver'];
+const DRIVER_STORES = ['equipment', 'eqchecks', 'settings'];
+
+/* 장비운전원 본인 장비: 장비 대장의 운전원 연락처 = 로그인 아이디(휴대폰 번호). 연락처가 없는 장비는 이름으로 */
+async function driverEquipIds(env, u) {
+  const dg = (s) => String(s || '').replace(/\D/g, ''), nm = (s) => String(s || '').replace(/\s/g, '');
+  const loginPhone = /^\d{10,11}$/.test(dg(u.login_id)) ? dg(u.login_id) : '';
+  const r = await env.DB.prepare("SELECT id,data FROM docs WHERE store='equipment' AND deleted=0").all();
+  const ids = new Set();
+  for (const row of r.results) {
+    let e; try { e = JSON.parse(row.data); } catch { continue; }
+    const ph = dg(e.phone);
+    if ((ph && loginPhone && ph === loginPhone) || ((!ph || !loginPhone) && nm(e.operator) && nm(e.operator) === nm(u.name))) ids.add(row.id);
+  }
+  return ids;
+}
 
 /* 취약근로자(건강정보) 열람 범위: 운영자·관리자만(기본) 또는 전체 — 현장 설정 vulnScope */
 async function vulnAllowed(env, u) {
   if (u.role === 'admin' || u.role === 'manager') return true;
+  if (u.role === 'driver') return false;
   const r = await env.DB.prepare("SELECT data FROM docs WHERE store='settings' AND id='shared' AND deleted=0").first();
   try { return !!r && JSON.parse(r.data).vulnScope === 'all'; } catch { return false; }
 }
@@ -285,10 +302,21 @@ async function route(req, env, url) {
     const hideVuln = !(await vulnAllowed(env, su));
     const since = Number(url.searchParams.get('since') || 0);
     const LIMIT = 300;
-    const r = await env.DB.prepare(`SELECT store,id,data,deleted,updated_at,created_by,updated_by FROM docs WHERE updated_at>? ${hideVuln ? "AND store<>'vuln'" : ''} ORDER BY updated_at LIMIT ?`).bind(since, LIMIT + 1).all();
+    const isDriver = su.role === 'driver';
+    const r = await env.DB.prepare(`SELECT store,id,data,deleted,updated_at,created_by,updated_by FROM docs WHERE updated_at>? ${isDriver ? "AND store IN ('equipment','eqchecks','settings')" : hideVuln ? "AND store<>'vuln'" : ''} ORDER BY updated_at LIMIT ?`).bind(since, LIMIT + 1).all();
     const rows = r.results.slice(0, LIMIT);
+    let out = rows;
+    if (isDriver) { // 본인 장비와 그 점검 기록만
+      const mine = await driverEquipIds(env, su);
+      out = rows.filter((d) => {
+        if (d.store === 'settings') return true;
+        if (d.deleted) return true;
+        if (d.store === 'equipment') return mine.has(d.id);
+        try { return mine.has(JSON.parse(d.data).equipId); } catch { return false; }
+      });
+    }
     return json({
-      docs: rows.map((d) => ({ store: d.store, id: d.id, deleted: !!d.deleted, updatedAt: d.updated_at, data: d.deleted ? null : JSON.parse(d.data) })),
+      docs: out.map((d) => ({ store: d.store, id: d.id, deleted: !!d.deleted, updatedAt: d.updated_at, data: d.deleted ? null : JSON.parse(d.data) })),
       cursor: rows.length ? rows[rows.length - 1].updated_at : since,
       more: r.results.length > LIMIT,
     });
@@ -310,6 +338,11 @@ async function route(req, env, url) {
       if (d.store === 'plans' && u.role !== 'admin') fail(403, '현장 운영안은 운영자만 올릴 수 있습니다');
     }
     if (u.role !== 'admin' && docs.some((d) => d.store === 'vuln') && !(await vulnAllowed(env, u))) fail(403, '취약근로자 정보는 운영자·관리자만 다룰 수 있습니다');
+    if (u.role === 'driver') { // 장비운전원: 본인 장비의 장비점검만
+      if (docs.some((d) => d.store !== 'eqchecks')) fail(403, '장비운전원은 장비점검만 할 수 있습니다');
+      const mine = await driverEquipIds(env, u);
+      if (docs.some((d) => !mine.has(d.data.equipId))) fail(403, '본인 장비만 점검할 수 있습니다');
+    }
     for (const d of docs) {
     }
 
@@ -329,6 +362,7 @@ async function route(req, env, url) {
     const saved = [], rows = [];
     for (const d of docs) {
       const old = prev.get(d.store + '|' + d.id) || null;
+      if (u.role === 'driver' && old && old.equipId !== d.data.equipId) fail(403, '본인 장비만 점검할 수 있습니다');
       if (u.role !== 'admin' && (d.store === 'violations' || d.store === 'alcohol')) {
         if (!!(old && old.void) !== !!d.data.void) fail(403, '무효 처리는 운영자만 할 수 있습니다');
       }
@@ -379,7 +413,7 @@ async function route(req, env, url) {
     return json({ id, size: buf.byteLength });
   }
   if ((m = p.match(/^\/api\/file\/([a-f0-9]+)$/)) && M === 'GET') {
-    await requireUser(req, env);
+    if ((await requireUser(req, env)).role === 'driver') fail(403, '열람 권한이 없습니다');
     const obj = env.PHOTOS && await env.PHOTOS.get(`f/${m[1]}`);
     if (!obj) fail(404, '파일이 없습니다');
     const name = (url.searchParams.get('n') || '현장운영안').replace(/[\\/:*?"<>|\r\n]/g, '_').slice(0, 80);

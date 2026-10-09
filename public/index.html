@@ -758,15 +758,16 @@ function docAlcoholList(ds){
 }
 
 /* ---------- views ---------- */
-const APP_VER='2026.10.09-16';
+const APP_VER='2026.10.09-17';
 const VIEWS=[['home','홈'],['strike','삼진아웃'],['alcohol','음주측정'],['reg','관리대장'],['settings','설정']];
 /* 하위 화면 → 하단 탭 묶음 */
 const NAVOF={plans:'home',workers:'reg',equip:'reg',eqcheck:'reg',vuln:'reg',records:'settings'};
 const REG_TABS=[['workers','근로자'],['equip','장비'],['eqcheck','장비점검'],['vuln','취약근로자']];
 let lastReg='workers';
 let cur='home';
-function go(v,arg,fromPop){if(v==='reg')v=lastReg;if(NAVOF[v]==='reg')lastReg=v;if(!fromPop&&(v!==cur||arg!==undefined)){history.pushState({hj:'v',v},'');NAV.stale=false}cur=v;document.body.classList.toggle('is-home',v==='home');$$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===(NAVOF[v]||v)));window.scrollTo(0,0);R[v](arg);try{sessionStorage.setItem('v',v)}catch(e){}}
-function renderNav(){$('#nav').innerHTML=VIEWS.map(([v,t])=>`<button data-v="${v}"><span class="ni"><i class="i i-${v}"></i></span>${t}</button>`).join('');$$('#nav button').forEach(b=>b.onclick=()=>go(b.dataset.v))}
+const DRIVER_VIEWS=['eqcheck','settings'];
+function go(v,arg,fromPop){if(isDriver()&&!DRIVER_VIEWS.includes(v))v='eqcheck';if(v==='reg')v=lastReg;if(NAVOF[v]==='reg')lastReg=v;if(!fromPop&&(v!==cur||arg!==undefined)){history.pushState({hj:'v',v},'');NAV.stale=false}cur=v;document.body.classList.toggle('is-home',v==='home');$$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===(isDriver()?v:(NAVOF[v]||v))));window.scrollTo(0,0);R[v](arg);try{sessionStorage.setItem('v',v)}catch(e){}}
+function renderNav(){$('#nav').innerHTML=(isDriver()?[['eqcheck','장비점검'],['settings','내 정보']]:VIEWS).map(([v,t])=>`<button data-v="${v}"><span class="ni"><i class="i i-${v}"></i></span>${t}</button>`).join('');$$('#nav button').forEach(b=>b.onclick=()=>go(b.dataset.v))}
 const R={};
 const V$=()=>$('#view');
 
@@ -1448,7 +1449,7 @@ function editUser(u){const nu=!u;u=u||{};
    <div><label class="f">이름 *</label><input class="inp" id="euN" value="${h(u.name||'')}"></div>
    <div><label class="f">소속</label><input class="inp" id="euO" value="${h(u.org||'')}" list="companyList"></div>
    <div><label class="f">직책</label><input class="inp" id="euT" value="${h(u.title||'')}" placeholder="예) 관리감독자"></div>
-   <div><label class="f">권한</label><select class="inp" id="euR"><option value="user" ${u.role==='user'?'selected':''}>사용자 (등록·열람, 취약근로자 제외)</option><option value="manager" ${u.role==='manager'?'selected':''}>관리자 (등록·전체 열람, 삭제·설정 불가)</option><option value="admin" ${u.role==='admin'?'selected':''}>운영자 (삭제·대장·설정·사용자 관리)</option></select></div>
+   <div><label class="f">권한</label><select class="inp" id="euR"><option value="user" ${u.role==='user'?'selected':''}>사용자 (등록·열람, 취약근로자 제외)</option><option value="manager" ${u.role==='manager'?'selected':''}>관리자 (등록·전체 열람, 삭제·설정 불가)</option><option value="driver" ${u.role==='driver'?'selected':''}>장비운전원 (본인 장비 점검만)</option><option value="admin" ${u.role==='admin'?'selected':''}>운영자 (삭제·대장·설정·사용자 관리)</option></select><div class="small muted" style="margin-top:4px">장비운전원은 장비 대장의 <b>운전원 연락처</b>가 아이디(휴대폰 번호)와 같은 장비만 보입니다.</div></div>
    <div><label class="f">${nu?'초기 비밀번호 * (6자 이상)':'비밀번호 초기화 (입력할 때만)'}</label><input class="inp" id="euP" type="text" autocomplete="off" autocapitalize="off"></div></div>
    ${nu?'':`<label class="row" style="margin-top:12px"><input type="checkbox" id="euA" ${u.active?'checked':''} style="width:22px;height:22px"> 사용 가능 (해제하면 바로 로그아웃·로그인 불가)</label>`}
    <div class="small muted" style="margin-top:8px">초기 비밀번호는 본인에게 직접 전달하세요. 첫 로그인 때 새 비밀번호로 바꾸게 됩니다.</div>
@@ -1459,7 +1460,8 @@ function editUser(u){const nu=!u;u=u||{};
   })}
 let SERVER=false,ME=null;
 const isAdmin=()=>!SERVER||(ME&&ME.role==='admin');
-const roleBadge=r=>r==='admin'?'<span class="badge">운영자</span>':r==='manager'?'<span class="badge">관리자</span>':'<span class="badge bgray">사용자</span>';
+const isDriver=()=>SERVER&&!!ME&&ME.role==='driver';
+const roleBadge=r=>r==='admin'?'<span class="badge">운영자</span>':r==='manager'?'<span class="badge">관리자</span>':r==='driver'?'<span class="badge bgray">장비운전원</span>':'<span class="badge bgray">사용자</span>';
 const SHARED_KEYS=['site','periodMonths','vtypes','levels','alcMode','alc','alcMsg','vulnAge','bp','eqItems','eqCheckItems','vulnScope'];
 async function api(path,body){
   const r=await fetch('/api/'+path,{method:body!==undefined?'POST':'GET',credentials:'same-origin',headers:body!==undefined?{'content-type':'application/json'}:{},body:body!==undefined?JSON.stringify(body):undefined});
@@ -1543,7 +1545,7 @@ async function authGate(){
   else if(!u)u=await authScreen('login');
   if(u.mustChange)u=await authScreen('pw');
   const prev=await kvGet('me');let reset=false;
-  if(!prev||prev.id!==u.id){for(const s of ['workers','equipment','violations','alcohol','vuln','eqchecks','plans','outbox'])await DB.putMany(s,[],true);await kvSet('lastSync',0);reset=true}
+  if(!prev||prev.id!==u.id||prev.role!==u.role){for(const s of ['workers','equipment','violations','alcohol','vuln','eqchecks','plans','outbox'])await DB.putMany(s,[],true);await kvSet('lastSync',0);reset=true}
   await kvSet('me',u);applyMe(u);return reset;
 }
 async function logout(){try{await api('logout',{})}catch(e){}await kvSet('me',null);location.reload()}
@@ -1754,13 +1756,13 @@ function docPhotoSheet(blocks){
 }
 
 /* ---------- 하위 탭 (관리대장 / 설정) ---------- */
-function setTabs(){const adm=isAdmin();return [['settings:me','내 정보'],...(adm?[['settings:site','현장 기준']]:[]),...(SERVER&&adm?[['settings:users','사용자 관리']]:[]),['records','기록·보고'],['settings:data','데이터·앱']]}
+function setTabs(){const adm=isAdmin();if(isDriver())return [['settings:me','내 정보']];return [['settings:me','내 정보'],...(adm?[['settings:site','현장 기준']]:[]),...(SERVER&&adm?[['settings:users','사용자 관리']]:[]),['records','기록·보고'],['settings:data','데이터·앱']]}
 function segBar(items,active){
   const h1=$('h1',V$());const html=`<div class="seg">${items.map(([k,l])=>`<button type="button" data-seg="${k}" class="${k===active?'on':''}">${l}</button>`).join('')}</div>`;
   if(h1)h1.insertAdjacentHTML('afterend',html);else V$().insertAdjacentHTML('afterbegin',html);
   $$('[data-seg]',V$()).forEach(b=>b.onclick=()=>{const [v,t]=b.dataset.seg.split(':');go(v,t)});
 }
-for(const k of ['workers','equip','eqcheck','vuln']){const f=R[k];R[k]=(...a)=>{f(...a);segBar(REG_TABS.filter(t=>t[0]!=='vuln'||vulnVisible()),k)}}
+for(const k of ['workers','equip','eqcheck','vuln']){const f=R[k];R[k]=(...a)=>{f(...a);if(!isDriver())segBar(REG_TABS.filter(t=>t[0]!=='vuln'||vulnVisible()),k)}}
 {const f=R.records;R.records=(...a)=>{f(...a);segBar(setTabs(),'records')}}
 {const f=R.settings;R.settings=(tab)=>{
   const tabs=setTabs().map(x=>x[0]);if(typeof tab==='string')R.settings.tab=tab;
