@@ -101,7 +101,12 @@ async function extractBlobs(env, value, userId, stmts) {
     const bytes = Uint8Array.from(atob(m[2]), (c) => c.charCodeAt(0));
     if (bytes.length > 1_900_000) fail(413, '사진이 너무 큽니다');
     const id = uid();
-    stmts.push(env.DB.prepare('INSERT INTO blobs (id,mime,data,created_by,created_at) VALUES (?,?,?,?,?)').bind(id, m[1], bytes, userId, now()));
+    if (env.PHOTOS) {
+      // R2: 사진·서명 원본 보관 (D1 500MB 한도와 무관)
+      await env.PHOTOS.put(`b/${id}`, bytes, { httpMetadata: { contentType: m[1] }, customMetadata: { by: String(userId || ''), at: String(now()) } });
+    } else {
+      stmts.push(env.DB.prepare('INSERT INTO blobs (id,mime,data,created_by,created_at) VALUES (?,?,?,?,?)').bind(id, m[1], bytes, userId, now()));
+    }
     return `/api/blob/${id}`;
   }
   if (Array.isArray(value)) return Promise.all(value.map((v) => extractBlobs(env, v, userId, stmts)));
@@ -314,9 +319,31 @@ async function route(req, env, url) {
 
   if ((m = p.match(/^\/api\/blob\/([a-f0-9]+)$/)) && M === 'GET') {
     await requireUser(req, env);
+    const cacheHdr = 'private, max-age=31536000, immutable';
+    if (env.PHOTOS) {
+      const obj = await env.PHOTOS.get(`b/${m[1]}`);
+      if (obj) return new Response(obj.body, { headers: { 'content-type': (obj.httpMetadata && obj.httpMetadata.contentType) || 'image/jpeg', 'cache-control': cacheHdr } });
+    }
     const r = await env.DB.prepare('SELECT mime,data FROM blobs WHERE id=?').bind(m[1]).first();
     if (!r) fail(404, '없음');
-    return new Response(new Uint8Array(r.data), { headers: { 'content-type': r.mime, 'cache-control': 'private, max-age=31536000, immutable' } });
+    return new Response(new Uint8Array(r.data), { headers: { 'content-type': r.mime, 'cache-control': cacheHdr } });
+  }
+
+  /* --- storage (admin): how much is still inside D1, and move it to R2 in small batches --- */
+  if (p === '/api/admin/storage' && M === 'GET') {
+    await requireAdmin(req, env);
+    const r = await env.DB.prepare('SELECT COUNT(*) AS n, COALESCE(SUM(LENGTH(data)),0) AS bytes FROM blobs').first();
+    const d = await env.DB.prepare('SELECT COUNT(*) AS n, COALESCE(SUM(LENGTH(data)),0) AS bytes FROM docs WHERE deleted=0').first();
+    return json({ r2: !!env.PHOTOS, d1Blobs: r.n, d1BlobBytes: r.bytes, docs: d.n, docBytes: d.bytes });
+  }
+  if (p === '/api/admin/migrate-blobs' && M === 'POST') {
+    await requireAdmin(req, env);
+    if (!env.PHOTOS) fail(400, 'R2 저장소가 아직 연결되지 않았습니다');
+    const rows = (await env.DB.prepare('SELECT id,mime,data FROM blobs LIMIT 15').all()).results;
+    for (const r of rows) await env.PHOTOS.put(`b/${r.id}`, new Uint8Array(r.data), { httpMetadata: { contentType: r.mime } });
+    if (rows.length) await env.DB.prepare('DELETE FROM blobs WHERE id IN (SELECT value FROM json_each(?))').bind(JSON.stringify(rows.map((r) => r.id))).run();
+    const left = await env.DB.prepare('SELECT COUNT(*) AS n FROM blobs').first();
+    return json({ moved: rows.length, remaining: left.n });
   }
 
   fail(404, '없는 주소');

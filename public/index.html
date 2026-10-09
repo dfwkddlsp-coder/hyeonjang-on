@@ -637,7 +637,7 @@ function sigPad(host,label,preset){
   ['pointerup','pointercancel'].forEach(t=>cv.addEventListener(t,()=>{if($('#modal').classList.contains('hidden'))document.documentElement.classList.remove('no-scroll')}));
   return {isEmpty:()=>empty,data:()=>empty?'':cv.toDataURL('image/png'),clear,useMine:()=>{clear();if(S.mySig)drawImg(S.mySig)}};
 }
-function compressImg(file,max=1280,q=.72){return new Promise((res,rej)=>{const img=new Image(),url=URL.createObjectURL(file);
+function compressImg(file,max=1024,q=.65){return new Promise((res,rej)=>{const img=new Image(),url=URL.createObjectURL(file);
   img.onload=()=>{const s=Math.min(1,max/Math.max(img.width,img.height));const c=document.createElement('canvas');c.width=Math.round(img.width*s);c.height=Math.round(img.height*s);c.getContext('2d').drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(url);res(c.toDataURL('image/jpeg',q))};
   img.onerror=rej;img.src=url})}
 
@@ -756,7 +756,7 @@ function docAlcoholList(ds){
 }
 
 /* ---------- views ---------- */
-const APP_VER='2026.10.09-12';
+const APP_VER='2026.10.09-13';
 const VIEWS=[['home','홈'],['strike','삼진아웃'],['alcohol','음주측정'],['reg','관리대장'],['settings','설정']];
 /* 하위 화면 → 하단 탭 묶음 */
 const NAVOF={workers:'reg',equip:'reg',eqcheck:'reg',vuln:'reg',records:'settings'};
@@ -1187,6 +1187,7 @@ R.settings=()=>{
   <button class="btn xl" id="sSave">저장</button>
   </section><section class="st" data-st="data">
   <div class="card"><b>데이터</b><div style="height:6px"></div><div class="small muted">근로자 ${W.length} · 장비 ${E.length} · 삼진아웃 ${V.length} · 음주측정 ${A.length} · 취약근로자 ${VU.length}</div>
+  ${SERVER&&adm?'<div class="hint small" id="stoBox" style="margin-top:10px">저장소 상태 확인 중…</div>':''}
   ${adm?'<div class="row" style="margin-top:10px"><button class="btn line" id="dW">근로자 대장 비우기</button><button class="btn line" id="dE">장비 대장 비우기</button></div>':''}${SERVER?'<button class="btn sm line" id="syncNow" style="margin-top:10px">지금 동기화</button>':''}</div>
   <div class="card small muted">앱 설치: 크롬/사파리 메뉴 → "홈 화면에 추가". 인터넷 없이도 동작합니다.<br>버전 ${APP_VER} · 인터넷에 연결되어 있으면 새 버전을 자동으로 받습니다.</div>
   </section>`;
@@ -1216,6 +1217,12 @@ R.settings=()=>{
   const clearReg=async(store,msg)=>{if(!confirm(msg))return;try{if(SERVER)await pushImport(store,[],true);else{await DB.putMany(store,[],true);if(store==='workers')W=[];else E=[]}R.settings()}catch(x){toast(x.message)}};
   if($('#dW'))$('#dW').onclick=()=>clearReg('workers','근로자 대장을 모두 지웁니다. (적발·측정 기록은 유지) 계속할까요?');
   if($('#dE'))$('#dE').onclick=()=>clearReg('equipment','장비 대장을 모두 지웁니다. 계속할까요?');
+  const stoBox=$('#stoBox');
+  const loadSto=async()=>{if(!stoBox)return;try{const r=await api('admin/storage');const mb=b=>(b/1048576).toFixed(1)+'MB';
+    stoBox.innerHTML=`<b>서버 저장소</b><br>사진 저장: ${r.r2?'<b>R2 저장소</b> (무료 10GB)':'데이터베이스 (무료 500MB 중 일부)'}<br>데이터베이스 안 사진: ${r.d1Blobs}장 · ${mb(r.d1BlobBytes)} &nbsp;|&nbsp; 기록: ${r.docs}건 · ${mb(r.docBytes)}${r.r2&&r.d1Blobs?`<br><button class="btn sm" id="stoMove" style="margin-top:8px">데이터베이스 사진 ${r.d1Blobs}장 → R2로 옮기기</button>`:''}`;
+    const mv=$('#stoMove');if(mv)mv.onclick=async()=>{mv.disabled=true;let left=r.d1Blobs,moved=0;try{while(left>0){const x=await api('admin/migrate-blobs',{});moved+=x.moved;left=x.remaining;mv.textContent=`옮기는 중… ${moved}장 완료, ${left}장 남음`;if(!x.moved)break}toast(`사진 ${moved}장을 R2로 옮겼습니다`)}catch(e){toast(e.message)}loadSto()};
+  }catch(e){stoBox.textContent='저장소 상태를 불러오지 못했습니다'}};
+  if(R.settings.tab==='data')loadSto();
   if($('#syncNow'))$('#syncNow').onclick=async()=>{await Sync.run();toast(Sync.state==='ok'?'동기화 완료':'서버에 연결할 수 없습니다');R.settings()};
   if($('#pwBtn'))$('#pwBtn').onclick=async()=>{const u=await authScreen('pw');await kvSet('me',u);applyMe(u);toast('비밀번호 변경됨')};
   if($('#outBtn'))$('#outBtn').onclick=()=>{if(confirm('로그아웃할까요?'))logout()};
