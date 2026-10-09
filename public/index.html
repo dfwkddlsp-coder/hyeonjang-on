@@ -206,7 +206,7 @@ table.t tr.click:hover td{background:#f8fafc}
 .doc.eqw b,.doc.psheet b{font-weight:800}
 .doc.eqw{font-size:11pt}
 .doc.eqw h1{font-size:20pt;margin:1mm 0 3mm}
-.doc.eqw .eqf{font-size:11pt;line-height:1.9;margin-bottom:1.5mm}
+.doc.eqw .eqf{font-size:11pt;line-height:1.75;margin-bottom:1.5mm}
 .doc.eqw .eqf u{display:inline-block;min-width:52mm;text-decoration:none;border-bottom:1px solid #000;padding:0 2mm;margin-left:1mm}
 .doc.eqw .eqf .wl{float:right;font-weight:700}
 .doc.eqw .eqf .sg{margin-left:3mm;position:relative}.doc.eqw .eqf .sg img{height:11mm;vertical-align:middle;margin-left:2mm}
@@ -214,8 +214,10 @@ table.t tr.click:hover td{background:#f8fafc}
 .doc.eqw .grid6 th{background:#dceaf7;font-size:11pt;padding:1.2mm .5mm;width:auto;text-align:center;line-height:1.35}
 .doc.eqw .grid6 th.it{text-align:center}
 .doc.eqw .grid6 td.it{background:#d9d9d9;text-align:left;font-size:11pt;padding:1mm 2mm}
-.doc.eqw .grid6 .mk{text-align:center;font-size:15pt}
-.doc.eqw .grid6 .rm{font-size:8.5pt;text-align:left;padding:1mm 1.5mm;line-height:1.3}
+.doc.eqw .grid6 td{padding:.8mm 1.5mm;line-height:1.25}
+.doc.eqw .grid6 .mk{text-align:center;font-size:15pt;line-height:1;padding:0}
+.doc.eqw .grid6 .rm{font-size:10pt;text-align:left;padding:1.5mm 2.5mm;line-height:1.45;vertical-align:top}
+.doc.eqw .grid6 tr.memo{height:17mm}.doc.eqw .grid6 tr.memo th{vertical-align:middle;text-align:center}
 .doc.eqw .eqfoot{display:flex;justify-content:space-between;gap:6mm;font-size:9.5pt;margin-top:1.5mm}
 .doc.eqw .stamp.doc{right:6mm;top:0}
 .doc.eqw .grid6 th.legacy-unused,.doc.eqw .grid6 td.legacy-unused{width:auto;text-align:center;font-size:10pt;padding:1.6mm 1mm}
@@ -739,7 +741,7 @@ function docAlcoholList(ds){
 }
 
 /* ---------- views ---------- */
-const APP_VER='2026.10.09-9';
+const APP_VER='2026.10.09-10';
 const VIEWS=[['home','홈'],['strike','삼진아웃'],['alcohol','음주측정'],['reg','관리대장'],['settings','설정']];
 /* 하위 화면 → 하단 탭 묶음 */
 const NAVOF={workers:'reg',equip:'reg',eqcheck:'reg',vuln:'reg',records:'settings'};
@@ -1641,16 +1643,18 @@ function docEqWeek(e,mon){
   const sigSrc=w&&w.sig||(legacy.find(c=>c&&c.sig)||{}).sig;
   const remarks=[w&&w.remark?h(w.remark):'',...legacy.map((c,i)=>c&&c.remark?`${WD6[i]} ${h(c.remark)}`:'')].filter(Boolean);
   const done=eqWeekComplete(e.id,mon);
-  const rowH=Math.max(9,Math.min(20,Math.floor(140/Math.max(titles.length,1))));
+  const memo=[...titles.map((t,r)=>{const n=note(t);return n?`<div><b>${r+1}. ${h(t)}</b> — ${n}</div>`:''}).filter(Boolean),...remarks.map(x=>`<div>${x}</div>`)];
+  const rowH=Math.max(7,Math.min(20,Math.floor(129/Math.max(titles.length,1))));
   return `<div class="doc eqw">${done?stampHtml('doc'):''}<h1>장비 전담관리자 일일점검표</h1>
   <div class="eqf"><div><span>■ 소속협력사 :</span><u>${h(e.company||'')}</u></div>
     <div><span>■ 장비종류 :</span><u>${h(e.type||'')}</u><span style="margin-left:6mm">■ 장비번호 :</span><u>${h(e.plate||'')}</u><span class="wl">${weekLabel(mon)}</span></div>
     <div><span>■ 장비 전담관리자 :</span><u>${h(w&&w.inspector||e.manager||'')}</u><span class="sg">(서명)${sigSrc?`<img src="${sigSrc}">`:''}</span></div></div>
-  <table class="grid6"><colgroup><col style="width:38%">${days.map(()=>'<col style="width:7.6%">').join('')}<col></colgroup>
-  <tr><th class="it">점 검 항 목</th>${days.map((d,i)=>`<th>${WD6[i]}<br>( ${md(d)} )</th>`).join('')}<th>비 고</th></tr>
-  ${titles.map((t,r)=>`<tr style="height:${rowH}mm"><td class="it">${r+1}. ${h(t)}</td>${days.map((d,i)=>`<td class="mk">${sym(val(t,i))}</td>`).join('')}<td class="rm">${note(t)}</td></tr>`).join('')}
+  <table class="grid6"><colgroup><col style="width:46%">${days.map(()=>'<col style="width:9%">').join('')}</colgroup>
+  <tr><th class="it">점 검 항 목</th>${days.map((d,i)=>`<th>${WD6[i]}<br>( ${md(d)} )</th>`).join('')}</tr>
+  ${titles.map((t,r)=>`<tr style="height:${rowH}mm"><td class="it">${r+1}. ${h(t)}</td>${days.map((d,i)=>`<td class="mk">${sym(val(t,i))}</td>`).join('')}</tr>`).join('')}
+  <tr class="memo"><th class="it">비 고</th><td colspan="6" class="rm">${memo.join('')}</td></tr>
   </table>
-  <div class="eqfoot"><span>○ 적합 · × 부적합 · - 해당없음 · △ 기타의견 (부적합·기타의견은 비고에 내용)${remarks.length?` &nbsp;|&nbsp; 비고: ${remarks.join(' / ')}`:''}</span><span>${h(S.site||'')}</span></div></div>`;
+  <div class="eqfoot"><span>○ 적합 · × 부적합 · - 해당없음 · △ 기타의견 (부적합·기타의견은 비고에 내용)</span><span>${h(S.site||'')}</span></div></div>`;
 }
 
 /* 사진대지: 장비별 주간 사진을 4장씩 한 건으로 (사진마다 항목명 표시) */
