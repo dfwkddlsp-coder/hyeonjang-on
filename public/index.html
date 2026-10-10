@@ -235,7 +235,7 @@ table.t tr.click:hover td{background:#f8fafc}
 .doc.eqw .grid6 th.legacy-unused,.doc.eqw .grid6 td.legacy-unused{width:auto;text-align:center;font-size:10pt;padding:1.6mm 1mm}
 
 
-.doc.eqw .grid6 .it{text-align:left;width:62mm}.doc.eqw .grid6 .rm{width:34mm;text-align:left;font-size:8.5pt}
+.doc.eqw .grid6 .it{text-align:left;width:62mm}.doc.eqw .grid6 .it .md{font-size:7.5pt;color:#333;line-height:1.25;margin-top:.4mm}.doc.eqw .grid6 .rm{width:34mm;text-align:left;font-size:8.5pt}
 .doc.eqw .dsc{font-size:8pt;color:#444;margin-top:.5mm}.doc.eqw .mk{font-size:13pt;width:12mm}.doc.eqw .mk.sm{font-size:8pt}
 .doc.psheet h1{letter-spacing:6mm}.doc.psheet .pl{margin:0 0 3mm;font-size:11pt}
 .doc .pblock{margin-bottom:5mm}.doc .pblock.empty{border:1px solid #000;height:120mm;display:flex;align-items:center;justify-content:center;font-size:12pt}
@@ -785,7 +785,7 @@ function docAlcoholList(ds){
 }
 
 /* ---------- views ---------- */
-const APP_VER='2026.10.10-5';
+const APP_VER='2026.10.10-6';
 const VIEWS=[['home','홈'],['strike','삼진아웃'],['alcohol','음주측정'],['reg','관리대장'],['settings','설정']];
 /* 하위 화면 → 하단 탭 묶음 */
 const NAVOF={plans:'home',workers:'reg',equip:'reg',eqcheck:'reg',vuln:'reg',records:'settings'};
@@ -1071,7 +1071,7 @@ R.home=()=>{
    <div class="hm-site"><b>${h(S.site||'현장명 미설정')}</b><br>${h([S.inspectorOrg,S.inspector].filter(Boolean).join(' ')||'점검자 미설정')}</div></div>
   ${!S.site||!S.inspector?`<div class="hint" style="margin-bottom:16px"><a href="#" id="toSet">설정</a>에서 ${!S.inspector?'<b>내 정보</b>(이름·서명)':''}${!S.site&&!S.inspector?'와 ':''}${!S.site?'현장명':''}을 등록하세요. 점검자 이름·서명이 자동으로 들어갑니다.</div>`:''}
   <div class="hm-grid">
-   ${(()=>{const iu=E.filter(e=>!e.outDate),dn=iu.filter(e=>eqCheckOf(e.id,today())).length,mt=iu.filter(e=>isMine(e)&&!eqCheckOf(e.id,today())).length;return tile(1,'eqcheck','장비점검','daily inspection','',iu.length-dn,`오늘 점검 <b>${dn}</b>/${iu.length}대<br>${mt?`내 담당 미점검 <b>${mt}</b>`:'사진대지 · 주간 점검표'}`,true,true)})()}
+   ${(()=>{const iu=eqTargets(),dn=iu.filter(e=>eqCheckOf(e.id,today())).length,mt=iu.filter(e=>isMine(e)&&!eqCheckOf(e.id,today())).length;return tile(1,'eqcheck','장비점검','daily inspection','',iu.length-dn,`오늘 점검 <b>${dn}</b>/${iu.length}대<br>${mt?`내 담당 미점검 <b>${mt}</b>`:'사진대지 · 주간 점검표'}`,true,true)})()}
    ${tile(2,'strike','삼진아웃','three strikes out','warning · education · exit',vt.length,`오늘 적발 <b>${vt.length}</b>건<br>퇴출 <b>${banned.size}</b> · 교육 미이수 <b>${eduPend.length}</b>`)}
    ${tile(3,'alcohol','음주측정','alcohol check','breath test',atBad.length,`오늘 측정 <b>${at.length}</b>명 · 적발 <b>${atBad.length}</b><br>${noNotice.length?`통지서 미작성 <b>${noNotice.length}</b>`:'통지서 모두 작성됨'}`)}
    ${tile(4,'workers','근로자','worker register','people',null,`등록 <b>${W.length}</b>명<br>업체 <b>${new Set(W.map(w=>w.company)).size}</b>곳`)}
@@ -1460,7 +1460,8 @@ R.settings=()=>{
    <div class="grid g2"><div><label class="f">[지침] 재측정 기준 (% 이상)</label><input class="inp" id="sR" inputmode="decimal" value="${S.alc.retest.toFixed(3)}"></div><div><label class="f">[지침] 작업금지·귀가 기준 (% 이상)</label><input class="inp" id="sT" inputmode="decimal" value="${S.alc.stop.toFixed(3)}"></div></div>
    <div class="small muted" style="margin-top:6px">[지침] 재측정에서 다시 재측정 기준 이상이면 음주상태로 판정(작업금지). 측정거부는 출입통제·작업배제.</div>
    <label class="f">적발 알림 문구 — {업체} {일시} {성명} {직종} {수치} {조치} {기준} 자동 치환</label><textarea class="inp" id="sMsg" style="min-height:220px">${h(S.alcMsg)}</textarea></div>
-  <div class="card"><b>장비 주간 점검표 항목</b> <span class="small muted">— 한 줄에 하나</span>
+  ${adm?'<div class="card"><b>장비 종류별 점검표 양식</b> <span class="small muted">— 장비명에 키워드가 들어 있으면 그 양식을 씁니다. 어디에도 안 맞으면 아래 기본 양식</span><div id="efBox"></div></div>':''}
+  <div class="card"><b>기본 주간 점검표 항목 (굴착기 등)</b> <span class="small muted">— 한 줄에 하나</span>
    <textarea class="inp" id="sEqC" style="min-height:240px;font-size:14px">${h(S.eqCheckItems||DEF.eqCheckItems)}</textarea>
    <div class="small muted" style="margin-top:6px">기본값: 「장비 전담 관리자 점검표」 일일점검표 13개 항목.</div>
    <label class="f" style="margin-top:14px">장비 주간 사진 항목 — "항목|설명" (맨 앞 '점검사진'은 자동)</label>
@@ -1529,7 +1530,7 @@ R.settings=()=>{
   if($('#syncNow'))$('#syncNow').onclick=async()=>{await Sync.run();toast(Sync.state==='ok'?'동기화 완료':'서버에 연결할 수 없습니다');R.settings()};
   if($('#pwBtn'))$('#pwBtn').onclick=async()=>{const u=await authScreen('pw');await kvSet('me',u);applyMe(u);toast('비밀번호 변경됨')};
   if($('#outBtn'))$('#outBtn').onclick=()=>{if(confirm('로그아웃할까요?'))logout()};
-  if(adm){bindHomeLayout();bindDocCats();bindForms()}
+  if(adm){bindHomeLayout();bindDocCats();bindForms();bindEqForms()}
   if(SERVER&&adm){$('#uAdd').onclick=()=>editUser();$('#uBulk').onclick=()=>bulkUsers();if(R.settings.tab==='users')loadUsers()}
 };
 
@@ -1759,7 +1760,7 @@ let SERVER=false,ME=null;
 const isAdmin=()=>!SERVER||(ME&&ME.role==='admin');
 const isDriver=()=>SERVER&&!!ME&&ME.role==='driver';
 const roleBadge=r=>r==='admin'?'<span class="badge">운영자</span>':r==='manager'?'<span class="badge">관리자</span>':r==='driver'?'<span class="badge bgray">장비운전원</span>':'<span class="badge bgray">사용자</span>';
-const SHARED_KEYS=['site','periodMonths','vtypes','levels','alcMode','alc','alcMsg','vulnAge','bp','eqItems','eqCheckItems','vulnScope','homeLayout','docCats','forms'];
+const SHARED_KEYS=['site','periodMonths','vtypes','levels','alcMode','alc','alcMsg','vulnAge','bp','eqItems','eqCheckItems','vulnScope','homeLayout','docCats','forms','eqForms','eqExclude'];
 async function api(path,body){
   const r=await fetch('/api/'+path,{method:body!==undefined?'POST':'GET',credentials:'same-origin',headers:body!==undefined?{'content-type':'application/json'}:{},body:body!==undefined?JSON.stringify(body):undefined});
   let j=null;try{j=await r.json()}catch(e){}
@@ -1862,6 +1863,65 @@ const WD6='월화수목금토';
 const parseItems=src=>String(src).split('\n').map(l=>l.trim()).filter(Boolean).map(l=>l.replace(/^\d+\s*[.)]?\s*/,'')).filter(Boolean).map(l=>{const i=l.indexOf('|');return i<0?{t:l,d:''}:{t:l.slice(0,i).trim(),d:l.slice(i+1).trim()}});
 /* 주간 점검표 항목 (엑셀 일일점검표) */
 function eqItems(){return parseItems(S.eqCheckItems||DEF.eqCheckItems)}
+/* ---------- 장비 종류별 주간 점검표 양식 ----------
+   장비명에 키워드가 들어 있으면 그 양식 (장비에서 직접 고른 양식이 우선). 어느 것에도 안 맞으면 기본 양식(굴착기 등).
+   항목은 "점검항목|점검방법" 한 줄씩. 출처: 건설장비 안전점검표(40종) */
+const EQF_DEF=[
+ {k:'crane',name:'크레인',match:'크레인',items:'과부하 방지장치|정격하중 초과시 경보음과 함께 작동이 정지될 것\n권과 방지장치|훅이 최상부에 도달하기 전에 경보음과 함께 작동이 정지될 것\n훅 및 시브|훅 해지장치는 탈락 등의 이상이 없고 훅, 시브(도르래)는 원활하게 회전할 것\n와이어로프|와이어로프는 소선파단 등의 이상이 없고 단말처리가 양호할 것\n아웃트리거|수평 유지하여 최대확장을 하고 지반이상 및 받침목 2단 초과 사용을 금지할 것\n카운터 웨이트|임의개조가 없으며 제원표와 무게가 일치하고 견고하게 고정될 것\n와이어로프 이탈방지핀|시브(도르래)에 와이어로프 이탈 방지핀이 설치되어 있을 것\n유압장치 및 실린더|유압모터·실린더·배관 등에 누유 및 손상, 마모 등이 없을 것\n각종 등화류|전조·후미·안개·경광등의 기능은 정상작동 될 것\n브레이크 및 클러치|브레이크, 클러치 및 조정장치 등은 기능이 정상일 것'},
+ {k:'forklift',name:'지게차',match:'지게차',items:'후방 감시카메라|후방 감시카메라는 상시 전원이 켜져있고 모니터 등 작동에 문제가 없을 것\n조종장치 제동장치|조종장치, 클러치, 브레이크 등은 정상작동되고 좌석안전띠가 부착될 것\n후사경 후진경보기|후사경은 정상 부착되고 후진 경보장치는 정상적으로 작동될 것\n유압장치 및 실린더|유압모터·실린더·배관 등에 누유 및 손상, 마모 등이 없을 것\n트랙, 차륜(타이어)|트랙 궤도 또는 차륜(타이어)의 균열 및 변형이 없고, 체결상태가 양호할 것\n카운터 웨이트|추가설치 등 임의개조가 없으며 견고하게 고정될 것\n포크(하역장치)|변형 및 균열이 없고, 고정핀은 견고하게 체결되어 있을 것\n각종 등화류|전조·후미·방향지시·경보등의 기능은 정상작동 될 것\n헤드가드 백레스트|헤드가드와 백레스트는 정상적으로 설치되고 변형 등의 이상이 없을 것\n기타 안전시설|승강용 발판, 헤드가드, 협착 방지봉 등의 설치상태가 양호할 것'},
+ {k:'aerial',name:'고소작업차',match:'고소작업차,스카이',items:'과부하 방지장치|정격하중 초과시 경보음과 함께 작동이 정지될 것\n비상 정지장치|버튼을 누르면 동력이 차단되고 버튼은 적색의 수동복귀형일 것\n비상 하강장치|조작 설명서가 부착되고 동력이 차단된 경우라도 조작하면 작업대가 하강할 것\n아웃트리거|수평 유지하여 최대확장을 하고 지반이상 및 받침목 2단 초과 사용을 금지할 것\n와이어로프|와이어로프는 소선파단 등의 이상이 없고 단말처리가 양호할 것\n선회장치 및 작업대|고정볼트는 풀림 등 이상이 없고 작업대 낙하물 및 추락방지조치가 있을 것\n외관상태|용접부 등 주요부에 균열, 변형이 없고 유압장치는 누유 등의 이상이 없을 것\n브레이크 및 클러치|브레이크, 클러치, 운전장치 등은 기능이 정상일 것\n모니터|모니터(인디게이터)는 정상적으로 작동할 것\n모멘트 감지장치|전도모멘트가 발생할 경우 경보음과 함께 전도모멘트가 가중되는 작동이 정지될 것'},
+ {k:'pile',name:'항타기·항발기',match:'항타,항발',items:'권과 방지장치|훅, 햄머 등을 최대높이 상승전에 경보음과 함께 작동이 정지될 것\n와이어로프|와이어로프는 소선파단 등의 이상이 없고 단말처리가 양호할 것\n리더 및 햄머|높이, 수직도, 무게는 제원표 이내이고 볼트의 풀림, 변형 등 이상이 없을 것\n트랙|트랙은 균열, 손상 및 변형 등의 이상이 없고 긴장상태가 적정할 것\n아웃트리거 및 철판|이동시 침하방지용 철판을 사용하고 작업시 프론트잭, 아웃트리거를 사용할 것\n발전기|발전기의 고정(용접, 볼트체결)상태는 양호하고 충전부의 노출이 없을 것\n카운터 웨이트|임의개조가 없으며 제원표와 무게가 일치하고 견고하게 고정될 것\n역회전 방지장치|역회전방지장치 및 브레이크는 정상작동되고 이상없이 양호할 것\n주요구조부|턴테이블, 백스테이 등 주요 구조부의 조립부 및 작동부에 이상이 없을 것\n기타 안전시설|리더부 수직사다리에 수직생명줄을 설치할 것'},
+ {k:'dozer',name:'도저',match:'도저',items:'비상 정지장치|버튼을 누르면 모든 작동이 중단 될 것, 버튼은 수동 복귀형일 것\n후방 감시카메라|후방 감시카메라는 상시 전원이 켜져있고 모니터 등 작동에 문제가 없을 것\n조종장치 제동장치|조종장치, 클러치, 브레이크 등은 정상작동되고 좌석안전띠가 부착될 것\n후사경 후진경보기|후사경은 정상 부착되고 후진 경보장치는 정상적으로 작동될 것\n유압장치 및 실린더|유압모터·실린더·배관 등에 누유 및 손상, 마모 등이 없을 것\n트랙|트랙은 균열, 손상 및 변형 등의 이상이 없고 긴장상태가 적정할 것\n주요구조부|주요 구조부의 변형, 손상 및 조립부, 작동부에 이상이 없을 것\n각종 등화류|전조·후미·안개·경광등의 기능은 정상작동 될 것'},
+ {k:'drill',name:'천공기·어스드릴',match:'천공기,어스드릴,유압드릴,크롤러드릴,점보드릴,오거',items:'리더 및 오거|높이, 수직도, 무게는 제원표 이내이고 볼트의 풀림, 변형 등 이상이 없을 것\n트랙 및 철판|트랙 손상, 변형 여부 및 이동시 지반상태를 확인하고 필요시 철판을 사용할 것\n와이어로프|와이어로프는 소선파단 등의 이상이 없고 단말처리가 양호할 것\n유압장치 및 실린더|유압모터·실린더·배관 등에 누유 및 손상, 마모 등이 없을 것\n주요구조부|주요 구조부의 변형, 손상 및 조립부, 작동부에 이상이 없을 것\n기타|브레이크, 클러치, 운전장치 등은 기능이 정상일 것'},
+];
+const EQ_EXCLUDE_DEF='살수차';
+const eqForms=()=>Array.isArray(S.eqForms)?S.eqForms:EQF_DEF;
+const kwList=s=>String(s||'').split(',').map(x=>x.replace(/\s/g,'')).filter(Boolean);
+function eqFormOf(e){if(!e)return null;const fs=eqForms();
+  if(e.formK){if(e.formK==='base')return null;const f=fs.find(x=>x.k===e.formK);if(f)return f}
+  const ty=String(e.type||'').replace(/\s/g,'');return fs.find(f=>kwList(f.match).some(k=>ty.includes(k)))||null}
+function eqItemsFor(e){const f=eqFormOf(e);return f?parseItems(f.items):eqItems()}
+const eqFormName=e=>{const f=eqFormOf(e);return f?f.name:'기본 (굴착기 등)'};
+const eqExcluded=e=>!e.formK&&kwList(S.eqExclude===undefined?EQ_EXCLUDE_DEF:S.eqExclude).some(k=>String(e.type||'').replace(/\s/g,'').includes(k));
+const eqTargets=()=>E.filter(e=>!e.outDate&&!eqExcluded(e));
+/* 저장된 주간 기록은 그때의 항목으로 출력 (양식을 나중에 바꿔도 지난 점검표는 그대로) */
+const eqWeekItems=(e,w)=>{const ks=w&&(Array.isArray(w.itemList)&&w.itemList.length?w.itemList:w.marks&&Object.keys(w.marks).length?Object.keys(w.marks):null);return ks?ks.map(t=>{const cur=eqItemsFor(e).find(i=>i.t===t);return {t,d:cur?cur.d:''}}):eqItemsFor(e)};
+
+/* 장비점검 화면 [장비 추가]: 대장에 없는 장비가 갑자기 들어온 경우 */
+function eqQuickAdd(){
+  const fs=eqForms();
+  openModal('장비 추가',`<div class="small muted">관리대장에 없는 장비를 바로 등록하고 점검합니다. 장비 대장에도 함께 들어갑니다.</div>
+    <label class="f">점검표 양식 *</label><select class="inp" id="qaF">${fs.map(f=>`<option value="${h(f.k)}">${h(f.name)}</option>`).join('')}<option value="base">기본 (굴착기 등)</option></select>
+    <div class="grid g2"><div><label class="f">장비명 *</label><input class="inp" id="qaT" placeholder="예) 크레인(50톤)"></div><div><label class="f">차량번호</label><input class="inp" id="qaP"></div>
+    <div><label class="f">소속업체</label>${comboHtml('qaC','company','','업체명 직접 입력')}</div><div><label class="f">전담관리자</label><input class="inp" id="qaM" value="${h(S.inspector||'')}"></div>
+    <div><label class="f">운전원</label><input class="inp" id="qaO"></div><div><label class="f">운전원 연락처</label><input class="inp" id="qaPh" inputmode="tel" placeholder="010-0000-0000"></div></div>
+    <button class="btn xl" id="qaOk" style="width:100%;margin-top:14px">추가하고 점검표 열기</button>`,b=>{
+    bindCombos(b);const sync=()=>{const f=fs.find(x=>x.k===$('#qaF',b).value);if(f&&!$('#qaT',b).dataset.typed)$('#qaT',b).value=f.name};sync();
+    $('#qaF',b).onchange=sync;$('#qaT',b).oninput=()=>{$('#qaT',b).dataset.typed=1};
+    $('#qaOk',b).onclick=async()=>{const type=$('#qaT',b).value.trim();if(!type)return toast('장비명을 입력하세요');
+      const e={id:uid(),type,plate:$('#qaP',b).value.trim(),company:$('#qaC',b).value.trim(),manager:$('#qaM',b).value.trim(),operator:$('#qaO',b).value.trim(),phone:$('#qaPh',b).value.trim(),
+        inDate:today(),formK:$('#qaF',b).value,src:'장비점검 추가',created:nowLocal()};
+      try{await save('equipment',e);closeModal();toast('장비를 추가했습니다');R.eqcheck();eqWeekForm(e.id,weekMon(R.eqcheck.d||today()))}catch(x){toast(x.message)}}})}
+
+/* 설정 → 현장 기준: 장비 종류별 양식 편집 */
+function bindEqForms(){const box=$('#efBox');if(!box)return;let L=eqForms().map(f=>({...f}));
+  const render=()=>{box.innerHTML=L.map((f,i)=>`<details class="card" style="margin:8px 0;padding:10px"><summary><b>${h(f.name)}</b> <span class="small muted">— 항목 ${parseItems(f.items).length}개 · 장비명에 "${h(f.match)}"</span></summary>
+      <div class="grid g2" style="margin-top:8px"><div><label class="f">양식 이름</label><input class="inp" data-en="${i}" value="${h(f.name)}"></div><div><label class="f">장비명 키워드 (쉼표로 구분)</label><input class="inp" data-em="${i}" value="${h(f.match)}"></div></div>
+      <label class="f">점검 항목 — 한 줄에 "점검항목|점검방법"</label><textarea class="inp" data-ei="${i}" style="min-height:200px;font-size:13px">${h(f.items)}</textarea>
+      <button class="btn sm line" data-ex="${i}" style="margin-top:8px;color:var(--bad)">이 양식 삭제</button></details>`).join('')+
+    `<label class="f">점검 대상에서 뺄 장비 — 장비명 키워드 (쉼표로 구분)</label><input class="inp" id="efEx" value="${h(S.eqExclude===undefined?EQ_EXCLUDE_DEF:S.eqExclude)}" placeholder="예) 살수차">
+     <div class="row" style="margin-top:10px"><button class="btn sm line" id="efAdd"><i class="i i-plus"></i> 양식 추가</button><button class="btn sm ghost" id="efReset">기본 양식으로</button><span style="flex:1"></span><button class="btn sm" id="efSave">장비 양식 저장</button></div>`;
+    $$('[data-en]',box).forEach(x=>x.oninput=()=>{L[+x.dataset.en].name=x.value});
+    $$('[data-em]',box).forEach(x=>x.oninput=()=>{L[+x.dataset.em].match=x.value});
+    $$('[data-ei]',box).forEach(x=>x.oninput=()=>{L[+x.dataset.ei].items=x.value});
+    $$('[data-ex]',box).forEach(x=>x.onclick=()=>{if(!confirm(`「${L[+x.dataset.ex].name}」 양식을 삭제할까요? 이 양식을 쓰던 장비는 기본 양식으로 점검합니다.`))return;L.splice(+x.dataset.ex,1);render()});
+    $('#efAdd',box).onclick=()=>{L.push({k:uid(),name:'새 장비',match:'',items:''});render();const d=$$('details',box);d[d.length-1].open=true};
+    $('#efReset',box).onclick=()=>{if(!confirm('장비별 양식을 처음 기본값(크레인·지게차·고소작업차·항타기·도저·천공기)으로 되돌릴까요?'))return;L=EQF_DEF.map(f=>({...f}));render()};
+    $('#efSave',box).onclick=async()=>{if(L.some(f=>!f.name.trim()))return toast('양식 이름을 입력하세요');
+      S.eqForms=L.map(f=>({k:f.k,name:f.name.trim(),match:f.match.trim(),items:String(f.items).split('\n').map(x=>x.trim()).filter(Boolean).join('\n')}));S.eqExclude=$('#efEx',box).value.trim();
+      await saveSettings();if(SERVER)await queueShared();toast('장비 양식 저장됨')}};
+  render()}
+
 /* 주간 사진 항목 (장비점검방법 PPT) */
 function eqPhotoItems(){return String(S.eqItems||DEF.eqItems).split('\n').map(l=>l.trim()).filter(Boolean).map(l=>{const i=l.indexOf('|');return i<0?{t:l,d:''}:{t:l.slice(0,i).trim(),d:l.slice(i+1).trim()}})}
 function eqSlots(){return [{t:'점검사진',d:'전담관리자와 장비가 함께 나온 사진'},...eqPhotoItems().map((it,i)=>({t:`${i+1}. ${it.t}`,d:it.d}))]}
@@ -1890,7 +1950,7 @@ const eqCheckOf=(eid,ds)=>eqDayMark(eid,ds)||undefined;
 const MARK_SYM={O:'○',X:'×',N:'-',E:'△','':''};
 const MARK_TXT={O:'적합',X:'부적합',N:'해당없음',E:'기타의견'};
 /* 월~토 모든 칸이 채워지면 '완료' */
-function eqWeekComplete(eid,mon){const w=eqWeekRec(eid,mon);if(!w)return false;const items=eqItems();return items.length>0&&items.every(it=>{const a=(w.marks||{})[it.t];return a&&a.length>=6&&a.slice(0,6).every(Boolean)})}
+function eqWeekComplete(eid,mon){const w=eqWeekRec(eid,mon);if(!w)return false;const items=eqWeekItems(E.find(x=>x.id===eid),w);return items.length>0&&items.every(it=>{const a=(w.marks||{})[it.t];return a&&a.length>=6&&a.slice(0,6).every(Boolean)})}
 const stampHtml=(cls='')=>`<span class="stamp ${cls}">완료</span>`;
 /* 장비 1대 출력 묶음: 주간 점검표 + 사진대지 */
 function eqPrintPages(e,mon){const pages=[];if(weekDays(mon).some(d=>eqDayMark(e.id,d)))pages.push(docEqWeek(e,mon));pages.push(...docPhotoSheet(eqPhotoBlocks([e],mon)));return pages}
@@ -1899,13 +1959,13 @@ function eqCheckForm(eid,ds){eqWeekForm(eid,weekMon(ds||today()))}
 R.eqcheck=()=>{
   const ds=R.eqcheck.d||today();const mon=weekMon(ds);const days=weekDays(mon);const t=today();
   const f=R.eqcheck.f||(E.some(isMine)?'mine':'all');const q=R.eqcheck.q||'';
-  const inUse=E.filter(e=>!e.outDate);
+  const inUse=eqTargets();
   const list=inUse.filter(e=>(f!=='mine'||isMine(e))&&(f!=='todo'||!eqDayMark(e.id,t))&&(!q||norm([e.type,e.plate,e.company,e.manager,e.operator].join(' ')).includes(norm(q))))
     .sort((a,b)=>(isMine(b)-isMine(a))||(+a.no||999)-(+b.no||999));
   const done=inUse.filter(e=>eqDayMark(e.id,t)).length,mine=inUse.filter(isMine),mineTodo=mine.filter(e=>!eqDayMark(e.id,t));
   const slots=eqSlots().length,phDone=inUse.filter(e=>{const p=eqWeekPhoto(e.id,mon);return p&&(p.photos||[]).length>=slots}).length;
   const future=mon>weekMon(t);
-  V$().innerHTML=`<h1>장비 점검</h1>
+  V$().innerHTML=`<div class="row" style="justify-content:space-between"><h1>장비 점검</h1>${isDriver()?'':'<button class="btn sm" id="eqAdd"><i class="i i-plus"></i> 장비 추가</button>'}</div>
   <div class="row" style="margin-bottom:10px"><button class="btn sm line" id="wPrev">◀</button><div class="grow" style="text-align:center"><b>${weekLabel(mon)}</b><div class="small muted">${md(days[0])} ~ ${md(days[5])}</div></div><button class="btn sm line" id="wNext">▶</button>${mon!==weekMon(t)?'<button class="btn sm ghost" id="wNow">이번 주</button>':''}</div>
   <div class="grid g4" style="margin-bottom:10px"><div class="stat"><div class="t">오늘 점검</div><div class="n">${done}<span class="small muted">/${inUse.length}대</span></div></div>
    <div class="stat"><div class="t">내 담당 미점검</div><div class="n" style="color:${mineTodo.length?'var(--bad)':'inherit'}">${mineTodo.length}<span class="small muted">/${mine.length}대</span></div></div>
@@ -1915,7 +1975,7 @@ R.eqcheck=()=>{
   <input class="inp" id="eqq" type="search" placeholder="장비명·차량번호·업체·전담관리자" value="${h(q)}" style="margin-bottom:10px">
   ${!inUse.length?'<div class="card empty">장비 대장이 비어 있습니다. 관리대장 → 장비에서 엑셀을 불러오세요.</div>':''}
   ${list.map(e=>{const wp=eqWeekPhoto(e.id,mon),pn=wp?(wp.photos||[]).length:0;
-    return `<div class="card eqc"><div class="row" style="gap:8px"><div class="grow" style="min-width:0"><b>${h(eqName(e))}</b>${isMine(e)?' <span class="badge">내 담당</span>':''}${eqWeekComplete(e.id,mon)?' '+stampHtml('sm'):''}<div class="small muted ell">${h(e.company||'')} · 전담 ${h(e.manager||'미지정')}${e.operator?' · 운전원 '+h(e.operator):''}</div></div></div>
+    return `<div class="card eqc"><div class="row" style="gap:8px"><div class="grow" style="min-width:0"><b>${h(eqName(e))}</b>${isMine(e)?' <span class="badge">내 담당</span>':''}${eqWeekComplete(e.id,mon)?' '+stampHtml('sm'):''}<div class="small muted ell">${h(e.company||'')} · 전담 ${h(e.manager||'미지정')}${e.operator?' · 운전원 '+h(e.operator):''} · 양식 ${h(eqFormName(e))}</div></div></div>
     <div class="eqdays">${days.map((d,i)=>{const m=eqDayMark(e.id,d);return `<div class="eqd${d===t?' today':''}${m==='O'?' ok':m==='X'?' bad':''}${d>t&&!m?' off':''}"><span>${WD6[i]} ${md(d)}</span><b>${m==='O'?'○':m==='X'?'×':m==='P'?'…':d>t?'':'–'}</b></div>`}).join('')}</div>
     ${future?'':`<div class="grid g2" style="margin-top:8px;gap:8px"><button class="btn sm${eqWeekRec(e.id,mon)?' line':''}" data-wk="${e.id}"><i class="i i-pen"></i> ${eqWeekRec(e.id,mon)?'주간 점검표 보기/수정':'주간 점검표 체크'}</button>
       <button class="btn sm ${pn>=slots?'line':'ghost'}" data-wp="${e.id}"><i class="i i-camera"></i> 주간 사진 ${pn}/${slots}</button></div>
@@ -1927,22 +1987,23 @@ R.eqcheck=()=>{
   $$('[data-ef]').forEach(b=>b.onclick=()=>{R.eqcheck.f=b.dataset.ef;R.eqcheck()});
   $('#eqq').oninput=e=>{R.eqcheck.q=e.target.value;clearTimeout(R.eqcheck.t);R.eqcheck.t=setTimeout(()=>{R.eqcheck();const i=$('#eqq');i.focus();i.setSelectionRange(i.value.length,i.value.length)},250)};
   $$('[data-wk]').forEach(b=>b.onclick=()=>eqWeekForm(b.dataset.wk,mon));
+  if($('#eqAdd'))$('#eqAdd').onclick=eqQuickAdd;
   $$('[data-wp]').forEach(b=>b.onclick=()=>eqWeekPhotoForm(b.dataset.wp,mon));
   $$('[data-pr]').forEach(b=>b.onclick=()=>{const e=E.find(x=>x.id===b.dataset.pr);const pg=eqPrintPages(e,mon);if(!pg.length)return toast('이번 주 점검표·사진이 없습니다');printPages(pg)});
   $('#pAll').onclick=()=>{const pg=list.flatMap(e=>eqPrintPages(e,mon));if(!pg.length)return toast('이번 주 점검표·사진이 없습니다');printPages(pg)};
 };
 
 /* 주간 점검표: 항목 × 월~토 표에서 칸을 눌러 ○ → × → - → 빈칸 */
-function eqWeekForm(eid,mon){
-  const e=E.find(x=>x.id===eid);if(!e)return;const items=eqItems(),days=weekDays(mon),t=today();const prev=eqWeekRec(eid,mon);
+function eqWeekForm(eid,mon,fresh){
+  const e=E.find(x=>x.id===eid);if(!e)return;const prev=eqWeekRec(eid,mon);const items=prev&&!fresh?eqWeekItems(e,prev):eqItemsFor(e),days=weekDays(mon),t=today();
   const st={marks:{},notes:{...(prev&&prev.notes||{})}};
   for(const it of items)st.marks[it.t]=[...((prev&&prev.marks&&prev.marks[it.t])||['','','','','',''])];
   /* 예전 방식 하루 기록이 있으면 빈칸에 채워 넣음 */
   days.forEach((d,i)=>{const c=eqLegacyDay(eid,d);if(c)c.items.forEach(x=>{if(st.marks[x.t]&&!st.marks[x.t][i])st.marks[x.t][i]=x.v;if(x.note&&!st.notes[x.t])st.notes[x.t]=x.note})});
   const SYM=MARK_SYM,NEXT={'':'O',O:'X',X:'N',N:'E',E:''};
-  openModal(`주간 점검표 · ${eqName(e)}`,`<div class="card"><dl class="kv"><dt>소속협력사</dt><dd>${h(e.company||'-')}</dd><dt>장비</dt><dd>${h(eqName(e))}</dd><dt>전담관리자</dt><dd>${h(e.manager||'미지정')}</dd></dl>
+  openModal(`주간 점검표 · ${eqName(e)}`,`<div class="card"><dl class="kv"><dt>소속협력사</dt><dd>${h(e.company||'-')}</dd><dt>장비</dt><dd>${h(eqName(e))}</dd><dt>전담관리자</dt><dd>${h(e.manager||'미지정')}</dd><dt>점검표 양식</dt><dd>${isDriver()?h(eqFormName(e)):`<select class="inp" id="wkF" style="padding:4px 6px;width:auto">${eqForms().map(f=>`<option value="${h(f.k)}" ${eqFormOf(e)===f?'selected':''}>${h(f.name)}</option>`).join('')}<option value="base" ${eqFormOf(e)?'':'selected'}>기본 (굴착기 등)</option></select>`}</dd></dl>
      <div style="margin-top:8px"><b>${weekLabel(mon)}</b> <span class="muted small">(${md(days[0])}~${md(days[5])})</span> <span id="wkStamp"></span></div></div>
-   ${items.some(it=>it.d)?'':'<!--'}<details class="card small"><summary><b>점검 기준 보기</b> (장비점검방법 10~16쪽)</summary>${items.map((it,i)=>`<div style="margin-top:8px"><b>${i+1}. ${h(it.t)}</b><div class="muted">${h(it.d)}</div></div>`).join('')}</details>${items.some(it=>it.d)?'':'-->'}
+   ${items.some(it=>it.d)?'':'<!--'}<details class="card small"><summary><b>점검 방법 보기</b> (${h(eqFormName(e))})</summary>${items.map((it,i)=>`<div style="margin-top:8px"><b>${i+1}. ${h(it.t)}</b><div class="muted">${h(it.d)}</div></div>`).join('')}</details>${items.some(it=>it.d)?'':'-->'}
    <div class="row" style="margin-bottom:8px"><span class="grow small muted">칸을 누를 때마다 ○적합 → ×부적합 → -해당없음 → △기타의견 → 빈칸. 요일을 누르면 그날 전체 ○</span><button class="btn sm ghost" id="wkAll">오늘까지 모두 ○</button></div>
    <div class="wkwrap"><table class="wkt"><tr><th class="it">점검 항목</th>${days.map((d,i)=>`<th><button type="button" class="wkh" data-col="${i}" ${d>t?'disabled':''}>${WD6[i]}<br><small>${md(d)}</small></button></th>`).join('')}</tr>
      ${items.map((it,r)=>`<tr><td class="it">${r+1}. ${h(it.t)}</td>${days.map((d,c)=>`<td><button type="button" class="wkc" data-r="${r}" data-c="${c}" ${d>t?'disabled':''}></button></td>`).join('')}</tr>`).join('')}</table></div>
@@ -1961,6 +2022,8 @@ function eqWeekForm(eid,mon){
     $$('.wkh',b).forEach(x=>x.onclick=()=>{const c=+x.dataset.col;items.forEach(it=>{if(!st.marks[it.t][c])st.marks[it.t][c]='O'});paint()});
     $('#wkAll',b).onclick=()=>{days.forEach((d,c)=>{if(d<=t)items.forEach(it=>{if(!st.marks[it.t][c])st.marks[it.t][c]='O'})});paint()};
     paint();
+    const wf=$('#wkF',b);if(wf)wf.onchange=async()=>{if(prev&&!confirm('양식을 바꾸면 이번 주 체크 중 같은 이름의 항목만 남습니다. 바꿀까요?')){wf.value=eqFormOf(e)?eqFormOf(e).k:'base';return}
+      await save('equipment',{...e,formK:wf.value});closeModal();toast('점검표 양식을 바꿨습니다');eqWeekForm(eid,mon,true)};
     const sig=sigPad($('#wkSig',b),'전담관리자 서명',prev&&prev.sig?prev.sig:(($('#wkBy',b).value.trim()===S.inspector)?S.mySig:''));
     $('#wkBy',b).addEventListener('change',()=>{$('#wkBy').value.trim()===S.inspector?sig.useMine():sig.clear()});
     const del=$('#wkDel',b);if(del)del.onclick=async()=>{if(!confirm('이 주 점검표를 삭제할까요?'))return;try{await remove('eqchecks',prev.id);closeModal();R[cur]()}catch(x){toast(x.message)}};
@@ -1971,7 +2034,7 @@ function eqWeekForm(eid,mon){
       const by=$('#wkBy').value.trim();if(!by)return toast('점검자 이름을 입력하세요');if(sig.isEmpty())return toast('서명이 필요합니다');
       const notes={};items.forEach(it=>{if(st.marks[it.t].some(v=>v==='X'||v==='E'))notes[it.t]=String(st.notes[it.t]||'').trim()});
       await save('eqchecks',{id:weekRecId(eid,mon),kind:'week',week:mon,equipId:e.id,type:e.type||'',plate:e.plate||'',company:e.company||'',manager:e.manager||'',
-        marks:st.marks,notes,remark:$('#wkR').value.trim(),inspector:by,sig:sig.data(),created:prev?prev.created:nowLocal(),updated:nowLocal()});
+        marks:Object.fromEntries(items.map(it=>[it.t,st.marks[it.t]])),itemList:items.map(it=>it.t),form:eqFormName(e),notes,remark:$('#wkR').value.trim(),inspector:by,sig:sig.data(),created:prev?prev.created:nowLocal(),updated:nowLocal()});
       closeModal();toast(items.every(it=>st.marks[it.t].every(Boolean))?'주간 점검 완료':items.some(it=>st.marks[it.t].includes('X'))?'저장됨 — 부적합 항목 조치를 확인하세요':'주간 점검표 저장됨');R[cur]();
     };
   });
@@ -2011,7 +2074,7 @@ function eqWeekPhotoForm(eid,mon){
 /* 주간 일일점검표 출력 — A4 가로 1장 / 장비 1대 (현장 엑셀 양식과 같은 배치) */
 function docEqWeek(e,mon){
   const days=weekDays(mon),w=eqWeekRec(e.id,mon),legacy=days.map(d=>eqLegacyDay(e.id,d));
-  const titles=eqItems().map(i=>i.t);
+  const its=eqWeekItems(e,w),titles=its.map(i=>i.t);
   const val=(t,i)=>{const v=w&&w.marks&&w.marks[t]?w.marks[t][i]:'';if(v)return v;const c=legacy[i];const it=c&&c.items.find(x=>x.t===t);return it?it.v:''};
   const sym=v=>v==='X'?'<b>×</b>':MARK_SYM[v]||'';
   const note=t=>{const n=[];if(w&&w.notes&&w.notes[t])n.push(h(w.notes[t]));legacy.forEach((c,i)=>{const it=c&&c.items.find(x=>x.t===t);if(it&&it.note)n.push(`${WD6[i]}: ${h(it.note)}`)});return n.join('<br>')};
@@ -2022,11 +2085,11 @@ function docEqWeek(e,mon){
   const rowH=Math.max(7,Math.min(20,Math.floor(129/Math.max(titles.length,1))));
   return `<div class="doc eqw">${done?stampHtml('doc'):''}<h1>${FT('eqTitle')}</h1>
   <div class="eqf"><div><span>■ 소속협력사 :</span><u>${h(e.company||'')}</u></div>
-    <div><span>■ 장비종류 :</span><u>${h(e.type||'')}</u><span style="margin-left:6mm">■ 장비번호 :</span><u>${h(e.plate||'')}</u><span class="wl">${weekLabel(mon)}</span></div>
+    <div><span>■ 장비종류 :</span><u>${h(e.type||'')}${eqFormOf(e)?` (${h(w&&w.form||eqFormName(e))} 양식)`:''}</u><span style="margin-left:6mm">■ 장비번호 :</span><u>${h(e.plate||'')}</u><span class="wl">${weekLabel(mon)}</span></div>
     <div><span>■ 장비 전담관리자 :</span><u>${h(w&&w.inspector||e.manager||'')}</u><span class="sg">(서명)${sigSrc?`<img src="${sigSrc}">`:''}</span></div></div>
   <table class="grid6"><colgroup><col style="width:46%">${days.map(()=>'<col style="width:9%">').join('')}</colgroup>
   <tr><th class="it">점 검 항 목</th>${days.map((d,i)=>`<th>${WD6[i]}<br>( ${md(d)} )</th>`).join('')}</tr>
-  ${titles.map((t,r)=>`<tr style="height:${rowH}mm"><td class="it">${r+1}. ${h(t)}</td>${days.map((d,i)=>`<td class="mk">${sym(val(t,i))}</td>`).join('')}</tr>`).join('')}
+  ${titles.map((t,r)=>`<tr style="height:${rowH}mm"><td class="it">${r+1}. ${h(t)}${its[r].d?`<div class="md">${h(its[r].d)}</div>`:''}</td>${days.map((d,i)=>`<td class="mk">${sym(val(t,i))}</td>`).join('')}</tr>`).join('')}
   <tr class="memo"><th class="it">비 고</th><td colspan="6" class="rm">${memo.join('')}</td></tr>
   </table>
   <div class="eqfoot"><span>○ 적합 · × 부적합 · - 해당없음 · △ 기타의견 (부적합·기타의견은 비고에 내용)</span><span>${h(S.site||'')}</span></div></div>`;
