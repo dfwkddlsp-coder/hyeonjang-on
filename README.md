@@ -54,7 +54,16 @@ npm run check         # every script parses; index.html and sw.js list the same 
 TEST_ADMIN_ID=… TEST_ADMIN_PW=… npm test   # permission tests against the local server
 npm run deploy        # requires: npx wrangler login
 ```
-Apply schema changes to the live database with `npx wrangler d1 execute hyeonjang-on-db --remote --file schema.sql`.
+Apply schema changes to the live database with `npx wrangler d1 execute hyeonjang-on-db --remote --file migrations/<file>.sql`.
+
+## 다른 PC(노트북)에서 작업하기
+1. Git, Node.js LTS 설치 — PowerShell에서 `winget install Git.Git` 와 `winget install OpenJS.NodeJS.LTS` (설치 후 창을 새로 열기)
+2. 코드 받기 — `git clone https://github.com/dfwkddlsp-coder/hyeonjang-on.git`, `cd hyeonjang-on`, `npm install`
+3. 커밋 이름 — `git config user.name dfwkddlsp`, `git config user.email <GitHub 이메일>`
+4. 배포 권한 — `npx.cmd wrangler login` (Cloudflare 계정으로 로그인)
+5. 시험 서버 — `npm run db:local` 한 번, `npm run dev` → http://localhost:8787 에서 시험용 운영자 계정 만들기
+
+실서버 데이터(기록·사진·사용자)는 Cloudflare에 있어서 옮길 것이 없습니다. Claude Code로 이 폴더를 열면 `CLAUDE.md`(운영 규칙·작업 방식)를 먼저 읽습니다.
 
 ## Fonts
 Hangul: Pretendard (`public/vendor/fonts`, SIL OFL 1.1). Latin/digits: Chiron GoRound TC (Google Fonts).
