@@ -82,6 +82,12 @@ textarea.inp{min-height:84px;resize:vertical}
 .bok{background:#d8f2e2;color:#14653a}.bwarn{background:#fff0cc;color:#8a5a00}.bbad{background:#ffd5d7;color:#a0141b}.bgray{background:#eceff3;color:#5b6878}
 .list .it{display:flex;gap:12px;align-items:center;padding:12px 4px;border-bottom:1px solid var(--line);cursor:pointer}
 .list .it:last-child{border-bottom:0}
+.ugrp{border-bottom:1px solid var(--line)}.ugrp:last-child{border-bottom:0}
+.ugrp>summary{list-style:none;display:flex;align-items:center;gap:8px;padding:12px 4px;cursor:pointer;font-weight:700;font-size:15px}
+.ugrp>summary::-webkit-details-marker{display:none}
+.ugrp>summary::before{content:"▸";color:var(--sub);transition:transform .15s}.ugrp[open]>summary::before{transform:rotate(90deg)}
+.ugrp>summary .muted{font-weight:500}
+.ugrp>.it:last-child{border-bottom:0}
 .list .it .m{flex:1;min-width:0}
 .list .it .m b{font-size:16px}
 .ell{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -761,7 +767,7 @@ function docAlcoholList(ds){
 }
 
 /* ---------- views ---------- */
-const APP_VER='2026.10.10-1';
+const APP_VER='2026.10.10-2';
 const VIEWS=[['home','홈'],['strike','삼진아웃'],['alcohol','음주측정'],['reg','관리대장'],['settings','설정']];
 /* 하위 화면 → 하단 탭 묶음 */
 const NAVOF={plans:'home',workers:'reg',equip:'reg',eqcheck:'reg',vuln:'reg',records:'settings'};
@@ -1443,7 +1449,14 @@ function docVulnConsult(p,c){
 
 /* ---------- 서버 연결 (Cloudflare Worker + D1) ---------- */
 async function loadUsers(){const box=$('#usersBox');if(!box)return;
-  try{const r=await api('users');box.innerHTML=r.users.map(u=>`<div class="it" data-u="${u.id}"><span class="dot d0">${h(u.name.slice(0,1))}</span><div class="m"><b>${h(u.name)}</b> <span class="muted small">${h(u.loginId)}</span> ${u.role!=='user'?roleBadge(u.role):''}${!u.active?' <span class="badge bgray">사용 정지</span>':''}${u.mustChange?' <span class="badge bwarn">첫 로그인 전</span>':''}<div class="small muted ell">${h([u.org,u.title].filter(Boolean).join(' · ')||'-')}</div></div></div>`).join('')||'<div class="empty">없음</div>';
+  try{const r=await api('users');const row=u=>`<div class="it" data-u="${u.id}"><span class="dot d0">${h(u.name.slice(0,1))}</span><div class="m"><b>${h(u.name)}</b> <span class="muted small">${h(u.loginId)}</span> ${u.role!=='user'?roleBadge(u.role):''}${!u.active?' <span class="badge bgray">사용 정지</span>':''}${u.mustChange?' <span class="badge bwarn">첫 로그인 전</span>':''}<div class="small muted ell">${h([u.org,u.title].filter(Boolean).join(' · ')||'-')}</div></div></div>`;
+    /* 분류: 운영자·관리자 / 사용자 / 장비운전원 / 사용 정지 — 접기·펼치기는 기기에 기억 */
+    const G=[['staff','운영자 · 관리자',u=>u.active&&(u.role==='admin'||u.role==='manager')],['user','사용자',u=>u.active&&u.role==='user'],['driver','장비운전원',u=>u.active&&u.role==='driver'],['off','사용 정지',u=>!u.active]];
+    let fold={};try{fold=JSON.parse(localStorage.getItem('hjUserFold')||'{}')}catch(e){}
+    const isOpen=k=>fold[k]!==undefined?fold[k]:(k==='staff'||k==='user');
+    box.innerHTML=G.map(([k,t,f])=>{const us=r.users.filter(f);if(!us.length)return '';const wait=us.filter(u=>u.mustChange).length;
+      return `<details class="ugrp" data-g="${k}" ${isOpen(k)?'open':''}><summary>${t} <span class="muted small">${us.length}명${wait?` · 첫 로그인 전 ${wait}`:''}</span></summary>${us.map(row).join('')}</details>`}).join('')||'<div class="empty">없음</div>';
+    $$('details.ugrp',box).forEach(d=>d.ontoggle=()=>{fold[d.dataset.g]=d.open;try{localStorage.setItem('hjUserFold',JSON.stringify(fold))}catch(e){}});
     $$('[data-u]',box).forEach(el=>el.onclick=()=>editUser(r.users.find(u=>u.id===el.dataset.u)))}
   catch(x){box.innerHTML=`<div class="empty">${h(x.status?x.message:'인터넷 연결이 필요합니다')}</div>`}}
 function editUser(u){const nu=!u;u=u||{};
