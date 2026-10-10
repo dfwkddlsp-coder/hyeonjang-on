@@ -84,6 +84,17 @@ await test('only the operator changes settings, deletes, voids, imports', async 
   assert.equal((await M('users')).s, 403);
   assert.equal((await M('admin/backups')).s, 403);
 });
+await test('register upload can drop listed entries only (operator only), others untouched', async () => {
+  const keep = 'wk' + tag + 'k', drop = 'wk' + tag + 'd';
+  assert.equal((await A('docs', { import: true, docs: [doc('workers', keep, { name: 'a' }), doc('workers', drop, { name: 'b' })] })).s, 200);
+  del('workers', keep);
+  assert.equal((await M('docs', { import: true, docs: [], remove: { store: 'workers', ids: [drop] } })).s, 403);
+  assert.equal((await A('docs', { import: true, docs: [], remove: { store: 'violations', ids: [drop] } })).s, 400);
+  assert.equal((await A('docs', { import: true, docs: [], remove: { store: 'workers', ids: [drop] } })).s, 200);
+  const live = (await A('sync?since=0')).j.docs;
+  assert.equal(live.find((d) => d.id === drop).deleted, true);
+  assert.equal(live.find((d) => d.id === keep).deleted, false);
+});
 await test('staff-only records are hidden from plain users', async () => {
   const id = 'rs' + tag;
   assert.equal((await A('docs', { docs: [doc('records', id, { cat: 'x', scope: 'staff' })] })).s, 200); del('records', id);

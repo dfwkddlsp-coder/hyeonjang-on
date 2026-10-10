@@ -16,9 +16,10 @@ R.workers=()=>{
 function importDialog(kind,files){
   if(!files.length)return;const has=(kind==='workers'?W:kind==='vuln'?VU:E).length;
   openModal('엑셀 불러오기',`<p>${files.map(f=>'<i class="i i-file"></i> '+h(f.name)).join('<br>')}</p>
-   <div class="grid g2"><button class="btn" id="im">병합 (같은 ${kind==='equipment'?'차량번호':'사람'} 갱신, 새 항목 추가)</button>${has?'<button class="btn line" id="ir">전체 교체 (기존 대장 지우고 새로)</button>':''}</div><div id="ires" style="margin-top:12px"></div>`,b=>{
-    const run=async rep=>{if(rep&&!confirm('기존 대장을 모두 지우고 새 파일로 바꿉니다. 계속할까요?'))return;$('#ires').textContent='처리 중...';
-      let r;try{r=await importFiles(kind,files,rep)}catch(x){$('#ires').innerHTML=`<div class="hint" style="color:var(--bad)">${h(x.message)}</div>`;return}$('#ires').innerHTML=`<div class="hint">추가 <b>${r.added}</b> · 갱신 <b>${r.updated}</b><br>${r.msgs.map(h).join('<br>')}</div><button class="btn" style="margin-top:10px;width:100%" id="idone">확인</button>`;
+   <div class="grid g2"><button class="btn" id="im">추가·갱신 (바뀐 것만 반영)</button>${has?`<button class="btn line" id="ir">현재 대장으로 맞추기</button>`:''}</div>
+   <div class="small muted" style="margin-top:8px">어느 쪽이든 내용이 같은 ${kind==='equipment'?'장비':'사람'}는 그대로 두고, 지난 ${kind==='equipment'?'점검':kind==='vuln'?'상담·혈압':'적발·음주'} 기록과의 연결도 유지됩니다.${has?`<br><b>맞추기</b>는 파일에 없는 ${kind==='equipment'?'장비를 반출 처리':kind==='vuln'?'사람을 퇴사 처리':'사람을 대장에서 제외'}합니다.`:''}</div><div id="ires" style="margin-top:12px"></div>`,b=>{
+    const run=async rep=>{if(rep&&!confirm(`파일에 없는 ${kind==='equipment'?'장비는 반출 처리':kind==='vuln'?'사람은 퇴사 처리':'사람은 대장에서 제외'}됩니다. 계속할까요?`))return;$('#ires').textContent='처리 중...';
+      let r;try{r=await importFiles(kind,files,rep)}catch(x){$('#ires').innerHTML=`<div class="hint" style="color:var(--bad)">${h(x.message)}</div>`;return}$('#ires').innerHTML=`<div class="hint">추가 <b>${r.added}</b> · 변경 <b>${r.updated}</b> · 그대로 <b>${r.same||0}</b><br>${r.msgs.map(h).join('<br>')}</div><button class="btn" style="margin-top:10px;width:100%" id="idone">확인</button>`;
       $('#idone').onclick=()=>{closeModal();R[cur]()}};
     $('#im',b).onclick=()=>run(false);const ir=$('#ir',b);if(ir)ir.onclick=()=>run(true);
   });

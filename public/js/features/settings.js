@@ -23,7 +23,7 @@ R.records=()=>{
   if($('#bk'))$('#bk').onclick=()=>{const blob=new Blob([JSON.stringify({app:'fieldsafety',v:1,at:nowLocal(),settings:S,...Object.fromEntries(STORE_NAMES.map(s=>[s,STORE[s]()]))})],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`현장ON_백업_${today()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};
   if($('#rs'))$('#rs').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const d=JSON.parse(await f.text());if(d.app!=='fieldsafety')throw 0;
     if(!confirm(`백업(${d.at})을 복원합니다.\n같은 ID 기록은 덮어쓰고, 없는 기록은 추가합니다. 계속할까요?`))return;
-    if(SERVER){for(const s of STORE_NAMES)if((d[s]||[]).length)await pushImport(s,d[s],false);if(d.settings){applyShared(d.settings);await saveSettings();await queueShared()}}
+    if(SERVER){for(const s of STORE_NAMES)if((d[s]||[]).length)await pushImport(s,d[s]);if(d.settings){applyShared(d.settings);await saveSettings();await queueShared()}}
     else{for(const s of STORE_NAMES)await DB.putMany(s,d[s]||[]);if(d.settings){S=Object.assign(S,d.settings);await saveSettings()}await loadAll()}
     toast('복원 완료');R.records()}catch(x){toast(x.message&&x.message!=='0'?x.message:'백업 파일이 아닙니다')}};
   bindItems();

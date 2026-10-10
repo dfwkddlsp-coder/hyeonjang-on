@@ -48,10 +48,14 @@ const readFile=f=>new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()
 const eqKey=e=>(norm(e.plate)||norm(e.company)+'|'+norm(e.type))+'|'+norm(e.operator);
 const wKey=w=>norm(w.name)+'|'+(norm(w.birth)||norm(w.company));
 
-async function importFiles(kind,files,replace){
-  if(kind==='vuln')return importVuln(files,replace);
-  const isW=kind==='workers';const FIELDS=isW?WORKER_FIELDS:EQUIP_FIELDS;let added=0,updated=0,skipped=0;const msgs=[];const touched=new Set();
-  const cur=replace?[]:[...(isW?W:E)];const idx=new Map(cur.map(x=>[isW?wKey(x):eqKey(x),x]));
+/* 대장 비교: 기록 시각·출처만 다른 것은 '그대로' */
+const regSig=o=>{const c={...o};delete c.src;delete c.updated;delete c.created;delete c._by;return JSON.stringify(c)};
+/* 엑셀 대장 불러오기. 같은 사람·장비는 같은 기록(id)을 이어 쓰고 바뀐 칸만 갱신 — 점검·적발·상담 기록과의 연결이 유지됨.
+   sync=true (현재 대장으로 맞추기): 파일에 없는 장비는 반출 처리, 근로자는 대장에서 제외. 기록 자체는 지우지 않음 */
+async function importFiles(kind,files,sync){
+  if(kind==='vuln')return importVuln(files,sync);
+  const isW=kind==='workers';const FIELDS=isW?WORKER_FIELDS:EQUIP_FIELDS;let added=0,updated=0,same=0,skipped=0;const msgs=[];const touched=new Set(),seen=new Set();
+  const cur=(isW?W:E).map(x=>({...x}));const before=new Map(cur.map(x=>[x.id,regSig(x)]));const idx=new Map(cur.map(x=>[isW?wKey(x):eqKey(x),x]));
   for(const f of files){
     let res;try{res=parseWorkbook(await readFile(f),FIELDS,isW?2:3)}catch(e){msgs.push(`${f.name}: 읽기 실패`);continue}
     if(!res){msgs.push(`${f.name}: 머리글(${isW?'성명/소속':'장비명/차량번호'}) 행을 찾지 못함`);continue}
@@ -60,15 +64,24 @@ async function importFiles(kind,files,replace){
       if(isW&&/^(성명|이름)$/.test(o.name)){continue}
       if(isW){if(!o.inDate&&o.hireY&&o.hireM)o.inDate=`${o.hireY}-${pad(o.hireM)}-${pad(o.hireD||1)}`;if(o.eduY||o.eduN)o.eduBasic=o.eduY?'이수':'미이수';['hireY','hireM','hireD','eduY','eduN'].forEach(k=>delete o[k])}
       const k=isW?wKey(o):eqKey(o);const ex=idx.get(k);
-      if(ex){for(const f2 in o)if(o[f2])ex[f2]=o[f2];ex.src=f.name;ex.updated=nowLocal();updated++;touched.add(ex.id)}
-      else{const n={id:uid(),...o,src:f.name,created:nowLocal()};cur.push(n);idx.set(k,n);added++;touched.add(n.id)}
+      if(ex){seen.add(ex.id);for(const f2 in o)if(o[f2])ex[f2]=o[f2];
+        if(!isW&&ex.outByImport&&!o.outDate){delete ex.outDate;delete ex.outByImport} // 다시 들어온 장비
+        if(regSig(ex)!==before.get(ex.id)){ex.src=f.name;ex.updated=nowLocal();updated++;touched.add(ex.id)}else same++}
+      else{const n={id:uid(),...o,src:f.name,created:nowLocal()};cur.push(n);idx.set(k,n);seen.add(n.id);added++;touched.add(n.id)}
     }
     msgs.push(`${f.name} [${res.sheet}] 인식 완료`);
   }
-  const store=isW?'workers':'equipment';
-  if(SERVER)await pushImport(store,replace?cur:cur.filter(x=>touched.has(x.id)),replace);
-  else{await DB.putMany(store,cur,replace);if(isW)W=cur;else E=cur}
-  return {added,updated,skipped,msgs};
+  let removed=[],out=0;
+  if(sync&&seen.size){
+    if(isW)removed=cur.filter(x=>!seen.has(x.id));
+    else for(const e of cur)if(!seen.has(e.id)&&!e.outDate&&e.src!=='장비점검 추가'){e.outDate=today();e.outByImport=true;e.updated=nowLocal();touched.add(e.id);out++}
+  }
+  const store=isW?'workers':'equipment';const keep=cur.filter(x=>!removed.includes(x));
+  if(SERVER)await pushImport(store,keep.filter(x=>touched.has(x.id)),removed.map(x=>x.id));
+  else{await DB.putMany(store,keep,true);if(isW)W=keep;else E=keep}
+  if(out)msgs.push(`파일에 없는 장비 ${out}대 반출 처리 (점검 기록은 그대로)`);
+  if(removed.length)msgs.push(`파일에 없는 근로자 ${removed.length}명 대장에서 제외 (적발·음주 기록은 그대로)`);
+  return {added,updated,same,skipped,msgs};
 }
 
 /* ---------- excel export ---------- */

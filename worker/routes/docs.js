@@ -24,15 +24,16 @@ async function sync({ req, env, url }) {
   });
 }
 
-// POST /api/docs {docs:[{store,id,data}], import?, replaceStores?}
+// POST /api/docs {docs:[{store,id,data}], import?, remove?:{store,ids}, replaceStores? (legacy)}
 async function write({ req, env }) {
   const u = await requireUser(req, env);
   const b = await body(req);
   const docs = Array.isArray(b.docs) ? b.docs : [];
   const replace = Array.isArray(b.replaceStores) ? b.replaceStores : [];
-  if (!docs.length && !replace.length) return json({ saved: [] });
-  if (docs.length > MAX_BATCH) fail(413, '한 번에 500건까지 보낼 수 있습니다');
-  await checkWrite(env, u, docs, { replace, isImport: !!b.import });
+  const remove = b.remove && Array.isArray(b.remove.ids) && b.remove.ids.length ? b.remove : null;
+  if (!docs.length && !replace.length && !remove) return json({ saved: [] });
+  if (docs.length > MAX_BATCH || (remove && remove.ids.length > MAX_BATCH)) fail(413, '한 번에 500건까지 보낼 수 있습니다');
+  await checkWrite(env, u, docs, { replace, remove, isImport: !!b.import });
 
   // Everything below is set-based: one lookup for all previous versions, one upsert per chunk, one insert per photo.
   const prevRows = docs.length ? (await env.DB.prepare(
@@ -44,6 +45,12 @@ async function write({ req, env }) {
   const blobStmts = [], stmts = [];
   let ts = await stampBase(env);
   for (const s of replace) stmts.push(env.DB.prepare('UPDATE docs SET deleted=1, data=\'{}\', updated_at=?, updated_by=? WHERE store=? AND deleted=0').bind(ts++, u.id, s));
+  if (remove) { // one statement, but a distinct stamp per row so sync paging never splits a group
+    const marks = remove.ids.map((i) => ({ i, t: ts++ }));
+    stmts.push(env.DB.prepare(`UPDATE docs SET deleted=1, data='{}', updated_by=?1,
+        updated_at=(SELECT json_extract(value,'$.t') FROM json_each(?3) WHERE json_extract(value,'$.i')=docs.id)
+      WHERE store=?2 AND deleted=0 AND id IN (SELECT json_extract(value,'$.i') FROM json_each(?3))`).bind(u.id, remove.store, JSON.stringify(marks)));
+  }
 
   const saved = [], rows = [];
   for (const d of docs) {

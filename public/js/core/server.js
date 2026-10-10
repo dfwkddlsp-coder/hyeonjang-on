@@ -47,12 +47,14 @@ const Sync={busy:false,again:false,t:null,state:'',
 };
 async function badge(){const el=$('#netBadge');if(!SERVER){el.textContent=navigator.onLine?'온라인':'오프라인 · 기기 저장';return}
   const n=(await DB.all('outbox')).length;el.textContent=!navigator.onLine||Sync.state==='off'?(n?`오프라인 · 전송 대기 ${n}`:'오프라인'):(n?`전송 대기 ${n}`:'동기화됨')}
-/* 운영자 대장 업로드: 200건씩 서버로 */
-async function pushImport(store,docs,replace){
+/* 운영자 대장 업로드: 바뀐 것만 200건씩 서버로. removeIds = 대장에서 뺄 기록 (근로자만) */
+async function pushImport(store,docs,removeIds=[]){
   if(!navigator.onLine)throw new Error('대장 업로드는 인터넷 연결이 필요합니다');
-  for(let i=0;i===0||i<docs.length;i+=200){
-    const r=await api('docs',{import:true,replaceStores:replace&&i===0?[store]:[],docs:docs.slice(i,i+200).map(o=>({store,id:o.id,data:o}))});
+  for(let i=0;i<docs.length;i+=200){
+    const r=await api('docs',{import:true,docs:docs.slice(i,i+200).map(o=>({store,id:o.id,data:o}))});
     for(const d of r.saved)await applyDoc(d)}
+  for(let i=0;i<removeIds.length;i+=200){const ids=removeIds.slice(i,i+200);
+    await api('docs',{import:true,docs:[],remove:{store,ids}});for(const id of ids)await applyDoc({store,id,deleted:true})}
   await Sync.run()}
 
 /* 로그인·최초 운영자 등록·비밀번호 변경 화면 */

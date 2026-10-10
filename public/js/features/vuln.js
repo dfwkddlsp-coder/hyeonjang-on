@@ -17,8 +17,8 @@ const isGenExam=i=>!i.exam||/^일반|혈압|당뇨|혈액|간기능/.test(i.exam
 const FIT=['가 (현재 조건에서 작업 가능)','나 (일정 조건하 작업 가능)','다 (한시적 작업 불가)','라 (영구적 작업 불가)'];
 const CVD=['저위험','중등도위험','고위험','최고위험'];
 
-async function importVuln(files,replace){
-  let added=0,updated=0;const msgs=[];const cur=replace?[]:[...VU];const idx=new Map(cur.map(p=>[vKey(p),p]));const seen=new Set();
+async function importVuln(files,sync){
+  let added=0;const msgs=[];const cur=VU.map(p=>({...p}));const before=new Map(cur.map(p=>[p.id,regSig(p)]));const idx=new Map(cur.map(p=>[vKey(p),p]));const seen=new Set();
   for(const f of files){
     let wb;try{wb=await readFile(f)}catch(e){msgs.push(`${f.name}: 읽기 실패`);continue}let found=0;
     for(const sn of wb.SheetNames){
@@ -30,7 +30,7 @@ async function importVuln(files,replace){
         if(name){
           if(/예시/.test(no)||/예시/.test(name)){skip=true;curP=null;continue}skip=false;
           const o={name,company:g(row,'company'),job:g(row,'job'),age:g(row,'age').replace(/\D/g,'')};const k=vKey(o);const ex=idx.get(k);
-          if(ex){if(!seen.has(ex.id)){ex.items=[];updated++}Object.assign(ex,{company:o.company||ex.company,age:o.age||ex.age,src:f.name,updated:nowLocal()});curP=ex}
+          if(ex){if(!seen.has(ex.id))ex.items=[];Object.assign(ex,{company:o.company||ex.company,age:o.age||ex.age});delete ex.missingFromImport;curP=ex}
           else{curP={id:uid(),...o,items:[],consults:[],bp:[],src:f.name,created:nowLocal()};cur.push(curP);idx.set(k,curP);added++}
           seen.add(curP.id);n++;
         }else if(skip||!curP)continue;
@@ -41,10 +41,15 @@ async function importVuln(files,replace){
     }
     if(!found)msgs.push(`${f.name}: 머리글(성명/검진명) 행을 찾지 못함`);
   }
-  cur.forEach(p=>{p.retired=!!p.retiredManual||(p.items||[]).some(i=>/퇴사/.test(i.note))});
-  if(SERVER)await pushImport('vuln',replace?cur:cur.filter(p=>seen.has(p.id)),replace);
-  else{await DB.putMany('vuln',cur,replace);VU=cur}
-  return {added,updated,skipped:0,msgs};
+  /* 맞추기: 파일에 없는 사람은 지우지 않고 퇴사 처리 — 상담·혈압 기록 보존 */
+  let gone=0;if(sync&&seen.size)for(const p of cur)if(!seen.has(p.id)&&!p.missingFromImport){p.missingFromImport=true;gone++}
+  cur.forEach(p=>{p.retired=!!p.retiredManual||!!p.missingFromImport||(p.items||[]).some(i=>/퇴사/.test(i.note))});
+  const changed=cur.filter(p=>!before.has(p.id)||regSig(p)!==before.get(p.id));changed.forEach(p=>{p.updated=nowLocal()});
+  const ch=new Set(changed.map(p=>p.id)),updated=changed.filter(p=>before.has(p.id)).length,same=[...seen].filter(id=>before.has(id)&&!ch.has(id)).length;
+  if(SERVER)await pushImport('vuln',changed);
+  else{await DB.putMany('vuln',cur,true);VU=cur}
+  if(gone)msgs.push(`파일에 없는 ${gone}명 퇴사 처리 (상담·혈압 기록은 그대로)`);
+  return {added,updated,same,skipped:0,msgs};
 }
 function tplVuln(){
   const wb=XLSX.utils.book_new();const hd=['순번','성명','업체명','공종명','연령','검진명','건강구분1','검진소견1','사후관리소견1','사후관리소견2','비고'];

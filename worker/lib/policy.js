@@ -58,9 +58,10 @@ export async function syncRowFilter(env, u) {
 }
 
 /** Validate a batch write before anything is stored. `docs` = [{store,id,data}]. */
-export async function checkWrite(env, u, docs, { replace = [], isImport = false } = {}) {
-  if ((isImport || replace.length) && u.role !== 'admin') fail(403, '대장 엑셀 업로드는 운영자만 할 수 있습니다');
+export async function checkWrite(env, u, docs, { replace = [], remove = null, isImport = false } = {}) {
+  if ((isImport || replace.length || remove) && u.role !== 'admin') fail(403, '대장 엑셀 업로드는 운영자만 할 수 있습니다');
   for (const s of replace) if (!REGISTER_STORES.has(s)) fail(400, '교체할 수 없는 대장입니다');
+  if (remove && (!REGISTER_STORES.has(remove.store) || !Array.isArray(remove.ids) || remove.ids.some((i) => typeof i !== 'string'))) fail(400, '잘못된 요청');
   for (const d of docs) {
     if (!STORES.has(d.store) || typeof d.id !== 'string' || !d.id || !d.data || typeof d.data !== 'object') fail(400, '잘못된 기록');
     if (d.store === 'settings' && u.role !== 'admin') fail(403, '현장 설정은 운영자만 바꿀 수 있습니다');
