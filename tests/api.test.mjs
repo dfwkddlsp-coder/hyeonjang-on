@@ -67,28 +67,32 @@ await test('status renews nothing for a fresh session', async () => {
 await test('no login → 401', async () => assert.equal((await client()('sync?since=0')).s, 401));
 await test('unknown route → 404', async () => assert.equal((await A('nope')).s, 404));
 
-await test('user cannot read or write 취약근로자 (default scope)', async () => {
+await test('취약근로자: manager and operator only', async () => {
   const id = 'vu' + tag;
   assert.equal((await A('docs', { docs: [doc('vuln', id, { name: 'x' })] })).s, 200); del('vuln', id);
   assert.equal((await U('sync?since=0')).j.docs.some((d) => d.id === id), false);
   assert.equal((await U('docs', { docs: [doc('vuln', id + 'u')] })).s, 403);
   assert.equal((await M('sync?since=0')).j.docs.some((d) => d.id === id), true);
 });
-await test('only the operator changes settings, deletes, voids, imports', async () => {
+await test('only the operator changes settings, deletes, voids, users, backups', async () => {
   assert.equal((await M('docs', { docs: [doc('settings', 'shared', { site: 'x' })] })).s, 403);
   const id = 'v' + tag;
   assert.equal((await U('docs', { docs: [doc('violations', id, { name: 'x' })] })).s, 200); del('violations', id);
   assert.equal((await M('docs', { docs: [doc('violations', id, { name: 'x', void: { reason: 'x' } })] })).s, 403);
   assert.equal((await M('docs/delete', { store: 'violations', id })).s, 403);
-  assert.equal((await M('docs', { import: true, docs: [doc('workers', 'w' + tag)] })).s, 403);
   assert.equal((await M('users')).s, 403);
   assert.equal((await M('admin/backups')).s, 403);
 });
-await test('register upload can drop listed entries only (operator only), others untouched', async () => {
+await test('register Excel uploads: manager and operator only', async () => {
+  assert.equal((await U('docs', { import: true, docs: [doc('workers', 'wu' + tag)] })).s, 403);
+  assert.equal((await D('docs', { import: true, docs: [doc('workers', 'wd' + tag)] })).s, 403);
+  assert.equal((await M('docs', { import: true, docs: [doc('workers', 'wm' + tag)] })).s, 200); del('workers', 'wm' + tag);
+  assert.equal((await U('docs', { import: true, docs: [], remove: { store: 'workers', ids: ['x'] } })).s, 403);
+});
+await test('register upload can drop listed entries only, others untouched', async () => {
   const keep = 'wk' + tag + 'k', drop = 'wk' + tag + 'd';
   assert.equal((await A('docs', { import: true, docs: [doc('workers', keep, { name: 'a' }), doc('workers', drop, { name: 'b' })] })).s, 200);
   del('workers', keep);
-  assert.equal((await M('docs', { import: true, docs: [], remove: { store: 'workers', ids: [drop] } })).s, 403);
   assert.equal((await A('docs', { import: true, docs: [], remove: { store: 'violations', ids: [drop] } })).s, 400);
   assert.equal((await A('docs', { import: true, docs: [], remove: { store: 'workers', ids: [drop] } })).s, 200);
   const live = (await A('sync?since=0')).j.docs;
@@ -113,9 +117,12 @@ await test('driver sees and checks only their own equipment', async () => {
   assert.equal((await D('docs', { docs: [doc('eqchecks', wk + 'o', { equipId: eqOther })] })).s, 403);
   assert.equal((await D('docs', { docs: [doc('violations', 'dv' + tag)] })).s, 403);
 });
-await test('PDF upload: operator only, real PDFs only, staff files hidden from users', async () => {
+await test('PDF upload: manager and operator only, real PDFs only, staff files hidden from users', async () => {
   const pdf = Buffer.from('%PDF-1.4\n%%EOF\n');
-  assert.equal((await M('admin/files', pdf, 'application/pdf')).s, 403);
+  assert.equal((await U('admin/files', pdf, 'application/pdf')).s, 403);
+  assert.equal((await D('admin/files', pdf, 'application/pdf')).s, 403);
+  assert.equal((await M('admin/files', pdf, 'application/pdf')).s, 200);
+  assert.equal((await U('docs', { docs: [doc('plans', 'pu' + tag, { title: 'x' })] })).s, 403);
   assert.equal((await A('admin/files', Buffer.from('hello'), 'application/pdf')).s, 400);
   const up = await A('admin/files', pdf, 'application/pdf');
   assert.equal(up.s, 200);

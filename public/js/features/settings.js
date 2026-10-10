@@ -66,9 +66,6 @@ R.settings=()=>{
    <label class="f" style="margin-top:14px">장비 주간 사진 항목 — "항목|설명" (맨 앞 '점검사진'은 자동)</label>
    <textarea class="inp" id="sEq" style="min-height:180px;font-size:14px">${h(S.eqItems||DEF.eqItems)}</textarea>
    <div class="small muted" style="margin-top:6px">기본값: 장비전담제 장비점검방법 10~16쪽.</div></div>
-  <div class="card"><b>취약근로자 열람 범위</b>
-   <select class="inp" id="sVs" style="margin-top:8px"><option value="admin" ${S.vulnScope!=='all'?'selected':''}>운영자·관리자만 (권장 — 건강정보 보호)</option><option value="all" ${S.vulnScope==='all'?'selected':''}>모든 사용자</option></select>
-   <div class="small muted" style="margin-top:6px">검진 결과·혈압은 개인정보보호법상 민감정보입니다. '운영자·관리자만'이면 서버가 일반 사용자에게 아예 보내지 않고, 이미 받은 기기에서도 지워집니다.</div></div>
   <div class="card"><b>취약근로자 기준</b>
    <div class="grid g2"><div><label class="f">고령 분류 연령 (세 이상)</label><input class="inp" id="sVa" inputmode="numeric" value="${S.vulnAge}"></div><div></div>
    <div><label class="f">혈압 주의 (수축기/이완기 이상)</label><input class="inp" id="sBw" value="${S.bp.warn.join('/')}"></div><div><label class="f">혈압 위험 (수축기/이완기 이상)</label><input class="inp" id="sBs" value="${S.bp.stop.join('/')}"></div></div></div>
@@ -101,7 +98,7 @@ R.settings=()=>{
     if(!adm||R.settings.tab==='me'){if(await saveMine()){await saveSettings();toast('저장됨')}return}
     const r=parseFloat($('#sR').value),t=parseFloat($('#sT').value),dt=parseFloat($('#sDt').value),dy=parseFloat($('#sDy').value),oc=parseInt($('#sOc').value);if(!(r>0&&t>r&&dt>0&&dy>dt&&oc>=1))return toast('음주 기준값을 확인하세요');
     const bpP=v=>{const m=String(v).match(/(\d{2,3})\s*\/\s*(\d{2,3})/);return m?[+m[1],+m[2]]:null};const bw=bpP($('#sBw').value),bs=bpP($('#sBs').value),va=parseInt($('#sVa').value);
-    if(!bw||!bs||!(va>0))return toast('취약근로자 기준값을 확인하세요 (예: 140/90)');S.bp={warn:bw,stop:bs};S.vulnAge=va;S.vulnScope=$('#sVs').value==='all'?'all':'admin';S.eqItems=$('#sEq').value.split('\n').map(x=>x.trim()).filter(Boolean).join('\n')||DEF.eqItems;S.eqCheckItems=$('#sEqC').value.split('\n').map(x=>x.trim()).filter(Boolean).join('\n')||DEF.eqCheckItems;
+    if(!bw||!bs||!(va>0))return toast('취약근로자 기준값을 확인하세요 (예: 140/90)');S.bp={warn:bw,stop:bs};S.vulnAge=va;S.eqItems=$('#sEq').value.split('\n').map(x=>x.trim()).filter(Boolean).join('\n')||DEF.eqItems;S.eqCheckItems=$('#sEqC').value.split('\n').map(x=>x.trim()).filter(Boolean).join('\n')||DEF.eqCheckItems;
     const pin=$('#sN').value.trim();if(pin&&!/^\d{4,6}$/.test(pin))return toast('PIN은 숫자 4~6자리');
     if($('#sI').value.trim()&&!(await saveMine()))return;
     Object.assign(S,{site:$('#sS').value.trim(),periodMonths:+$('#sP').value,pin,alc:{retest:r,stop:t,detect:dt,day:dy,outCount:oc},alcMode:$('#sAm').value,alcMsg:$('#sMsg').value,

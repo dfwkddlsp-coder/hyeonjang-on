@@ -12,6 +12,7 @@ function lockScreen(){return new Promise(res=>{if(!S.pin)return res();const d=do
   await lockScreen();
   $('#siteName').textContent=S.site;renderNav();badge();
   {const g=$('#gearBtn');g.hidden=!isAdmin();g.onclick=()=>go('settings','site')}
+  $('#brandHome').onclick=e=>{e.preventDefault();if($('#modal').classList.contains('hidden'))go('home');else{closeModal();go('home')}};
   addEventListener('online',()=>{badge();Sync.run()});addEventListener('offline',badge);
   if(SERVER){purgeVulnIfHidden();Sync.run();setInterval(()=>{if(document.visibilityState==='visible')Sync.run()},30000);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')Sync.run()})}
   let v='home';try{v=sessionStorage.getItem('v')||'home'}catch(e){}go(R[v]?v:'home');

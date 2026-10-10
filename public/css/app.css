@@ -233,13 +233,14 @@ table.t tr.click:hover td{background:#f8fafc}
 /* 화면 안 하위 탭 */
 .seg{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:-2px 0 14px;padding:4px;background:var(--chip);border-radius:14px}
 .seg::-webkit-scrollbar{display:none}
+@media (max-width:520px){.seg{flex-wrap:wrap;overflow:visible}.seg button{flex:1 1 auto;padding:8px 10px}} /* 폰: 탭이 많으면 두 줄로 — 숨은 탭 없음 */
 .seg button{flex:1 0 auto;border:0;background:none;border-radius:10px;padding:9px 12px;font-weight:600;color:var(--sub);cursor:pointer;white-space:nowrap}
 .seg button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.08)}
 .dot .i{width:20px;height:20px}
 
 /* --- smartphone --- */
 .ph-only{display:none}
-.top .brand{display:flex;align-items:center;gap:8px}
+.top .brand{display:flex;align-items:center;gap:8px;color:inherit;text-decoration:none;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .top .logo{width:28px;height:28px;border-radius:7px;flex:none}
 .hm-title{display:flex;align-items:center;gap:.22em}
 .hm-logo{height:.92em;width:.92em;border-radius:.22em;flex:none;box-shadow:0 6px 14px -8px rgba(120,30,10,.6)}

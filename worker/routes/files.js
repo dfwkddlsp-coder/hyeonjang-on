@@ -1,14 +1,14 @@
 // Binary files: 문서함 PDFs (R2 'f/<id>') and photos/signatures (R2 'b/<id>' or D1 blobs).
 import { fail, json, uid } from '../lib/http.js';
-import { requireAdmin, requireUser } from '../lib/session.js';
-import { checkFileAccess } from '../lib/policy.js';
+import { requireUser } from '../lib/session.js';
+import { checkFileAccess, isStaff } from '../lib/policy.js';
 
 const PDF_MAX = 30 * 1024 * 1024;
 const IMMUTABLE = 'private, max-age=31536000, immutable';
 
-// POST /api/admin/files (body = the PDF) → {id,size}
+// POST /api/admin/files (body = the PDF) → {id,size} — 관리자·운영자
 async function uploadPdf({ req, env }) {
-  await requireAdmin(req, env);
+  if (!isStaff(await requireUser(req, env))) fail(403, 'PDF는 관리자·운영자만 올릴 수 있습니다');
   if (!env.PHOTOS) fail(400, 'R2 저장소가 연결되지 않았습니다');
   if (!/^application\/pdf/.test(req.headers.get('content-type') || '')) fail(400, 'PDF 파일만 올릴 수 있습니다');
   // stream straight into R2: buffering a big PDF in the Worker blows the free-plan CPU limit

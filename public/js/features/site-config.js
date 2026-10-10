@@ -15,19 +15,19 @@ function bindDocCats(){const box=$('#dcBox');if(!box)return;let L=docCats().map(
   const render=()=>{box.innerHTML=L.map((c,i)=>{const n=PL.filter(p=>(p.cat||'plans')===c.k).length+RC.filter(r=>r.cat===c.k).length;const ty=catType(c);
       return `<div class="row" style="padding:7px 0;border-top:1px solid var(--line);gap:8px;flex-wrap:wrap"><input class="inp grow" data-dn="${i}" value="${h(c.name)}" style="min-width:140px;padding:6px 8px;font-size:14px">
       <select class="inp" data-dt="${i}" style="width:auto;padding:6px;font-size:13px" ${n?'disabled title="기록이 있으면 유형을 바꿀 수 없습니다"':''}>${Object.entries(CAT_TYPES).map(([k,l])=>`<option value="${k}" ${ty===k?'selected':''}>${l}</option>`).join('')}</select>
-      ${ty==='check'||ty==='form'?`<button class="btn sm" data-dc="${i}">${ty==='check'?`점검 항목 ${catItems(c).length}개`:`양식 칸 ${(c.fields||[]).length}개`} · 구성</button>`:''}
+      ${ty!=='pdf'?`<button class="btn sm" data-dc="${i}">${ty==='check'?`점검 항목 ${catItems(c).length}개`:ty==='form'?`양식 칸 ${(c.fields||[]).length}개`:`사진 ${photoLayout(c)}장/칸`} · 구성</button>`:''}
       <select class="inp" data-ds="${i}" style="width:auto;padding:6px;font-size:13px"><option value="all" ${c.scope!=='staff'?'selected':''}>모두 열람</option><option value="staff" ${c.scope==='staff'?'selected':''}>운영자·관리자만</option></select>
       <span class="small muted" style="white-space:nowrap">${n}건</span><button class="btn sm line" data-dd="${i}" ${n||L.length<2?'disabled':''} title="${n?'문서가 있으면 지울 수 없습니다':''}">삭제</button></div>`}).join('')+
     '<div class="row" style="margin-top:8px"><button class="btn sm line" id="dcAdd"><i class="i i-plus"></i> 카테고리 추가</button><span class="sp" style="flex:1"></span><button class="btn sm" id="dcSave">저장</button></div>';
     $$('[data-dn]',box).forEach(x=>x.oninput=()=>{L[+x.dataset.dn].name=x.value});
     $$('[data-ds]',box).forEach(x=>x.onchange=()=>{L[+x.dataset.ds].scope=x.value});
-    $$('[data-dt]',box).forEach(x=>x.onchange=()=>{const c=L[+x.dataset.dt];c.type=x.value;render();if(x.value==='check'||x.value==='form')catConfig(c,saveCats)});
+    $$('[data-dt]',box).forEach(x=>x.onchange=()=>{const c=L[+x.dataset.dt];c.type=x.value;render();if(x.value!=='pdf')catConfig(c,saveCats)});
     $$('[data-dc]',box).forEach(x=>x.onclick=()=>catConfig(L[+x.dataset.dc],saveCats));
     $$('[data-dd]',box).forEach(x=>x.onclick=()=>{L.splice(+x.dataset.dd,1);render()});
     $('#dcAdd').onclick=()=>{L.push({k:uid(),name:'새 문서함',scope:'all'});render();const ins=$$('[data-dn]',box);ins[ins.length-1].select()};
     $('#dcSave').onclick=saveCats};
   const saveCats=async()=>{if(L.some(c=>!c.name.trim()))return toast('카테고리 이름을 입력하세요');
-      L=L.map(c=>({k:c.k,name:c.name.trim(),scope:c.scope==='staff'?'staff':'all',type:catType(c),mode:c.mode==='week'?'week':'each',items:c.items||'',fields:c.fields||[]}));S.docCats=L;await saveSettings();
+      L=L.map(c=>({k:c.k,name:c.name.trim(),scope:c.scope==='staff'?'staff':'all',type:catType(c),mode:c.mode==='week'?'week':'each',items:c.items||'',fields:c.fields||[],layout:c.layout==='1'?'1':'4'}));S.docCats=L;await saveSettings();
       if(SERVER){await queueShared();
         for(const p of PL){const c=L.find(x=>x.k===(p.cat||'plans'));if(c&&(p.scope||'all')!==c.scope)await save('plans',{...p,cat:p.cat||'plans',scope:c.scope})}
         for(const r of RC){const c=L.find(x=>x.k===r.cat);if(c&&(r.scope||'all')!==c.scope)await save('records',{...r,scope:c.scope})}}

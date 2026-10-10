@@ -4,6 +4,8 @@
 let SERVER=false,ME=null;
 const isAdmin=()=>!SERVER||(ME&&ME.role==='admin');
 const isDriver=()=>SERVER&&!!ME&&ME.role==='driver';
+/* 관리자·운영자: 취약근로자 열람, 파일(대장 엑셀·PDF) 등록 */
+const isStaff=()=>!SERVER||(!!ME&&(ME.role==='admin'||ME.role==='manager'));
 const roleBadge=r=>r==='admin'?'<span class="badge">운영자</span>':r==='manager'?'<span class="badge">관리자</span>':r==='driver'?'<span class="badge bgray">장비운전원</span>':'<span class="badge bgray">사용자</span>';
 const SHARED_KEYS=['site','periodMonths','vtypes','levels','alcMode','alc','alcMsg','vulnAge','bp','eqItems','eqCheckItems','vulnScope','homeLayout','docCats','forms','eqForms','eqExclude'];
 async function api(path,body){
@@ -17,7 +19,7 @@ const kvSet=(k,v)=>DB.put('kv',{k,v});
 function applyMe(u){ME=u;Object.assign(S,{inspector:u.name,inspectorOrg:u.org||'',myRole:u.title||'',mySig:u.sig||''})}
 function applyShared(d){for(const k of SHARED_KEYS)if(d[k]!==undefined)S[k]=k==='alc'?Object.assign({},DEF.alc,d[k]):d[k];$('#siteName').textContent=S.site||'';purgeVulnIfHidden()}
 /* 열람 권한이 없으면 이 기기에 받아둔 취약근로자 정보도 지움 */
-const vulnVisible=()=>!SERVER||isAdmin()||(ME&&ME.role==='manager')||S.vulnScope==='all';
+const vulnVisible=()=>isStaff();
 function purgeVulnIfHidden(){if(vulnVisible()||!VU.length)return;VU=[];DB.putMany('vuln',[],true).catch(()=>{})}
 function sharedDoc(){const o={id:'shared'};for(const k of SHARED_KEYS)o[k]=S[k];return o}
 async function queueShared(){await DB.put('outbox',{k:'settings|shared',store:'settings',id:'shared',data:sharedDoc(),ts:Date.now()});Sync.soon()}

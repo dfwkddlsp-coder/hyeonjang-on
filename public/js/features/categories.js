@@ -19,24 +19,50 @@ const CK_SYM={O:'○',X:'×',N:'-'};
 const canWriteCat=C=>!SERVER||(!isDriver()&&catVisible(C));
 const canEditRec=r=>isAdmin()||!SERVER||(ME&&r.byId===ME.id);
 
-function photoInputs(host,list,max){ // up to max photos with captions; list = [{src,cap}]
-  const draw=()=>{host.innerHTML=Array.from({length:max},(_,i)=>{const p=list[i];return `<div class="card" style="padding:8px;margin:0">
-      ${p?`<img src="${p.src}" style="width:100%;max-height:180px;object-fit:cover;border-radius:8px"><input class="inp" data-pc="${i}" value="${h(p.cap||'')}" placeholder="사진 설명 (선택)" style="margin-top:6px"><button type="button" class="btn sm line" data-pr="${i}" style="margin-top:6px;width:100%">사진 빼기</button>`
-        :`<div class="grid g2" style="gap:6px"><label class="btn sm"><i class="i i-camera"></i> 촬영<input type="file" accept="image/*" capture="environment" data-pf="${i}" hidden></label><label class="btn sm line">갤러리<input type="file" accept="image/*" data-pg="${i}" hidden></label></div><div class="small muted" style="text-align:center;margin-top:4px">사진 ${i+1}</div>`}</div>`}).join('');
+/* 사진 여러 장 입력: 갤러리에서 여러 장을 고르면 빈 칸에 차례로 들어감 (카메라는 한 장씩).
+   list = [{src,cap}], max = 최대 장수. opt.cap = 설명칸 안내문, opt.area = 설명을 여러 줄로. 반환: 현재 사진 목록을 돌려주는 함수 */
+function photoInputs(host,list,max,opt={}){
+  list=list.filter(Boolean);
+  const draw=()=>{
     host.className='grid g2';host.style.gap='8px';
-    const add=async(i,f)=>{if(!f)return;try{list[i]={src:await compressImg(f),cap:''};draw()}catch(e){toast('사진을 읽을 수 없습니다')}};
-    $$('[data-pf]',host).forEach(x=>x.onchange=()=>add(+x.dataset.pf,x.files[0]));
-    $$('[data-pg]',host).forEach(x=>{const lab=x.parentElement;lab.onclick=e=>{if(e.target===x)return;e.preventDefault();withGalleryConsent(()=>x.click())};x.onchange=()=>add(+x.dataset.pg,x.files[0])});
+    host.innerHTML=list.map((p,i)=>`<div class="card" style="padding:8px;margin:0">
+        <div style="position:relative"><img src="${p.src}" style="width:100%;height:150px;object-fit:cover;border-radius:8px;display:block"><span class="badge" style="position:absolute;left:6px;top:6px">${i+1}</span></div>
+        ${opt.area?`<textarea class="inp" data-pc="${i}" rows="2" placeholder="${h(opt.cap||'사진 설명')}" style="margin-top:6px">${h(p.cap||'')}</textarea>`:`<input class="inp" data-pc="${i}" value="${h(p.cap||'')}" placeholder="${h(opt.cap||'사진 설명 (선택)')}" style="margin-top:6px">`}
+        <div class="row" style="margin-top:6px;gap:6px">${max>1?`<button type="button" class="btn sm line" data-pu="${i}" ${i?'':'disabled'} aria-label="앞으로">◀</button><button type="button" class="btn sm line" data-pd="${i}" ${i<list.length-1?'':'disabled'} aria-label="뒤로">▶</button>`:''}<button type="button" class="btn sm line grow" data-pr="${i}">빼기</button></div></div>`).join('')
+      +(list.length<max?`<div class="card" style="padding:8px;margin:0;display:flex;flex-direction:column;justify-content:center;gap:6px;min-height:120px">
+        <label class="btn sm"><i class="i i-camera"></i> 촬영<input type="file" accept="image/*" capture="environment" data-pf hidden></label>
+        <label class="btn sm line">${max>1?'갤러리 (여러 장 선택)':'갤러리'}<input type="file" accept="image/*" ${max>1?'multiple':''} data-pg hidden></label>
+        <div class="small muted" style="text-align:center">${max>1?`${list.length}/${max}장`:'사진 1장'}</div></div>`:'');
+    const keep=()=>$$('[data-pc]',host).forEach(x=>{list[+x.dataset.pc].cap=x.value});
+    const add=async files=>{keep();const room=max-list.length;const fs=[...files].slice(0,room);
+      if(files.length>room)toast(`${max}장까지 넣을 수 있어 ${files.length-room}장은 빠졌습니다`);
+      for(const f of fs){try{list.push({src:await compressImg(f),cap:''})}catch(e){toast('읽을 수 없는 사진이 있습니다')}}draw()};
+    const pf=$('[data-pf]',host);if(pf)pf.onchange=()=>{add(pf.files);pf.value=''};
+    const pg=$('[data-pg]',host);if(pg){const lab=pg.parentElement;lab.onclick=e=>{if(e.target===pg)return;e.preventDefault();withGalleryConsent(()=>pg.click())};pg.onchange=()=>{add(pg.files);pg.value=''}}
     $$('[data-pc]',host).forEach(x=>x.oninput=()=>{list[+x.dataset.pc].cap=x.value});
-    $$('[data-pr]',host).forEach(x=>x.onclick=()=>{list[+x.dataset.pr]=null;draw()})};
-  draw();return ()=>list.filter(Boolean)}
+    $$('[data-pr]',host).forEach(x=>x.onclick=()=>{keep();list.splice(+x.dataset.pr,1);draw()});
+    $$('[data-pu]',host).forEach(x=>x.onclick=()=>{keep();const i=+x.dataset.pu;[list[i-1],list[i]]=[list[i],list[i-1]];draw()});
+    $$('[data-pd]',host).forEach(x=>x.onclick=()=>{keep();const i=+x.dataset.pd;[list[i+1],list[i]]=[list[i],list[i+1]];draw()})};
+  draw();return ()=>{$$('[data-pc]',host).forEach(x=>{if(list[+x.dataset.pc])list[+x.dataset.pc].cap=x.value});return list.slice()}}
+
+/* 사진대지 형식 — '4': 한 칸에 사진 4장 + 일시·내용 1개 (기존) / '1': 한 칸에 사진 1장 + 사진마다 일시·내용 */
+const photoLayout=C=>C&&C.layout==='1'?'1':'4';
+function docPhotoSheet1(items){ // items: [{date, content, src}] — 한 장에 3칸
+  const block=b=>`<table class="pst"><colgroup><col style="width:12%"><col style="width:28%"><col style="width:12%"><col style="width:48%"></colgroup>
+    <tr><td colspan="4" class="pc"><div class="pw" style="height:68mm"><img src="${b.src}" style="object-fit:contain"></div></td></tr>
+    <tr class="cap"><th>일 시</th><td>${h(b.date)}</td><th>내 용</th><td>${nl(b.content)}</td></tr></table>`;
+  const pages=[];
+  for(let i=0;i<items.length;i+=3){const three=items.slice(i,i+3);
+    pages.push(`<div class="doc psheet"><h1>${FT('psTitle')}</h1><div class="pl">현장명 : ${h(S.site||'')}</div>${three.map(block).join('')}</div>`)}
+  return pages;
+}
 
 R.recs=C=>{
   const t=catType(C),wk=t==='check'&&C.mode==='week';
   if(wk){R.recs.w=R.recs.w||weekMon(today())}else{R.recs.m=R.recs.m||today().slice(0,7)}
   const key=wk?R.recs.w:R.recs.m;
   const list=recsOf(C.k).filter(r=>wk?r.week===key:String(r.date||'').startsWith(key));
-  V$().innerHTML=`<h1>${h(C.name)}</h1><div class="small muted" style="margin:-6px 0 10px">${CAT_TYPES[t]}${t==='check'?(wk?' · 주간(월~토)':' · 건별'):''}${C.scope==='staff'?' · 운영자·관리자만':''}</div>
+  V$().innerHTML=`<h1>${h(C.name)}</h1><div class="small muted" style="margin:-6px 0 10px">${CAT_TYPES[t]}${t==='check'?(wk?' · 주간(월~토)':' · 건별'):t==='photo'?(photoLayout(C)==='1'?' · 한 칸에 사진 1장':' · 한 칸에 사진 4장'):''}${C.scope==='staff'?' · 운영자·관리자만':''}</div>
    ${canWriteCat(C)?`<button class="btn xl" id="rcNew" style="width:100%;margin-bottom:10px"><i class="i i-plus"></i> ${wk?'이번 주 점검표 작성':'새로 작성'}</button>`:''}
    <div class="row" style="margin-bottom:10px">${wk?`<button class="btn sm line" id="rcPrev">◀</button><div class="grow" style="text-align:center"><b>${weekLabel(key)}</b><div class="small muted">${md(key)} ~ ${md(addDays(key,5))}</div></div><button class="btn sm line" id="rcNext">▶</button>`
      :`<input class="inp" type="month" id="rcMonth" value="${key}" style="max-width:180px"><span class="grow"></span>`}</div>
@@ -49,7 +75,7 @@ R.recs=C=>{
   if($('#rcXls'))$('#rcXls').onclick=()=>recXls(C,list.slice().reverse(),key);
   $$('[data-rc]').forEach(el=>el.onclick=()=>recView(C,RC.find(r=>r.id===el.dataset.rc)));
 };
-function recTitle(C,r){const t=catType(C);if(t==='photo')return r.content||'(내용 없음)';if(t==='check')return r.place||'(장소 미입력)';
+function recTitle(C,r){const t=catType(C);if(t==='photo')return (r.content||((r.photos||[])[0]||{}).cap||'(내용 없음)')+` · 사진 ${(r.photos||[]).length}장`;if(t==='check')return r.place||'(장소 미입력)';
   const f=(C.fields||[]).find(f=>['text','sel','num','date'].includes(f.t)&&r.v&&r.v[f.id]);return f?`${f.l}: ${r.v[f.id]}`:(r.date||'')}
 
 function recView(C,r){if(!r)return;
@@ -63,10 +89,10 @@ function recView(C,r){if(!r)return;
 function recEdit(C,prev){
   const t=catType(C),wk=t==='check'&&C.mode==='week',items=catItems(C),r=prev?JSON.parse(JSON.stringify(prev)):{};
   let body='',getPhotos=null,pads={},mainPad=null;
-  if(t==='photo'){
+  if(t==='photo'){const one=photoLayout(C)==='1';
     body=`<div class="grid g2"><div><label class="f">일시</label><input class="inp" type="date" id="reD" value="${h(r.date||today())}"></div><div></div></div>
-      <label class="f">내용 *</label><input class="inp" id="reC" value="${h(r.content||'')}" placeholder="예) A동 3층 안전난간 설치 상태">
-      <label class="f">사진 (최대 4장)</label><div id="rePh"></div>`;
+      <label class="f">${one?'제목·장소 (선택 — 사진 설명이 비면 이 내용이 들어감)':'내용 *'}</label><input class="inp" id="reC" value="${h(r.content||'')}" placeholder="예) A동 3층 안전난간 설치 상태">
+      <label class="f">사진 — 갤러리에서 여러 장을 한 번에 고르면 차례로 들어갑니다${one?' (사진마다 내용 입력)':' (4장씩 한 칸)'}</label><div id="rePh"></div>`;
   }else if(t==='check'){
     if(!items.length){toast('운영자가 설정에서 점검 항목을 먼저 등록해야 합니다');return}
     const days=wk?weekDays(r.week||weekMon(today())):[];
@@ -93,7 +119,7 @@ function recEdit(C,prev){
         default:return L+`<input class="inp" data-fv="${f.id}" value="${h(v||'')}">`}}).join('');
   }
   openModal((prev?'수정 — ':'')+C.name,body+`<button class="btn xl" id="reSave" style="width:100%;margin-top:14px">저장</button>`,b=>{
-    if(t==='photo')getPhotos=photoInputs($('#rePh',b),(r.photos||[]).slice(),4);
+    if(t==='photo')getPhotos=photoLayout(C)==='1'?photoInputs($('#rePh',b),(r.photos||[]).slice(),60,{cap:'이 사진의 내용',area:true}):photoInputs($('#rePh',b),(r.photos||[]).slice(),40,{cap:'사진 설명 (선택)'});
     if(t==='check'){
       r.marks=r.marks||{};
       $$('[data-cm]',b).forEach(x=>x.onclick=()=>{const i=x.dataset.cm;r.marks[i]=r.marks[i]===x.dataset.cv?'':x.dataset.cv;$$(`[data-cm="${i}"]`,b).forEach(y=>y.classList.toggle('line',r.marks[i]!==y.dataset.cv))});
@@ -105,7 +131,7 @@ function recEdit(C,prev){
       $$('[data-fs]',b).forEach(x=>{pads[x.dataset.fs]=sigPad(x,'서명',(r.v||{})[x.dataset.fs]||'')});getPhotos=ph}
     $('#reSave',b).onclick=async()=>{
       const o={...r,id:r.id||uid(),cat:C.k,scope:C.scope==='staff'?'staff':'all',type:t,at:r.at||nowLocal(),by:r.by||S.inspector||(ME&&ME.name)||'',byId:r.byId||(ME&&ME.id)||''};
-      if(t==='photo'){o.date=$('#reD',b).value||today();o.content=$('#reC',b).value.trim();o.photos=getPhotos();if(!o.content)return toast('내용을 입력하세요');if(!o.photos.length)return toast('사진을 1장 이상 넣으세요')}
+      if(t==='photo'){o.date=$('#reD',b).value||today();o.content=$('#reC',b).value.trim();o.photos=getPhotos();if(!o.content&&photoLayout(C)!=='1')return toast('내용을 입력하세요');if(!o.photos.length)return toast('사진을 1장 이상 넣으세요')}
       if(t==='check'){o.place=$('#reP',b).value.trim();if(!o.place)return toast('점검 장소·대상을 입력하세요');
         if(wk){o.week=r.week||weekMon(today())}else{o.date=$('#reD',b).value||today();o.notes={};$$('[data-cn]',b).forEach(x=>{if(x.value.trim())o.notes[x.dataset.cn]=x.value.trim()})}
         o.remark=$('#reR',b).value.trim();o.items=items;o.sig=mainPad.isEmpty()?'':mainPad.data();o.inspector=S.inspector||(ME&&ME.name)||''}
@@ -120,7 +146,9 @@ function recEdit(C,prev){
 
 function recPages(C,list){
   const t=catType(C);
-  if(t==='photo')return docPhotoSheet(list.map(r=>({date:fmtDT(r.date),content:r.content||'',photos:(r.photos||[])})));
+  if(t==='photo'){
+    if(photoLayout(C)==='1')return docPhotoSheet1(list.flatMap(r=>(r.photos||[]).map(p=>({date:fmtDT(r.date),content:p.cap||r.content||'',src:p.src}))));
+    return docPhotoSheet(list.flatMap(r=>{const ph=r.photos||[],out=[];for(let i=0;i<ph.length;i+=4)out.push({date:fmtDT(r.date),content:r.content||'',photos:ph.slice(i,i+4)});return out}))}
   return list.map(r=>{
     const head=`<div class="doc"><h1>${h(C.name)}</h1><div class="site">[ ${h(S.site||'현장명')} ]</div>`;
     if(t==='check'){const its=r.items||catItems(C);
@@ -171,7 +199,12 @@ function catConfig(c,done){const t=catType(c);
         $$('[data-fx]',b).forEach(x=>x.onclick=()=>{F.splice(+x.dataset.fx,1);draw()})};
       draw();$('#ccAdd',b).onclick=()=>{F.push({id:uid(),l:'',t:'text'});draw();const ins=$$('[data-fl]',b);ins[ins.length-1].focus()};
       $('#ccOk',b).onclick=()=>{F=F.filter(f=>f.l.trim()).map(f=>({id:f.id,l:f.l.trim(),t:f.t,o:f.t==='sel'?(f.o||''):'',req:!!f.req}));if(!F.length)return toast('칸을 1개 이상 만드세요');c.fields=F;closeModal();done()}});return}
-  toast(t==='photo'?'사진대지는 따로 구성할 것이 없습니다 (일시 · 내용 · 사진 4장)':'PDF 문서함은 따로 구성할 것이 없습니다')}
+  if(t==='photo'){openModal(c.name+' — 사진대지 형식',`<label class="f">한 칸 구성</label><select class="inp" id="ccL">
+      <option value="4" ${photoLayout(c)==='4'?'selected':''}>한 칸에 사진 4장 + 일시·내용 1개 (장비점검 사진대지와 같음)</option>
+      <option value="1" ${photoLayout(c)==='1'?'selected':''}>한 칸에 사진 1장 + 사진마다 일시·내용 (한 장에 3칸)</option></select>
+      <div class="small muted" style="margin-top:6px">이미 작성한 기록도 출력할 때 바꾼 형식으로 나옵니다.</div>
+      <button class="btn xl" id="ccOk" style="width:100%;margin-top:12px">적용</button>`,b=>{$('#ccOk',b).onclick=()=>{c.layout=$('#ccL',b).value;closeModal();done()}});return}
+  toast('PDF 문서함은 따로 구성할 것이 없습니다')}
 R.plans=(cat)=>{
   if(typeof cat==='string')R.plans.cat=cat;
   const C=docCats().find(x=>x.k===R.plans.cat)||docCats()[0];R.plans.cat=C.k;
@@ -179,7 +212,7 @@ R.plans=(cat)=>{
   if(catType(C)!=='pdf')return R.recs(C);
   const pl=plansSorted(C.k);
   V$().innerHTML=`<h1>${h(C.name)}</h1>${C.scope==='staff'?'<div class="small muted" style="margin:-6px 0 10px">공개 범위: 운영자·관리자만</div>':''}
-  ${isAdmin()&&SERVER?`<div class="card"><b>PDF 올리기</b> <span class="small muted">운영자만 · 30MB까지</span>
+  ${isStaff()&&SERVER?`<div class="card"><b>PDF 올리기</b> <span class="small muted">관리자·운영자 · 30MB까지</span>
     <label class="f">제목</label><input class="inp" id="plT" placeholder="예) 2026년 10월 현장 운영안">
     <label class="f">PDF 파일</label><input class="inp" id="plF" type="file" accept="application/pdf,.pdf">
     <button class="btn" id="plUp" style="margin-top:10px">올리기</button></div>`:''}
