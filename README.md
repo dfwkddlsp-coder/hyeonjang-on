@@ -14,26 +14,44 @@ Field safety web app (PWA) for construction / manufacturing sites. Built for tab
 - Excel export, A4 one-page printing (auto-fit), backup/restore, PIN lock.
 
 ## Roles
-- First visit to a fresh deployment creates the **operator (운영자)** account.
-- The operator registers users in 설정 → 사용자 관리 (ID + initial password; the user changes it at first login).
-- Users can view everything and add records. Operator only: delete, void, register Excel import/clear, site settings, user management — enforced in the Worker, not just hidden in the UI.
+- First visit to a fresh deployment creates the **operator (운영자)** account. The operator registers users in 설정 → 사용자 관리 (one by one or many at once; the user changes the initial password at first login).
+- **운영자** everything · **관리자** sees everything incl. 취약근로자, no delete/void/settings/users · **사용자** records; 취약근로자 and staff-only categories hidden · **장비운전원** only their own equipment's checks.
+- Every rule is enforced in the Worker (`worker/lib/policy.js`), not just hidden in the UI.
 
 ## Data
-Records live in Cloudflare D1; photos and signatures are stored as separate blobs. Each device keeps a cache for offline use — changes are queued and uploaded when back online, and other devices pull changes every 30 s and when reopened.
+Records live in Cloudflare D1 as JSON documents (`docs` table, soft deletes so devices can sync them). Photos, signatures, PDFs and weekly backups live in R2. Each device keeps an IndexedDB copy for offline use — changes are queued and uploaded when back online, and other devices pull changes every 30 s and when reopened.
 
 Never commit real site Excel files or backups (`.gitignore` blocks `*.xlsx`, `*.xls`, `*.json`).
 
 ## Layout
-- `public/` — the app (static files, served by the Worker's assets binding)
-- `worker/index.js` — API: login, users, sync, photos
-- `schema.sql` — D1 tables
-- `index.html` (repo root) — redirect for the old GitHub Pages address
+```
+public/                 the app (static files served by the Worker's assets binding; no build step)
+  index.html            markup + script load order
+  css/app.css
+  js/core/              util · store (IndexedDB, settings) · rules · excel · ui (modal, signature, photo)
+                        · print (A4 pages, printed forms) · server (roles, API, sync, login)
+  js/app/               nav (router, view registry R) · tabs · boot
+  js/features/          one file per screen: home, strike, alcohol, registers, vuln, equipment,
+                        categories (PDF / 사진대지 / 점검표 / 작성 양식), settings, site-config, users
+  sw.js                 offline cache (FILES must match index.html — npm run check)
+worker/
+  index.js              router over the [method, path | RegExp, handler] tables in routes/
+  lib/                  http · crypto · session · policy (all permissions) · storage (photos, backups)
+  routes/               auth · users · docs (sync / write / delete) · files (PDF, photos) · admin
+migrations/             D1 schema changes (wrangler d1 execute --file)
+tests/                  check.mjs · api.test.mjs (permissions) · ui-smoke.js (paste into the browser console)
+```
+`public/js` holds classic scripts that share one global scope and load in the order listed in `index.html`.
+Only `core/ui.js`, `app/tabs.js` and `app/boot.js` run code at load time; everything else only defines
+functions and constants, so a new screen is one more file in `js/features/` (added to `index.html` and `sw.js`).
 
 ## Develop / deploy
 ```
 npm install
 npm run db:local      # create local D1 tables
 npm run dev           # http://localhost:8787
+npm run check         # every script parses; index.html and sw.js list the same files
+TEST_ADMIN_ID=… TEST_ADMIN_PW=… npm test   # permission tests against the local server
 npm run deploy        # requires: npx wrangler login
 ```
 Apply schema changes to the live database with `npx wrangler d1 execute hyeonjang-on-db --remote --file schema.sql`.

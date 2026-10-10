@@ -5,12 +5,13 @@
 //   fonts  — cache first, never change
 //   photos — cache first (immutable), but only the most recent PHOTO_MAX are kept
 //            so the phone's storage does not keep growing week after week.
-const C='fieldsafety-v26';
+const C='fieldsafety-v27';
 const FONTS='fieldsafety-fonts';
 const PHOTOS='fieldsafety-photos';
 const PHOTO_MAX=250; // ≈ 30MB at ~120KB per photo
 const KEEP=[C,FONTS,PHOTOS];
-const FILES=['./','index.html','vendor/xlsx.full.min.js','manifest.webmanifest','icon.svg','icon-192.png','icon-512.png','icon-maskable-512.png','apple-touch-icon.png'];
+// app shell for offline start; keep in sync with the <link>/<script> tags in index.html
+const FILES=['./','index.html','css/app.css','js/core/util.js','js/core/store.js','js/core/rules.js','js/core/excel.js','js/core/ui.js','js/core/print.js','js/core/server.js','js/app/nav.js','js/features/categories.js','js/features/site-config.js','js/features/home.js','js/features/strike.js','js/features/alcohol.js','js/features/registers.js','js/features/settings.js','js/features/vuln.js','js/features/users.js','js/features/equipment.js','js/app/tabs.js','js/app/boot.js','vendor/xlsx.full.min.js','manifest.webmanifest','icon.svg','icon-192.png','icon-512.png','icon-maskable-512.png','apple-touch-icon.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(C).then(c=>c.addAll(FILES.map(f=>new Request(f,{cache:'reload'})))));self.skipWaiting()});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>!KEEP.includes(k)).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
 const put=(name,req,res)=>{if(res&&(res.ok||res.type==='opaque')){const cp=res.clone();caches.open(name).then(c=>c.put(req,cp))}return res};
