@@ -441,6 +441,7 @@ const DEF={
   eqItems:'안전벨트 / 안전레버|좌석 안전벨트는 운행 중 상시 착용하고 안전레버 하강 시 조종이 불가할 것\n버켓 안전핀 / 훅해지장치|규정된 버켓을 사용하고 안전핀은 정상적으로 체결되어 있을 것, 훅해지장치가 있을 것\n조종장치 / 제동장치|브레이크, 클러치 및 조종장치는 손상 및 변형이 없으며 정상 작동될 것\n장비실명제 부착상태|장비실명제(허가증)가 부착되어 있고 해당 운전원이 실제 운전을 하고 있는지 확인\n협착방지봉 / 후방카메라·센서·후사경·경보기·조명|협착방지봉 부착상태, 후방카메라·센서·후사경·경보기·조명 정상작동 여부\n트랙 / 차륜|트랙 또는 차륜(타이어)의 균열·변형·파손 등 주행장치 이상이 없을 것 (손상이 심하면 타이어 교체 지시 및 확인)\n작업구역 통제|안전시설물 등으로 작업구역을 설정하고 유도자를 배치할 것 (장비 1대당 유도자 1명 이상)',
   eqCheckItems:'작업계획서 작성여부\n장비 실명제 부착상태\n백호 버킷 이탈방진핀 체결상태 (인식웨빙띠 설치)\n백호 훅 해지장치 설치상태\n크레인등 양중장비 권과방지장치 부착상태\n신호수 배치 및 복장상태 (깃발,호루라기,신호봉,적색조끼 및 안전모)\n후방카메라 작동상태\n후진경고음 작동상태\n타이어 마모상태\n장비후면 접근금지표지 및 협착방지봉 부착상태\n작업장구획 및 안전표지 부착상태\n작업장 정리정돈 상태\n주변 위험요소 방치 여부',
   vulnScope:'admin',
+  homeLayout:[{k:'eqcheck',wide:true},{k:'strike'},{k:'alcohol'},{k:'workers'},{k:'equip'},{k:'vuln'},{k:'plans'}],
   alcMode:'site',
   alc:{retest:0.020,stop:0.050,detect:0.001,day:0.030,outCount:2},
   alcMsg:'음주적발 알림\n1. 협력사명 : {업체}\n2. 측정일시 : {일시}\n3. {성명}({직종})\n4. 혈중 알코올 농도 {수치}\n5. 조치 : 🚫{조치}\n\n기준 : \n{기준}\n\n해당인원이 현장에서 작업하지 않도록 각별한 관리 부탁드리며 작업 중 적발 시 영구 퇴출 등 불이익이 발생할 수 있으니 참고해주시기 바랍니다.\n\n모든 관리자께서는 해당인원이 현장에서 작업할 시 작업중지 및 안전보건팀에 연락해주시기 바랍니다.'
@@ -767,7 +768,7 @@ function docAlcoholList(ds){
 }
 
 /* ---------- views ---------- */
-const APP_VER='2026.10.10-2';
+const APP_VER='2026.10.10-3';
 const VIEWS=[['home','홈'],['strike','삼진아웃'],['alcohol','음주측정'],['reg','관리대장'],['settings','설정']];
 /* 하위 화면 → 하단 탭 묶음 */
 const NAVOF={plans:'home',workers:'reg',equip:'reg',eqcheck:'reg',vuln:'reg',records:'settings'};
@@ -809,6 +810,27 @@ R.plans=()=>{
   $$('[data-pdel]').forEach(b=>b.onclick=async()=>{const p=PL.find(x=>x.id===b.dataset.pdel);if(!p||!confirm(`「${p.title}」을(를) 삭제할까요?\nPDF 파일도 서버에서 지워집니다.`))return;try{await remove('plans',p.id);toast('삭제했습니다');R.plans()}catch(x){toast(x.message)}});
 };
 
+/* 홈 화면 배치: 운영자가 설정 → 현장 기준에서 순서·넓게·숨기기 (모든 사용자에게 같게 적용) */
+const HL_NAMES={eqcheck:'장비점검',strike:'삼진아웃',alcohol:'음주측정',workers:'근로자',equip:'장비',vuln:'취약근로자',plans:'현장 운영안'};
+function homeLayout(){const cur=(Array.isArray(S.homeLayout)?S.homeLayout:[]).filter(it=>it&&HL_NAMES[it.k]);
+  const seen=new Set(cur.map(it=>it.k));return [...cur.map(it=>({k:it.k,wide:!!it.wide,hide:!!it.hide})),...DEF.homeLayout.filter(it=>!seen.has(it.k)).map(it=>({k:it.k,wide:!!it.wide,hide:false}))]}
+function applyHomeLayout(){const g=$('.hm-grid',V$());if(!g)return;
+  for(const it of homeLayout()){const b=g.querySelector(`[data-go="${it.k}"]`);if(!b)continue;b.classList.toggle('wide',it.wide);b.hidden=it.hide;g.appendChild(b)}}
+function bindHomeLayout(){const box=$('#hlBox');if(!box)return;let L=homeLayout();
+  const commit=async()=>{S.homeLayout=L.map(it=>({k:it.k,wide:it.wide,hide:it.hide}));await saveSettings();if(SERVER)await queueShared();render();toast('홈 배치 저장됨')};
+  const render=()=>{box.innerHTML=L.map((it,i)=>`<div class="row" style="padding:7px 0;border-top:1px solid var(--line);gap:8px;flex-wrap:nowrap">
+      <b class="grow" style="${it.hide?'opacity:.4;text-decoration:line-through':''}">${i+1}. ${HL_NAMES[it.k]}</b>
+      <label class="small row" style="gap:4px;flex-wrap:nowrap"><input type="checkbox" data-hw="${i}" ${it.wide?'checked':''}>넓게</label>
+      <label class="small row" style="gap:4px;flex-wrap:nowrap"><input type="checkbox" data-hs="${i}" ${it.hide?'':'checked'}>보이기</label>
+      <button class="btn sm line" data-hu="${i}" ${i?'':'disabled'} aria-label="위로">▲</button><button class="btn sm line" data-hd="${i}" ${i<L.length-1?'':'disabled'} aria-label="아래로">▼</button></div>`).join('')+
+      '<button class="btn sm ghost" id="hlReset" style="margin-top:8px">기본 배치로 되돌리기</button>';
+    $$('[data-hw]',box).forEach(c=>c.onchange=()=>{L[+c.dataset.hw].wide=c.checked;commit()});
+    $$('[data-hs]',box).forEach(c=>c.onchange=()=>{L[+c.dataset.hs].hide=!c.checked;commit()});
+    $$('[data-hu]',box).forEach(b=>b.onclick=()=>{const i=+b.dataset.hu;[L[i-1],L[i]]=[L[i],L[i-1]];commit()});
+    $$('[data-hd]',box).forEach(b=>b.onclick=()=>{const i=+b.dataset.hd;[L[i+1],L[i]]=[L[i],L[i+1]];commit()});
+    $('#hlReset').onclick=()=>{if(!confirm('홈 배치를 기본값으로 되돌릴까요?'))return;L=DEF.homeLayout.map(it=>({k:it.k,wide:!!it.wide,hide:false}));commit()}};
+  render()}
+
 R.home=()=>{
   const t=today();const vt=V.filter(v=>v.date===t&&!v.void);const at=A.filter(a=>a.date===t&&!a.void&&!a.retestOf);const atBad=at.filter(a=>isAlcBad(alcFinal(a)));
   const pend=A.filter(a=>!a.void&&a.judge==='재측정'&&!retestChild(a));
@@ -838,6 +860,7 @@ R.home=()=>{
   ${eduPend.length?`<div class="hm-sec"><h2>교육 미이수</h2><span>2nd strike</span></div><div class="card list">${eduPend.map(vItem).join('')}</div>`:''}
   ${expE.length?`<div class="hm-sec"><h2>장비 서류</h2><span>expiring</span></div><div class="card list">${expE.slice(0,10).map(eqItem).join('')}</div>`:''}
   <div class="hm-sec"><h2>today.</h2><span>오늘 삼진아웃 적발</span></div><div class="card list">${vt.length?vt.sort((a,b)=>b.at.localeCompare(a.at)).map(vItem).join(''):'<div class="empty">오늘 적발 기록 없음</div>'}</div>`;
+  applyHomeLayout();
   $$('[data-go]').forEach(b=>b.onclick=()=>go(b.dataset.go));const ts=$('#toSet');if(ts)ts.onclick=e=>{e.preventDefault();go('settings',!S.inspector?'me':'site')};
   bindItems();
 };
@@ -1190,7 +1213,7 @@ R.settings=()=>{
   <section class="st" data-st="me">
   ${SERVER?`<div class="card"><div class="row"><div class="grow"><b>${h(ME.name)}</b> <span class="muted small">${h(ME.loginId)}</span> ${roleBadge(ME.role)}</div><button class="btn sm line" id="pwBtn">비밀번호 변경</button><button class="btn sm line" id="outBtn">로그아웃</button></div></div>`:''}
   </section><section class="st" data-st="users">
-  ${SERVER&&adm?`<div class="card"><div class="row"><b class="grow">사용자 관리</b><button class="btn sm" id="uAdd"><i class="i i-plus"></i> 사용자 등록</button></div><div class="small muted" style="margin-top:4px">등록한 사람만 로그인할 수 있습니다. 첫 로그인 때 비밀번호를 직접 바꾸게 됩니다.</div><div class="list" id="usersBox" style="margin-top:6px"><div class="empty">불러오는 중…</div></div></div>`:''}
+  ${SERVER&&adm?`<div class="card"><div class="row"><b class="grow">사용자 관리</b><button class="btn sm line" id="uBulk"><i class="i i-plus"></i> 여러 명 등록</button><button class="btn sm" id="uAdd"><i class="i i-plus"></i> 사용자 등록</button></div><div class="small muted" style="margin-top:4px">등록한 사람만 로그인할 수 있습니다. 첫 로그인 때 비밀번호를 직접 바꾸게 됩니다.</div><div class="list" id="usersBox" style="margin-top:6px"><div class="empty">불러오는 중…</div></div></div>`:''}
   </section><section class="st" data-st="me">
   <div class="card" id="myCard"><b>내 정보</b> <span class="small muted">— 등록하면 점검자·측정인·상담자 이름과 서명이 자동으로 들어갑니다</span>
    <div class="grid g2"><div><label class="f">소속</label><input class="inp" id="sO" value="${h(S.inspectorOrg)}" placeholder="예) OO건설 안전팀"></div><div><label class="f">성명</label><input class="inp" id="sI" value="${h(S.inspector)}" placeholder="이름"></div>
@@ -1200,6 +1223,7 @@ R.settings=()=>{
   </section><section class="st" data-st="site">
   ${adm?'':'<div class="hint" style="margin-bottom:12px">현장명·삼진아웃·음주 기준은 운영자가 관리합니다.</div><div hidden>'}
   <div class="card"><label class="f">현장명</label><input class="inp" id="sS" value="${h(S.site)}" placeholder="현장명을 직접 입력하세요"></div>
+  ${adm?'<div class="card"><b>홈 화면 배치</b> <span class="small muted">— 바꾸는 즉시 저장되고 모든 사용자 홈에 같게 적용됩니다</span><div id="hlBox" style="margin-top:6px"></div></div>':''}
   <div class="card"><b>삼진아웃 기준</b>
    <label class="f">누적 기간</label><select class="inp" id="sP">${[[0,'공사 기간 전체 누적'],[3,'최근 3개월'],[6,'최근 6개월'],[12,'최근 12개월']].map(([v,t])=>`<option value="${v}" ${S.periodMonths==v?'selected':''}>${t}</option>`).join('')}</select>
    ${S.levels.map((l,i)=>`<div style="border-left:6px solid var(--l${i+1});padding-left:10px;margin-top:12px"><div class="grid g2"><div><label class="f">${i+1}차 명칭</label><input class="inp" data-ln="${i}" value="${h(l.name)}"></div><div><label class="f">스티커 색</label><input class="inp" data-ls="${i}" value="${h(l.sticker)}"></div></div><label class="f">조치사항 (줄바꿈 구분)</label><textarea class="inp" data-la="${i}">${h(l.act)}</textarea></div>`).join('')}
@@ -1279,7 +1303,8 @@ R.settings=()=>{
   if($('#syncNow'))$('#syncNow').onclick=async()=>{await Sync.run();toast(Sync.state==='ok'?'동기화 완료':'서버에 연결할 수 없습니다');R.settings()};
   if($('#pwBtn'))$('#pwBtn').onclick=async()=>{const u=await authScreen('pw');await kvSet('me',u);applyMe(u);toast('비밀번호 변경됨')};
   if($('#outBtn'))$('#outBtn').onclick=()=>{if(confirm('로그아웃할까요?'))logout()};
-  if(SERVER&&adm){$('#uAdd').onclick=()=>editUser();if(R.settings.tab==='users')loadUsers()}
+  if(adm)bindHomeLayout();
+  if(SERVER&&adm){$('#uAdd').onclick=()=>editUser();$('#uBulk').onclick=()=>bulkUsers();if(R.settings.tab==='users')loadUsers()}
 };
 
 /* ---------- 취약근로자 ---------- */
@@ -1449,7 +1474,7 @@ function docVulnConsult(p,c){
 
 /* ---------- 서버 연결 (Cloudflare Worker + D1) ---------- */
 async function loadUsers(){const box=$('#usersBox');if(!box)return;
-  try{const r=await api('users');const row=u=>`<div class="it" data-u="${u.id}"><span class="dot d0">${h(u.name.slice(0,1))}</span><div class="m"><b>${h(u.name)}</b> <span class="muted small">${h(u.loginId)}</span> ${u.role!=='user'?roleBadge(u.role):''}${!u.active?' <span class="badge bgray">사용 정지</span>':''}${u.mustChange?' <span class="badge bwarn">첫 로그인 전</span>':''}<div class="small muted ell">${h([u.org,u.title].filter(Boolean).join(' · ')||'-')}</div></div></div>`;
+  try{const r=await api('users');LAST_USERS=r.users;const row=u=>`<div class="it" data-u="${u.id}"><span class="dot d0">${h(u.name.slice(0,1))}</span><div class="m"><b>${h(u.name)}</b> <span class="muted small">${h(u.loginId)}</span> ${u.role!=='user'?roleBadge(u.role):''}${!u.active?' <span class="badge bgray">사용 정지</span>':''}${u.mustChange?' <span class="badge bwarn">첫 로그인 전</span>':''}<div class="small muted ell">${h([u.org,u.title].filter(Boolean).join(' · ')||'-')}</div></div></div>`;
     /* 분류: 운영자·관리자 / 사용자 / 장비운전원 / 사용 정지 — 접기·펼치기는 기기에 기억 */
     const G=[['staff','운영자 · 관리자',u=>u.active&&(u.role==='admin'||u.role==='manager')],['user','사용자',u=>u.active&&u.role==='user'],['driver','장비운전원',u=>u.active&&u.role==='driver'],['off','사용 정지',u=>!u.active]];
     let fold={};try{fold=JSON.parse(localStorage.getItem('hjUserFold')||'{}')}catch(e){}
@@ -1459,6 +1484,36 @@ async function loadUsers(){const box=$('#usersBox');if(!box)return;
     $$('details.ugrp',box).forEach(d=>d.ontoggle=()=>{fold[d.dataset.g]=d.open;try{localStorage.setItem('hjUserFold',JSON.stringify(fold))}catch(e){}});
     $$('[data-u]',box).forEach(el=>el.onclick=()=>editUser(r.users.find(u=>u.id===el.dataset.u)))}
   catch(x){box.innerHTML=`<div class="empty">${h(x.status?x.message:'인터넷 연결이 필요합니다')}</div>`}}
+let LAST_USERS=[];
+/* 여러 명 한 번에 등록: 엑셀·조직도에서 복사해 붙여넣기, 또는 장비 대장의 운전원 불러오기 */
+function bulkUsers(){
+  openModal('여러 명 등록',`<div class="small muted">한 줄에 한 명 — <b>이름, 휴대폰번호, 소속, 직책</b> (쉼표나 엑셀에서 복사한 칸 그대로). 아이디는 휴대폰 번호 숫자만으로 만들어집니다. 이미 있는 아이디는 건너뜁니다.</div>
+    <textarea class="inp" id="buT" rows="9" style="margin-top:8px;font-size:15px" placeholder="홍길동, 010-1234-5678, OO건설, 관리감독자"></textarea>
+    <button class="btn sm line" id="buEq" style="margin-top:8px"><i class="i i-equip"></i> 장비 대장 운전원 불러오기</button>
+    <div class="grid g2" style="margin-top:10px"><div><label class="f">권한</label><select class="inp" id="buR"><option value="user">사용자</option><option value="manager">관리자</option><option value="driver">장비운전원</option></select></div>
+    <div><label class="f">초기 비밀번호 * (6자 이상, 모두 같게)</label><input class="inp" id="buP" type="text" autocomplete="off" autocapitalize="off"></div></div>
+    <div class="small muted" style="margin-top:4px">모든 사람이 첫 로그인 때 비밀번호를 바꾸게 됩니다.</div>
+    <div id="buMsg" class="small" style="margin-top:8px"></div>
+    <button class="btn xl" id="buGo" style="margin-top:10px">등록</button>`,b=>{
+    const dg=x=>String(x||'').replace(/\D/g,'');const have=new Set(LAST_USERS.map(u=>dg(u.loginId)||u.loginId));
+    $('#buEq',b).onclick=()=>{const by={};for(const e of E){if(e.outDate||!e.operator||!dg(e.phone))continue;const p=dg(e.phone);(by[p]=by[p]||[]).push(e)}
+      const lines=[],skip=[];for(const [p,es] of Object.entries(by)){const names=[...new Set(es.map(e=>e.operator.trim()))];
+        if(have.has(p))continue;if(names.length>1){skip.push(`${names.join('·')} (같은 번호 ${p})`);continue}lines.push([names[0],p,es[0].company||'','장비운전원'].join(', '))}
+      $('#buT',b).value=lines.join('\n');$('#buR',b).value='driver';
+      $('#buMsg',b).innerHTML=`아직 계정이 없는 운전원 <b>${lines.length}</b>명을 불러왔습니다.${skip.length?`<br>번호가 겹쳐 뺀 사람: ${h(skip.join(', '))} — 장비 대장 연락처를 고친 뒤 다시 불러오세요.`:''}`};
+    $('#buGo',b).onclick=async()=>{const pw=$('#buP',b).value.trim(),role=$('#buR',b).value,msg=$('#buMsg',b),go=$('#buGo',b);
+      if(pw.length<6)return toast('초기 비밀번호를 6자 이상 입력하세요');
+      const rows=$('#buT',b).value.split('\n').map(l=>l.split(/[,\t]/).map(x=>x.trim())).filter(c=>c[0]||c[1]);
+      const bad=rows.filter(c=>!c[0]||!/^\d{10,11}$/.test(dg(c[1])));if(!rows.length)return toast('등록할 사람을 입력하세요');
+      if(bad.length)return msg.innerHTML=`<span style="color:var(--bad)">이름이나 휴대폰 번호가 잘못된 줄: ${h(bad.map(c=>c.join(' ')).join(' / '))}</span>`;
+      go.disabled=true;let ok=0;const dup=[],err=[];
+      for(const [i,c] of rows.entries()){go.textContent=`등록 중… ${i+1}/${rows.length}`;
+        try{await api('users',{loginId:dg(c[1]),name:c[0],org:c[2]||'',title:c[3]||'',role,password:pw});ok++}
+        catch(x){(x.status===409?dup:err).push(c[0]+(x.status===409?'':` (${x.message})`))}}
+      go.disabled=false;go.textContent='등록';
+      msg.innerHTML=`등록 <b>${ok}</b>명${dup.length?` · 이미 있어 건너뜀 ${dup.length}명 (${h(dup.join(', '))})`:''}${err.length?`<br><span style="color:var(--bad)">실패: ${h(err.join(', '))}</span>`:''}`;
+      if(ok){$('#buT',b).value='';loadUsers();toast(`${ok}명 등록했습니다`)}};
+  })}
 function editUser(u){const nu=!u;u=u||{};
   openModal(nu?'사용자 등록':'사용자 정보',`<div class="grid g2">
    <div><label class="f">아이디 ${nu?'*':''}</label><input class="inp" id="euL" value="${h(u.loginId||'')}" ${nu?'':'disabled'} autocapitalize="off" autocorrect="off" placeholder="예) 01012345678"></div>
@@ -1478,7 +1533,7 @@ let SERVER=false,ME=null;
 const isAdmin=()=>!SERVER||(ME&&ME.role==='admin');
 const isDriver=()=>SERVER&&!!ME&&ME.role==='driver';
 const roleBadge=r=>r==='admin'?'<span class="badge">운영자</span>':r==='manager'?'<span class="badge">관리자</span>':r==='driver'?'<span class="badge bgray">장비운전원</span>':'<span class="badge bgray">사용자</span>';
-const SHARED_KEYS=['site','periodMonths','vtypes','levels','alcMode','alc','alcMsg','vulnAge','bp','eqItems','eqCheckItems','vulnScope'];
+const SHARED_KEYS=['site','periodMonths','vtypes','levels','alcMode','alc','alcMsg','vulnAge','bp','eqItems','eqCheckItems','vulnScope','homeLayout'];
 async function api(path,body){
   const r=await fetch('/api/'+path,{method:body!==undefined?'POST':'GET',credentials:'same-origin',headers:body!==undefined?{'content-type':'application/json'}:{},body:body!==undefined?JSON.stringify(body):undefined});
   let j=null;try{j=await r.json()}catch(e){}
@@ -1778,7 +1833,7 @@ function docPhotoSheet(blocks){
 }
 
 /* ---------- 하위 탭 (관리대장 / 설정) ---------- */
-function setTabs(){const adm=isAdmin();if(isDriver())return [['settings:me','내 정보']];return [['settings:me','내 정보'],...(adm?[['settings:site','현장 기준']]:[]),...(SERVER&&adm?[['settings:users','사용자 관리']]:[]),['records','기록·보고'],['settings:data','데이터·앱']]}
+function setTabs(){const adm=isAdmin();if(!adm)return [['settings:me','내 정보']];return [['settings:me','내 정보'],...(adm?[['settings:site','현장 기준']]:[]),...(SERVER&&adm?[['settings:users','사용자 관리']]:[]),['records','기록·보고'],['settings:data','데이터·앱']]}
 function segBar(items,active){
   const h1=$('h1',V$());const html=`<div class="seg">${items.map(([k,l])=>`<button type="button" data-seg="${k}" class="${k===active?'on':''}">${l}</button>`).join('')}</div>`;
   if(h1)h1.insertAdjacentHTML('afterend',html);else V$().insertAdjacentHTML('afterbegin',html);
