@@ -248,9 +248,13 @@ function eqPhotoBlocks(list,mon){
   }
   return out;
 }
+/* 사진대지 한 장 = 2칸 (위·아래). 칸은 사진 4장(+일시·내용 1개) 또는 single:true면 사진 1장 크게 */
 function docPhotoSheet(blocks){
   const cell=p=>p?`<td colspan="2" class="pc"><div class="pw"><img src="${p.src}">${p.cap?`<span class="pcap">${h(p.cap)}</span>`:''}</div></td>`:'<td colspan="2" class="pc"></td>';
-  const block=b=>{const ph=b.photos;return `<table class="pst"><colgroup><col style="width:9%"><col style="width:41%"><col style="width:9%"><col style="width:41%"></colgroup>
+  const one=b=>`<table class="pst"><colgroup><col style="width:9%"><col style="width:41%"><col style="width:9%"><col style="width:41%"></colgroup>
+    <tr><td colspan="4" class="pc" style="height:124mm"><div class="pw" style="height:124mm"><img src="${b.photos[0].src}" style="object-fit:contain"></div></td></tr>
+    <tr class="cap"><th>일 시</th><td>${h(b.date)}</td><th>내 용</th><td>${nl(b.content)}</td></tr></table>`;
+  const block=b=>{if(b.single)return one(b);const ph=b.photos;return `<table class="pst"><colgroup><col style="width:9%"><col style="width:41%"><col style="width:9%"><col style="width:41%"></colgroup>
     <tr>${cell(ph[0])}${cell(ph[1])}</tr><tr>${cell(ph[2])}${cell(ph[3])}</tr>
     <tr class="cap"><th>일 시</th><td>${h(b.date)}</td><th>내 용</th><td>${h(b.content)}</td></tr></table>`};
   const pages=[];
