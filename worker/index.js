@@ -313,6 +313,8 @@ async function route(req, env, url) {
     const r = await env.DB.prepare(`SELECT store,id,data,deleted,updated_at,created_by,updated_by FROM docs WHERE updated_at>? ${isDriver ? "AND store IN ('equipment','eqchecks','settings')" : hideVuln ? "AND store<>'vuln'" : ''} ORDER BY updated_at LIMIT ?`).bind(since, LIMIT + 1).all();
     const rows = r.results.slice(0, LIMIT);
     let out = rows;
+    if (su.role === 'user') // 문서함 공개 범위 '운영자·관리자만'인 PDF는 일반 사용자에게 보내지 않음
+      out = out.filter((d) => { if (d.store !== 'plans' || d.deleted) return true; try { return JSON.parse(d.data).scope !== 'staff'; } catch { return true; } });
     if (isDriver) { // 본인 장비와 그 점검 기록만
       const mine = await driverEquipIds(env, su);
       out = rows.filter((d) => {
@@ -422,7 +424,12 @@ async function route(req, env, url) {
     return json({ id, size: len });
   }
   if ((m = p.match(/^\/api\/file\/([a-f0-9]+)$/)) && M === 'GET') {
-    if ((await requireUser(req, env)).role === 'driver') fail(403, '열람 권한이 없습니다');
+    const fu = await requireUser(req, env);
+    if (fu.role === 'driver') fail(403, '열람 권한이 없습니다');
+    if (fu.role === 'user') {
+      const r = await env.DB.prepare("SELECT 1 FROM docs WHERE store='plans' AND deleted=0 AND json_extract(data,'$.fileId')=? AND json_extract(data,'$.scope')='staff'").bind(m[1]).first();
+      if (r) fail(403, '열람 권한이 없습니다');
+    }
     const obj = env.PHOTOS && await env.PHOTOS.get(`f/${m[1]}`);
     if (!obj) fail(404, '파일이 없습니다');
     const name = (url.searchParams.get('n') || '현장운영안').replace(/[\\/:*?"<>|\r\n]/g, '_').slice(0, 80);
