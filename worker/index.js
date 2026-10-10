@@ -7,7 +7,7 @@
 const STORES = new Set(['workers', 'equipment', 'violations', 'alcohol', 'vuln', 'eqchecks', 'plans', 'settings']);
 const PDF_MAX = 30 * 1024 * 1024; // 현장 운영안 PDF 한 파일 최대 크기
 const REGISTER_STORES = new Set(['workers', 'equipment', 'vuln']);
-const SESSION_DAYS = 30;
+const SESSION_DAYS = 180; // 자동 로그인: 앱을 열 때마다 다시 180일로 연장
 const PBKDF2_ITER = 20000; // keeps login under the free-plan CPU budget
 const MAX_FAILS = 5, LOCK_MS = 10 * 60 * 1000;
 
@@ -126,7 +126,7 @@ async function currentUser(req, env) {
   const t = cookieToken(req);
   if (!t) return null;
   const row = await env.DB.prepare(
-    'SELECT u.* FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=? AND s.expires_at>? AND u.active=1'
+    'SELECT u.*, s.expires_at AS s_exp FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=? AND s.expires_at>? AND u.active=1'
   ).bind(await sha256(t), now()).first();
   return row || null;
 }
@@ -186,7 +186,14 @@ async function route(req, env, url) {
   if (p === '/api/status' && M === 'GET') {
     const n = await env.DB.prepare('SELECT COUNT(*) AS n FROM users').first();
     const u = await currentUser(req, env);
-    return json({ setupNeeded: !n.n, user: publicUser(u), time: now() });
+    let hdr = {};
+    if (u && u.s_exp - now() < (SESSION_DAYS - 1) * 864e5) { // 하루 넘게 지났으면 만료일을 다시 늘림
+      const t = cookieToken(req);
+      await env.DB.prepare('UPDATE sessions SET expires_at=? WHERE token_hash=?').bind(now() + SESSION_DAYS * 864e5, await sha256(t)).run();
+      const secure = url.protocol === 'https:' ? '; Secure' : '';
+      hdr = { 'set-cookie': `hs=${t}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${SESSION_DAYS * 86400}${secure}` };
+    }
+    return json({ setupNeeded: !n.n, user: publicUser(u), time: now() }, 200, hdr);
   }
 
   // first run only: create the operator account

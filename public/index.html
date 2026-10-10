@@ -31,6 +31,8 @@ button,input,select,textarea{font:inherit;color:inherit}
 .top .brand{font-weight:800;font-size:18px;white-space:nowrap}
 .top small{font-weight:500;opacity:.8;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .top .sp{flex:1}
+.top .gear{flex:none;width:38px;height:38px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink);display:grid;place-items:center;cursor:pointer;padding:0}
+.top .gear .i{width:22px;height:22px}
 .layout{display:flex;min-height:calc(100vh - 52px)}
 nav#nav{background:#fff;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:4px;padding:10px 8px;width:96px;flex:none;position:sticky;top:52px;height:calc(100vh - 52px)}
 nav#nav button{border:0;background:none;border-radius:12px;padding:10px 4px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:13px;color:var(--sub);cursor:pointer}
@@ -363,6 +365,7 @@ body.is-home .card{background:var(--tile);border-radius:22px;box-shadow:none}
   <small id="siteName"></small>
   <div class="sp"></div>
   <span id="netBadge" class="badge" style="background:var(--chip);color:var(--sub);font-weight:600"></span>
+  <button id="gearBtn" class="gear" type="button" aria-label="설정" title="설정" hidden><i class="i i-settings"></i></button>
 </header>
 <div class="layout">
   <nav id="nav"></nav>
@@ -758,7 +761,7 @@ function docAlcoholList(ds){
 }
 
 /* ---------- views ---------- */
-const APP_VER='2026.10.09-17';
+const APP_VER='2026.10.10-1';
 const VIEWS=[['home','홈'],['strike','삼진아웃'],['alcohol','음주측정'],['reg','관리대장'],['settings','설정']];
 /* 하위 화면 → 하단 탭 묶음 */
 const NAVOF={plans:'home',workers:'reg',equip:'reg',eqcheck:'reg',vuln:'reg',records:'settings'};
@@ -816,12 +819,12 @@ R.home=()=>{
    <div class="hm-site"><b>${h(S.site||'현장명 미설정')}</b><br>${h([S.inspectorOrg,S.inspector].filter(Boolean).join(' ')||'점검자 미설정')}</div></div>
   ${!S.site||!S.inspector?`<div class="hint" style="margin-bottom:16px"><a href="#" id="toSet">설정</a>에서 ${!S.inspector?'<b>내 정보</b>(이름·서명)':''}${!S.site&&!S.inspector?'와 ':''}${!S.site?'현장명':''}을 등록하세요. 점검자 이름·서명이 자동으로 들어갑니다.</div>`:''}
   <div class="hm-grid">
-   ${tile(1,'strike','삼진아웃','three strikes out','warning · education · exit',vt.length,`오늘 적발 <b>${vt.length}</b>건<br>퇴출 <b>${banned.size}</b> · 교육 미이수 <b>${eduPend.length}</b>`,false,true)}
-   ${tile(2,'alcohol','음주측정','alcohol check','breath test',atBad.length,`오늘 측정 <b>${at.length}</b>명 · 적발 <b>${atBad.length}</b><br>${noNotice.length?`통지서 미작성 <b>${noNotice.length}</b>`:'통지서 모두 작성됨'}`)}
-   ${vulnVisible()?tile(3,'vuln','취약근로자','vulnerable workers','health care',vuNo.length,`관리 <b>${vuAct.length}</b>명 · 고혈압 <b>${vuAct.filter(p=>vulnTags(p).includes('고혈압')).length}</b><br>사후상담 미실시 <b>${vuNo.length}</b>`):tile(3,'vuln','취약근로자','vulnerable workers','health care',null,`건강정보 보호를 위해<br><b>운영자·관리자만</b> 열람`)}
+   ${(()=>{const iu=E.filter(e=>!e.outDate),dn=iu.filter(e=>eqCheckOf(e.id,today())).length,mt=iu.filter(e=>isMine(e)&&!eqCheckOf(e.id,today())).length;return tile(1,'eqcheck','장비점검','daily inspection','',iu.length-dn,`오늘 점검 <b>${dn}</b>/${iu.length}대<br>${mt?`내 담당 미점검 <b>${mt}</b>`:'사진대지 · 주간 점검표'}`,true,true)})()}
+   ${tile(2,'strike','삼진아웃','three strikes out','warning · education · exit',vt.length,`오늘 적발 <b>${vt.length}</b>건<br>퇴출 <b>${banned.size}</b> · 교육 미이수 <b>${eduPend.length}</b>`)}
+   ${tile(3,'alcohol','음주측정','alcohol check','breath test',atBad.length,`오늘 측정 <b>${at.length}</b>명 · 적발 <b>${atBad.length}</b><br>${noNotice.length?`통지서 미작성 <b>${noNotice.length}</b>`:'통지서 모두 작성됨'}`)}
    ${tile(4,'workers','근로자','worker register','people',null,`등록 <b>${W.length}</b>명<br>업체 <b>${new Set(W.map(w=>w.company)).size}</b>곳`)}
    ${tile(5,'equip','장비','equipment register','machines',expE.length,`등록 <b>${E.length}</b>대<br>서류 만료·임박 <b>${expE.length}</b>`)}
-   ${(()=>{const iu=E.filter(e=>!e.outDate),dn=iu.filter(e=>eqCheckOf(e.id,today())).length,mt=iu.filter(e=>isMine(e)&&!eqCheckOf(e.id,today())).length;return tile(6,'eqcheck','장비점검','daily inspection','',iu.length-dn,`오늘 점검 <b>${dn}</b>/${iu.length}대<br>${mt?`내 담당 미점검 <b>${mt}</b>`:'사진대지 · 주간 점검표'}`,true)})()}
+   ${vulnVisible()?tile(6,'vuln','취약근로자','vulnerable workers','health care',vuNo.length,`관리 <b>${vuAct.length}</b>명 · 고혈압 <b>${vuAct.filter(p=>vulnTags(p).includes('고혈압')).length}</b><br>사후상담 미실시 <b>${vuNo.length}</b>`):tile(6,'vuln','취약근로자','vulnerable workers','health care',null,`건강정보 보호를 위해<br><b>운영자·관리자만</b> 열람`)}
    ${(()=>{const pl=plansSorted();return tile(7,'plans','현장 운영안','site plan','pdf',null,pl.length?`등록 <b>${pl.length}</b>건<br>${h(pl[0].title)}`:'운영 계획·기준 문서<br>PDF 열람')})()}
   </div>
   ${noNotice.length?`<div class="hm-sec"><h2>통지서 미작성</h2><span>alcohol notice</span></div><div class="card list">${noNotice.map(alcItem).join('')}</div>`:''}
@@ -1523,12 +1526,18 @@ function authScreen(kind){return new Promise(res=>{
     ${K.f.map(([n,l,t,ac])=>`<label class="f">${l}</label><input class="inp" name="${n}" type="${t}" autocomplete="${ac}" ${t==='text'?'autocapitalize="off" autocorrect="off" spellcheck="false"':''}>`).join('')}
     <div class="auth-err"></div><button class="btn xl" type="submit" style="margin-top:12px">${K.b}</button>
     <p class="small muted" style="text-align:center;margin:10px 0 0">습관이 된 노력을 실력이라 한다.</p></form>`;
-  document.body.appendChild(d);const fm=$('form',d);setTimeout(()=>fm.elements[0].focus(),50);
+  document.body.appendChild(d);const fm=$('form',d);
+  let savedId='';try{savedId=localStorage.getItem('hjLoginId')||''}catch(e){}
+  if(kind==='login'&&savedId){fm.elements.loginId.value=savedId;setTimeout(()=>fm.elements.password.focus(),50)}else setTimeout(()=>fm.elements[0].focus(),50);
   fm.onsubmit=async e=>{e.preventDefault();const v=Object.fromEntries(new FormData(fm));const err=$('.auth-err',d);err.textContent='';
     if(kind==='setup'&&v.password!==v.password2)return err.textContent='비밀번호 확인이 다릅니다';
     if(kind==='pw'&&v.next!==v.next2)return err.textContent='새 비밀번호 확인이 다릅니다';
     const btn=$('button',fm);btn.disabled=true;
-    try{const r=kind==='setup'?await api('setup',v):kind==='login'?await api('login',v):await api('me/password',{current:v.current,next:v.next});d.remove();res(r.user)}
+    try{const r=kind==='setup'?await api('setup',v):kind==='login'?await api('login',v):await api('me/password',{current:v.current,next:v.next});
+      if(r.user){try{localStorage.setItem('hjLoginId',r.user.loginId)}catch(e){}
+        const pw=kind==='pw'?v.next:v.password; // 휴대폰·브라우저 비밀번호 저장 (지원하는 기기만)
+        if(pw&&window.PasswordCredential)try{await navigator.credentials.store(new PasswordCredential({id:r.user.loginId,password:pw,name:r.user.name}))}catch(e){}}
+      d.remove();res(r.user)}
     catch(x){err.textContent=x.status?x.message:'인터넷 연결을 확인하세요'}finally{btn.disabled=false}};
 })}
 async function authGate(){
@@ -1778,8 +1787,10 @@ function lockScreen(){return new Promise(res=>{if(!S.pin)return res();const d=do
   try{await DB.open()}catch(e){V$().innerHTML='<div class="card">이 브라우저에서 저장소를 열 수 없습니다. 시크릿 모드가 아닌 일반 창에서 열어주세요.</div>';return}
   await loadSettings();await loadAll();
   if(location.protocol.startsWith('http')&&await authGate())await loadAll();
+  if(SERVER){const sv=Object.keys(STORE).join(',');if(await kvGet('storeSet')!==sv){await kvSet('lastSync',0);await kvSet('storeSet',sv)}}
   await lockScreen();
   $('#siteName').textContent=S.site;renderNav();badge();
+  {const g=$('#gearBtn');g.hidden=!isAdmin();g.onclick=()=>go('settings','site')}
   addEventListener('online',()=>{badge();Sync.run()});addEventListener('offline',badge);
   if(SERVER){purgeVulnIfHidden();Sync.run();setInterval(()=>{if(document.visibilityState==='visible')Sync.run()},30000);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')Sync.run()})}
   let v='home';try{v=sessionStorage.getItem('v')||'home'}catch(e){}go(R[v]?v:'home');
