@@ -4,7 +4,7 @@
 // Roles: 'admin' (운영자) manages users, shared settings, register imports, deletes and voids.
 //        'user' can read everything and create/update records.
 
-const STORES = new Set(['workers', 'equipment', 'violations', 'alcohol', 'vuln', 'eqchecks', 'plans', 'settings']);
+const STORES = new Set(['workers', 'equipment', 'violations', 'alcohol', 'vuln', 'eqchecks', 'plans', 'records', 'settings']);
 const PDF_MAX = 30 * 1024 * 1024; // 현장 운영안 PDF 한 파일 최대 크기
 const REGISTER_STORES = new Set(['workers', 'equipment', 'vuln']);
 const SESSION_DAYS = 180; // 자동 로그인: 앱을 열 때마다 다시 180일로 연장
@@ -314,7 +314,7 @@ async function route(req, env, url) {
     const rows = r.results.slice(0, LIMIT);
     let out = rows;
     if (su.role === 'user') // 문서함 공개 범위 '운영자·관리자만'인 PDF는 일반 사용자에게 보내지 않음
-      out = out.filter((d) => { if (d.store !== 'plans' || d.deleted) return true; try { return JSON.parse(d.data).scope !== 'staff'; } catch { return true; } });
+      out = out.filter((d) => { if ((d.store !== 'plans' && d.store !== 'records') || d.deleted) return true; try { return JSON.parse(d.data).scope !== 'staff'; } catch { return true; } });
     if (isDriver) { // 본인 장비와 그 점검 기록만
       const mine = await driverEquipIds(env, su);
       out = rows.filter((d) => {
@@ -345,6 +345,7 @@ async function route(req, env, url) {
       if (!STORES.has(d.store) || typeof d.id !== 'string' || !d.id || !d.data || typeof d.data !== 'object') fail(400, '잘못된 기록');
       if (d.store === 'settings' && u.role !== 'admin') fail(403, '현장 설정은 운영자만 바꿀 수 있습니다');
       if (d.store === 'plans' && u.role !== 'admin') fail(403, '현장 운영안은 운영자만 올릴 수 있습니다');
+      if (d.store === 'records' && u.role === 'user' && d.data.scope === 'staff') fail(403, '운영자·관리자만 작성할 수 있는 항목입니다');
     }
     if (u.role !== 'admin' && docs.some((d) => d.store === 'vuln') && !(await vulnAllowed(env, u))) fail(403, '취약근로자 정보는 운영자·관리자만 다룰 수 있습니다');
     if (u.role === 'driver') { // 장비운전원: 본인 장비의 장비점검만
