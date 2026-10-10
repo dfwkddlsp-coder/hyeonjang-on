@@ -17,7 +17,7 @@ async function api(path,body){
 const kvGet=async k=>{const r=await DB.req(DB.st('kv','readonly').get(k));return r?r.v:undefined};
 const kvSet=(k,v)=>DB.put('kv',{k,v});
 function applyMe(u){ME=u;Object.assign(S,{inspector:u.name,inspectorOrg:u.org||'',myRole:u.title||'',mySig:u.sig||''})}
-function applyShared(d){for(const k of SHARED_KEYS)if(d[k]!==undefined)S[k]=k==='alc'?Object.assign({},DEF.alc,d[k]):d[k];$('#siteName').textContent=S.site||'';purgeVulnIfHidden()}
+function applyShared(d){for(const k of SHARED_KEYS)if(d[k]!==undefined)S[k]=k==='alc'?Object.assign({},DEF.alc,d[k]):d[k];$('#siteName').textContent=S.site||'';purgeVulnIfHidden();if(typeof renderNav==='function'&&$('#nav').childElementCount)renderNav()}
 /* 열람 권한이 없으면 이 기기에 받아둔 취약근로자 정보도 지움 */
 const vulnVisible=()=>isStaff();
 function purgeVulnIfHidden(){if(vulnVisible()||!VU.length)return;VU=[];DB.putMany('vuln',[],true).catch(()=>{})}

@@ -41,7 +41,7 @@ function bindForms(){const box=$('#fmBox');if(!box)return;
   $('#fmReset').onclick=async()=>{if(!confirm('모든 양식 문구를 기본값으로 되돌릴까요?'))return;await commit({});bindForms()}}
 function bindHomeLayout(){const box=$('#hlBox');if(!box)return;let L=homeLayout();
   const N=hlNames();
-  const commit=async()=>{S.homeLayout=L.map(it=>({k:it.k,wide:it.wide,hide:it.hide,name:it.name||''}));await saveSettings();if(SERVER)await queueShared();render();toast('홈 배치 저장됨')};
+  const commit=async()=>{S.homeLayout=L.map(it=>({k:it.k,wide:it.wide,hide:it.hide,name:it.name||''}));await saveSettings();if(SERVER)await queueShared();render();renderNav();toast('홈 배치 저장됨')};
   const render=()=>{box.innerHTML=L.map((it,i)=>`<div class="row" style="padding:7px 0;border-top:1px solid var(--line);gap:8px;flex-wrap:nowrap">
       <span class="small muted" style="width:18px">${i+1}</span><input class="inp grow" data-hn="${i}" value="${h(it.name||'')}" placeholder="${h(N[it.k])}" style="min-width:0;padding:6px 8px;font-size:14px;${it.hide?'opacity:.45':''}" title="타일 이름 (비우면 기본 이름)">
       <label class="small row" style="gap:4px;flex-wrap:nowrap"><input type="checkbox" data-hw="${i}" ${it.wide?'checked':''}>넓게</label>
