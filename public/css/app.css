@@ -355,7 +355,7 @@ body.is-home .card{background:var(--tile);border-radius:22px;box-shadow:none}
 }
 /* ---------- 안내 봇(안전온) ---------- */
 canvas.gbc{image-rendering:pixelated;display:block;width:32px;height:42px;flex:none}
-.gb-fab{position:fixed;right:16px;bottom:calc(20px + env(safe-area-inset-bottom));z-index:40;width:60px;height:60px;border-radius:50%;border:0;background:#232220;box-shadow:0 4px 14px rgba(0,0,0,.28);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0} /* 장비점검 타일과 같은 색 */
+.gb-fab{position:fixed;right:16px;bottom:calc(20px + env(safe-area-inset-bottom));z-index:40;width:60px;height:60px;border-radius:50%;border:0;background:#2a94ff;box-shadow:0 4px 14px rgba(0,0,0,.22);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0} /* 파랑 (운영자 지정 #2A94FF) */
 .gb-fab canvas.gbc{width:36px;height:47px}
 .gb-fab:active{transform:scale(.94)}
 @media (max-width:760px){body:not(.is-home) .gb-fab{bottom:calc(92px + env(safe-area-inset-bottom));width:54px;height:54px}}

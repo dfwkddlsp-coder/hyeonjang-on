@@ -1,7 +1,7 @@
 // 현장ON — 안내 봇(안전온): 경례하는 픽셀 캐릭터, 자주 묻는 질문 + AI 답변, 운영자에게 의견 보내기, 받은 의견(운영자)
 'use strict';
 /* ---------- 픽셀 캐릭터 (16×20, 내림 / 경례) ---------- */
-const GB_PAL={W:'#fbfbf8',w:'#d9d6cf',G:'#2f9e5b',K:'#1a1a1a',S:'#f6c9a0',P:'#f29a9a',M:'#b5443a',L:'#cfe6f5',E:'#1a1a1a',T:'#ffffff',V:'#c8f03c',R:'#e8e8e8',N:'#2c3e66',B:'#4a3426'};
+const GB_PAL={W:'#fbfbf8',w:'#d9d6cf',G:'#2f9e5b',K:'#1a1a1a',S:'#f6c9a0',P:'#f29a9a',M:'#b5443a',L:'#cfe6f5',E:'#1a1a1a',T:'#ffffff',V:'#c8f03c',R:'#e8e8e8',N:'#18223d',B:'#4a3426'};
 const GB_DOWN=['.....WWWWWW.....','....WWWGGWWW....','...WWGGGGGGWW...','...WWWWGGWWWW...','.wwwwwwwwwwwwww.','..KSSSSSSSSSSK..','..SKKKKKKKKKKS..','..SKLEKSSKELKS..','..SKLEKSSKELKS..','..SKKKKSSKKKKS..','..SPSSSMMSSSPS..','...SSSSSSSSSS...','...VVVVTTVVVV...','..VVVVVTTVVVVV..','..VRRRRRRRRRRV..','..VVVVVVVVVVVV..','..SVVVVVVVVVVS..','...NNNNNNNNNN...','...NNNN..NNNN...','..BBBBB..BBBBB..'];
 const GB_UP=['.....WWWWWW.....','....WWWGGWWW....','...WWGGGGGGWW...','...WWWWGGWWWW...','.wwwwwwwwwwwwww.','.SSSSSSSSSSSSK..','.VSKKKKKKKKKKS..','.VSKLEKSSKELKS..','VVSKLEKSSKELKS..','V.SKKKKSSKKKKS..','V.SPSSMMMMSSPS..','VV.SSSSSSSSSS...','.VVVVVVTTVVVV...','...VVVVTTVVVVV..','...RRRRRRRRRRV..','...VVVVVVVVVVV..','...VVVVVVVVVVS..','...NNNNNNNNNN...','...NNNN..NNNN...','..BBBBB..BBBBB..'];
 const GB_CALM=matchMedia('(prefers-reduced-motion: reduce)');
