@@ -27,3 +27,7 @@ crons = ["0 18 * * SUN"]
 
 [observability]
 enabled = true
+
+# 안내 봇(안전온)의 AI 답변 — Cloudflare Workers AI 공개 모델 (worker/routes/guide.js)
+[ai]
+binding = "AI"

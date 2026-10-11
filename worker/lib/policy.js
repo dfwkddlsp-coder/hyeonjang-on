@@ -40,7 +40,7 @@ export async function driverEquipIds(env, u) {
 /** SQL condition limiting the stores a user's sync may read. */
 export async function syncStoreFilter(env, u) {
   if (u.role === 'driver') return "AND store IN ('equipment','eqchecks','settings')";
-  return (await vulnAllowed(env, u)) ? '' : "AND store<>'vuln'";
+  return "AND store NOT IN ('feedback','aiuse') " + ((await vulnAllowed(env, u)) ? '' : "AND store<>'vuln'"); // 의견·AI 사용 횟수는 동기화하지 않음 (운영자는 /api/feedback)
 }
 
 /** Row-level filter on sync results (rows straight from the docs table). */

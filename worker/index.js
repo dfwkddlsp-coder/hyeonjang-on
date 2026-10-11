@@ -6,7 +6,7 @@
 //   lib/session.js  login cookie, current user
 //   lib/policy.js   roles and every permission rule
 //   lib/storage.js  photo extraction, change stamps, backups
-//   routes/*.js     [method, path | RegExp, handler] tables
+//   routes/*.js     [method, path | RegExp, handler] tables (guide.js: 안내 봇 AI, 운영자에게 의견)
 import { HttpError, fail, json } from './lib/http.js';
 import { runBackup } from './lib/storage.js';
 import auth from './routes/auth.js';
@@ -14,8 +14,9 @@ import users from './routes/users.js';
 import docs from './routes/docs.js';
 import files from './routes/files.js';
 import admin from './routes/admin.js';
+import guide from './routes/guide.js';
 
-const ROUTES = [...auth, ...users, ...docs, ...files, ...admin];
+const ROUTES = [...auth, ...users, ...docs, ...files, ...admin, ...guide];
 
 function match(method, path) {
   for (const [m, p, handler] of ROUTES) {

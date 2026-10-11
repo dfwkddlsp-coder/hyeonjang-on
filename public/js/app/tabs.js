@@ -1,7 +1,7 @@
 // 현장ON — sub tabs for 관리대장 / 설정
 'use strict';
 /* ---------- 하위 탭 (관리대장 / 설정) ---------- */
-function setTabs(){const adm=isAdmin();if(!adm)return [['settings:me','내 정보']];return [['settings:me','내 정보'],...(adm?[['settings:site','현장 기준']]:[]),...(SERVER&&adm?[['settings:users','사용자 관리']]:[]),['records','기록·보고'],['settings:data','데이터·앱']]}
+function setTabs(){const adm=isAdmin();if(!adm)return [['settings:me','내 정보']];return [['settings:me','내 정보'],...(adm?[['settings:site','현장 기준']]:[]),...(SERVER&&adm?[['settings:users','사용자 관리'],['settings:guide','안내·의견']]:[]),['records','기록·보고'],['settings:data','데이터·앱']]}
 function segBar(items,active){
   const h1=$('h1',V$());const html=`<div class="seg">${items.map(([k,l])=>`<button type="button" data-seg="${k}" class="${k===active?'on':''}">${l}</button>`).join('')}</div>`;
   if(h1)h1.insertAdjacentHTML('afterend',html);else V$().insertAdjacentHTML('afterbegin',html);

@@ -120,6 +120,22 @@ await test('only the writer (or operator) edits a record; edu / follow / links s
   assert.equal((await A('docs', { docs: [doc('violations', v, { ...vd, place: '3동' })] })).s, 200, 'operator edits any');
 });
 
+await test('feedback: anyone sends, only the operator reads; never synced', async () => {
+  const t = '의견테스트' + tag;
+  assert.equal((await U('feedback', { kind: '불편해요', text: t })).s, 200);
+  assert.equal((await D('feedback', { kind: '오류 같아요', text: t + 'd' })).s, 200, 'driver can send');
+  assert.equal((await U('feedback', { text: '' })).s, 400);
+  assert.equal((await U('feedback')).s, 403, 'user cannot read');
+  assert.equal((await M('feedback?count=1')).s, 403, 'manager cannot read');
+  const list = (await A('feedback')).j.items;
+  const mine = list.find((x) => x.text === t);
+  assert.ok(mine && mine.status === 'new' && mine.by === '일반테스트');
+  assert.equal((await A('feedback/' + mine.id, { status: 'done', memo: 'ok' })).s, 200);
+  assert.equal((await A('feedback')).j.items.find((x) => x.id === mine.id).status, 'done');
+  assert.equal((await A('sync?since=0')).j.docs.some((d) => d.store === 'feedback' || d.store === 'aiuse'), false);
+  assert.equal((await U('docs', { docs: [doc('feedback', 'fx' + tag, { text: 'x' })] })).s, 400, 'not writable through docs');
+});
+
 await test('driver sees and checks only their own equipment', async () => {
   const live = (await D('sync?since=0')).j.docs.filter((d) => !d.deleted);
   assert.deepEqual([...new Set(live.map((d) => d.store))].filter((s) => s !== 'settings'), ['equipment']);

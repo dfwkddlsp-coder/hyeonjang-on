@@ -10,7 +10,7 @@ function lockScreen(){return new Promise(res=>{if(!S.pin)return res();const d=do
   if(location.protocol.startsWith('http')&&await authGate())await loadAll();
   if(SERVER){const sv=Object.keys(STORE).join(',');if(await kvGet('storeSet')!==sv){await kvSet('lastSync',0);await kvSet('storeSet',sv)}}
   await lockScreen();
-  $('#siteName').textContent=S.site;renderNav();badge();
+  $('#siteName').textContent=S.site;renderNav();badge();gbFab();
   {const g=$('#gearBtn');g.hidden=!isAdmin();g.onclick=()=>go('settings','site')}
   $('#brandHome').onclick=e=>{e.preventDefault();if($('#modal').classList.contains('hidden'))go('home');else{closeModal();go('home')}};
   addEventListener('online',()=>{badge();Sync.run()});addEventListener('offline',badge);
