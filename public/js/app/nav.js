@@ -1,7 +1,7 @@
 // 현장ON — app version, bottom nav, view router (go), view registry R
 'use strict';
 /* ---------- views ---------- */
-const APP_VER='2026.10.10-11';
+const APP_VER='2026.10.11-1';
 /* 하위 화면 → 하단 탭 묶음 */
 const NAVOF={plans:'home',workers:'reg',equip:'reg',eqcheck:'reg',vuln:'reg',records:'settings'};
 const REG_TABS=[['workers','근로자'],['equip','장비'],['eqcheck','장비점검'],['vuln','취약근로자']];
@@ -21,12 +21,13 @@ function navItems(){
 function renderNav(){const nav=$('#nav');if(!nav)return;
   nav.innerHTML=navItems().map(n=>`<button type="button" data-v="${n.v}"${n.arg?` data-arg="${h(n.arg)}"`:''}><span class="ni"><i class="i i-${n.icon||n.v}"></i></span><span class="nt">${h(n.t)}</span></button>`).join('');
   $$('button',nav).forEach(b=>b.onclick=()=>go(b.dataset.v,b.dataset.arg));
-  nav.onscroll=navMore;markNav(cur);requestAnimationFrame(navMore)}
+  nav.onscroll=()=>{navMore();navDial()};if(!nav.dataset.dial){nav.dataset.dial='1';navDialBind(nav)}
+  markNav(cur);requestAnimationFrame(()=>{navMore();navDialLook()})}
 /* 폰: 오른쪽에 메뉴가 더 있으면 끝을 흐리게 */
 function navMore(){const n=$('#nav');if(n)n.classList.toggle('more',n.scrollWidth-n.clientWidth-n.scrollLeft>4)}
 addEventListener('resize',navMore);
 function markNav(v,arg){const key=v==='records'?'settings':v;const cat=v==='plans'?(arg||R.plans.cat||(docCats()[0]||{}).k):null;let on=null;
   $$('#nav button').forEach(b=>{const m=b.dataset.v===key&&(!cat||b.dataset.arg===cat);b.classList.toggle('on',m);if(m)on=b});
-  if(on&&on.scrollIntoView)on.scrollIntoView({block:'nearest',inline:'nearest'});navMore()}
+  if(on&&on.scrollIntoView)on.scrollIntoView({block:'nearest',inline:'nearest'});navMore();navDialLook()}
 const R={};
 const V$=()=>$('#view');

@@ -43,6 +43,7 @@ R.settings=()=>{
    <div><label class="f">직책</label><input class="inp" id="sRole" value="${h(S.myRole||'')}" placeholder="예) 안전관리자"></div><div></div></div>
    <label class="f">내 서명</label><div id="mySigBox"></div>
    <button class="btn" id="mySave" style="width:100%;margin-top:12px">내 정보 저장</button></div>
+  <div class="card"><label class="row" style="gap:10px"><input type="checkbox" id="hapOn" ${hapticOn()?'checked':''} style="width:22px;height:22px"><span class="grow"><b>진동</b> <span class="small muted">— 버튼을 누르거나 하단 메뉴를 넘길 때 살짝 진동 (이 기기에만 적용)</span></span></label></div>
   </section><section class="st" data-st="site">
   ${adm?'':'<div class="hint" style="margin-bottom:12px">현장명·삼진아웃·음주 기준은 운영자가 관리합니다.</div><div hidden>'}
   <div class="card"><label class="f">현장명</label><input class="inp" id="sS" value="${h(S.site)}" placeholder="현장명을 직접 입력하세요"></div>
@@ -91,6 +92,7 @@ R.settings=()=>{
     if(SERVER){try{const r=await api('me',{name:nm,org:$('#sO').value.trim(),title:$('#sRole').value.trim(),...(newSig?{sig:newSig}:{})});await kvSet('me',r.user);applyMe(r.user)}catch(x){toast(x.status?x.message:'내 정보 저장은 인터넷 연결이 필요합니다');return false}}
     else{Object.assign(S,{inspectorOrg:$('#sO').value.trim(),inspector:nm,myRole:$('#sRole').value.trim()});if(newSig)S.mySig=newSig}
     delete S._reSig;await saveSettings();return true};
+  $('#hapOn').onchange=e=>{setHaptic(e.target.checked);if(e.target.checked)haptic('press');toast(e.target.checked?'진동 켜짐':'진동 꺼짐')};
   $('#mySave').onclick=async()=>{if(await saveMine()){toast(S.mySig?'내 정보·서명 저장됨':'내 정보 저장됨 (서명은 아직 없음)');drawMine()}};
   const gco=$('#gcOff');if(gco)gco.onclick=async()=>{S.galleryConsent=null;await saveSettings();toast('갤러리 사용 동의 철회됨');R.settings()};
   $('#sSave').onclick=async()=>{
