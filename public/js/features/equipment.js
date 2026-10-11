@@ -36,10 +36,10 @@ const eqWeekItems=(e,w)=>{const ks=w&&(Array.isArray(w.itemList)&&w.itemList.len
 /* 장비점검 화면 [장비 추가]: 대장에 없는 장비가 갑자기 들어온 경우 */
 function eqQuickAdd(){
   const fs=eqForms();
-  openModal('장비 추가',`<div class="small muted">관리대장에 없는 장비를 바로 등록하고 점검합니다. 장비 대장에도 함께 들어갑니다.</div>
+  openModal('장비 추가',`${isGuest()?'':'<div class="small muted">관리대장에 없는 장비를 바로 등록하고 점검합니다. 장비 대장에도 함께 들어갑니다.</div>'}
     <label class="f">점검표 양식 *</label><select class="inp" id="qaF">${fs.map(f=>`<option value="${h(f.k)}">${h(f.name)}</option>`).join('')}<option value="base">기본 (굴착기 등)</option></select>
     <div class="grid g2"><div><label class="f">장비명 *</label><input class="inp" id="qaT" placeholder="예) 크레인(50톤)"></div><div><label class="f">차량번호</label><input class="inp" id="qaP"></div>
-    <div><label class="f">소속업체</label>${comboHtml('qaC','company',isGuest()?ME.org||'':'','업체명 직접 입력')}</div><div><label class="f">전담관리자</label><input class="inp" id="qaM" value="${isGuest()?'':h(S.inspector||'')}"></div>
+    <div><label class="f">소속업체</label>${comboHtml('qaC','company',isGuest()?ME.org||'':'','업체명 직접 입력')}</div><div${isGuest()?' hidden':''}><label class="f">전담관리자</label><input class="inp" id="qaM" value="${isGuest()?'':h(S.inspector||'')}"></div>
     <div><label class="f">운전원</label><input class="inp" id="qaO" value="${isGuest()?h(ME.name):''}"></div><div><label class="f">운전원 연락처</label><input class="inp" id="qaPh" inputmode="tel" placeholder="010-0000-0000" value="${isGuest()?h(ME.title||''):''}"></div></div>
     <button class="btn xl" id="qaOk" style="width:100%;margin-top:14px">추가하고 점검표 열기</button>`,b=>{
     bindCombos(b);const sync=()=>{const f=fs.find(x=>x.k===$('#qaF',b).value);if(f&&!$('#qaT',b).dataset.typed)$('#qaT',b).value=f.name};sync();
@@ -105,33 +105,32 @@ R.eqcheck=()=>{
     .sort((a,b)=>(isMine(b)-isMine(a))||(+a.no||999)-(+b.no||999));
   const done=inUse.filter(e=>eqDayMark(e.id,t)).length,mine=inUse.filter(isMine),mineTodo=mine.filter(e=>!eqDayMark(e.id,t));
   const slots=eqSlots().length,phDone=inUse.filter(e=>{const p=eqWeekPhoto(e.id,mon);return p&&(p.photos||[]).length>=slots}).length;
-  const future=mon>weekMon(t);
+  const future=mon>weekMon(t),drv=isDriver();
   V$().innerHTML=`<div class="row" style="justify-content:space-between"><h1>장비 점검</h1>${isDriver()&&!isGuest()?'':'<button class="btn sm" id="eqAdd"><i class="i i-plus"></i> 장비 추가</button>'}</div>
   <div class="row" style="margin-bottom:10px"><button class="btn sm line" id="wPrev">◀</button><div class="grow" style="text-align:center"><b>${weekLabel(mon)}</b><div class="small muted">${md(days[0])} ~ ${md(days[5])}</div></div><button class="btn sm line" id="wNext">▶</button>${mon!==weekMon(t)?'<button class="btn sm ghost" id="wNow">이번 주</button>':''}</div>
   <div class="grid g4" style="margin-bottom:10px"><div class="stat"><div class="t">오늘 점검</div><div class="n">${done}<span class="small muted">/${inUse.length}대</span></div></div>
-   <div class="stat"><div class="t">내 담당 미점검</div><div class="n" style="color:${mineTodo.length?'var(--bad)':'inherit'}">${mineTodo.length}<span class="small muted">/${mine.length}대</span></div></div>
+   ${drv?'':`<div class="stat"><div class="t">내 담당 미점검</div><div class="n" style="color:${mineTodo.length?'var(--bad)':'inherit'}">${mineTodo.length}<span class="small muted">/${mine.length}대</span></div></div>`}
    <div class="stat"><div class="t">주간 사진 완료</div><div class="n">${phDone}<span class="small muted">/${inUse.length}대</span></div></div></div>
-  <button class="btn line" id="pAll" style="width:100%;margin-bottom:10px"><i class="i i-print"></i> 주간 출력 — 목록의 모든 장비 (점검표 + 사진대지)</button>
+  ${drv?'':`<button class="btn line" id="pAll" style="width:100%;margin-bottom:10px"><i class="i i-print"></i> 주간 출력</button>
   <div class="chips scroll" style="margin-bottom:8px">${[['mine','내 담당'],['all','전체'],['todo','오늘 미점검']].map(([k,l])=>`<button class="chip ${f===k?'on':''}" data-ef="${k}">${l}</button>`).join('')}</div>
-  <input class="inp" id="eqq" type="search" placeholder="장비명·차량번호·업체·전담관리자" value="${h(q)}" style="margin-bottom:10px">
-  ${!inUse.length?'<div class="card empty">장비 대장이 비어 있습니다. 관리대장 → 장비에서 엑셀을 불러오세요.</div>':''}
+  <input class="inp" id="eqq" type="search" placeholder="장비명·차량번호·업체·전담관리자" value="${h(q)}" style="margin-bottom:10px">`}
+  ${!inUse.length?`<div class="card empty">${isGuest()?'<b>＋ 장비 추가</b>를 눌러 오늘 쓸 장비를 등록하세요.':drv?'내 장비가 없습니다. 장비 대장의 운전원 연락처가 로그인 번호와 같은지 관리자에게 확인해 주세요.':'장비 대장이 비어 있습니다. 관리대장 → 장비에서 엑셀을 불러오세요.'}</div>`:''}
   ${list.map(e=>{const wp=eqWeekPhoto(e.id,mon),pn=wp?(wp.photos||[]).length:0;
     return `<div class="card eqc"><div class="row" style="gap:8px"><div class="grow" style="min-width:0"><b>${h(eqName(e))}</b>${isMine(e)?' <span class="badge">내 담당</span>':''}${eqWeekComplete(e.id,mon)?' '+stampHtml('sm'):''}<div class="small muted ell">${h(e.company||'')} · 전담 ${h(e.manager||'미지정')}${e.operator?' · 운전원 '+h(e.operator):''} · 양식 ${h(eqFormName(e))}</div></div></div>
     <div class="eqdays">${days.map((d,i)=>{const m=eqDayMark(e.id,d);return `<div class="eqd${d===t?' today':''}${m==='O'?' ok':m==='X'?' bad':''}${d>t&&!m?' off':''}"><span>${WD6[i]} ${md(d)}</span><b>${m==='O'?'○':m==='X'?'×':m==='P'?'…':d>t?'':'–'}</b></div>`}).join('')}</div>
-    ${future?'':`<div class="grid g2" style="margin-top:8px;gap:8px"><button class="btn sm${eqWeekRec(e.id,mon)?' line':''}" data-wk="${e.id}"><i class="i i-pen"></i> ${eqWeekRec(e.id,mon)?'주간 점검표 보기/수정':'주간 점검표 체크'}</button>
+    ${future?'':`<div class="eq-acts"><button class="btn sm${eqWeekRec(e.id,mon)?' line':''}" data-wk="${e.id}"><i class="i i-pen"></i> ${eqWeekRec(e.id,mon)?'점검표 수정':'주간 점검표'}</button>
       <button class="btn sm ${pn>=slots?'line':'ghost'}" data-wp="${e.id}"><i class="i i-camera"></i> 주간 사진 ${pn}/${slots}</button></div>
-      <button class="btn sm line" data-pr="${e.id}" style="width:100%;margin-top:8px"><i class="i i-print"></i> 이 장비 출력 (점검표 + 사진대지)</button>`}</div>`}).join('')}
-  ${inUse.length&&!list.length?'<div class="card empty">해당 장비 없음</div>':''}
-  <div class="hint small">점검표는 한 화면에서 <b>월~토를 한꺼번에</b> 체크합니다. 사진은 <b>주 1회</b>, [점검사진(관리자+장비)]과 항목별로 1장씩 올립니다. (○ 적합 · × 부적합 · … 일부 · – 미점검)</div>`;
+      ${drv?'':`<button class="btn sm line" data-pr="${e.id}" style="width:100%;margin-top:8px"><i class="i i-print"></i> 이 장비 출력</button>`}`}</div>`}).join('')}
+  ${inUse.length&&!list.length?'<div class="card empty">해당 장비 없음</div>':''}`;
   const setD=v=>{R.eqcheck.d=v;R.eqcheck()};
   $('#wPrev').onclick=()=>setD(addDays(mon,-7));$('#wNext').onclick=()=>setD(addDays(mon,7));if($('#wNow'))$('#wNow').onclick=()=>setD(t);
   $$('[data-ef]').forEach(b=>b.onclick=()=>{R.eqcheck.f=b.dataset.ef;R.eqcheck()});
-  $('#eqq').oninput=e=>{R.eqcheck.q=e.target.value;clearTimeout(R.eqcheck.t);R.eqcheck.t=setTimeout(()=>{R.eqcheck();const i=$('#eqq');i.focus();i.setSelectionRange(i.value.length,i.value.length)},250)};
+  if($('#eqq'))$('#eqq').oninput=e=>{R.eqcheck.q=e.target.value;clearTimeout(R.eqcheck.t);R.eqcheck.t=setTimeout(()=>{R.eqcheck();const i=$('#eqq');i.focus();i.setSelectionRange(i.value.length,i.value.length)},250)};
   $$('[data-wk]').forEach(b=>b.onclick=()=>eqWeekForm(b.dataset.wk,mon));
   if($('#eqAdd'))$('#eqAdd').onclick=eqQuickAdd;
   $$('[data-wp]').forEach(b=>b.onclick=()=>eqWeekPhotoForm(b.dataset.wp,mon));
   $$('[data-pr]').forEach(b=>b.onclick=()=>{const e=E.find(x=>x.id===b.dataset.pr);const pg=eqPrintPages(e,mon);if(!pg.length)return toast('이번 주 점검표·사진이 없습니다');printPages(pg)});
-  $('#pAll').onclick=()=>{const pg=list.flatMap(e=>eqPrintPages(e,mon));if(!pg.length)return toast('이번 주 점검표·사진이 없습니다');printPages(pg)};
+  if($('#pAll'))$('#pAll').onclick=()=>{const pg=list.flatMap(e=>eqPrintPages(e,mon));if(!pg.length)return toast('이번 주 점검표·사진이 없습니다');printPages(pg)};
 };
 
 /* 주간 점검표: 항목 × 월~토 표에서 칸을 눌러 ○ → × → - → 빈칸 */
@@ -145,7 +144,7 @@ function eqWeekForm(eid,mon,fresh){
   openModal(`주간 점검표 · ${eqName(e)}`,`<div class="card"><dl class="kv"><dt>소속협력사</dt><dd>${h(e.company||'-')}</dd><dt>장비</dt><dd>${h(eqName(e))}</dd><dt>전담관리자</dt><dd>${h(e.manager||'미지정')}</dd><dt>점검표 양식</dt><dd>${isDriver()?h(eqFormName(e)):`<select class="inp" id="wkF" style="padding:4px 6px;width:auto">${eqForms().map(f=>`<option value="${h(f.k)}" ${eqFormOf(e)===f?'selected':''}>${h(f.name)}</option>`).join('')}<option value="base" ${eqFormOf(e)?'':'selected'}>기본 (굴착기 등)</option></select>`}</dd></dl>
      <div style="margin-top:8px"><b>${weekLabel(mon)}</b> <span class="muted small">(${md(days[0])}~${md(days[5])})</span> <span id="wkStamp"></span></div></div>
    ${items.some(it=>it.d)?'':'<!--'}<details class="card small"><summary><b>점검 방법 보기</b> (${h(eqFormName(e))})</summary>${items.map((it,i)=>`<div style="margin-top:8px"><b>${i+1}. ${h(it.t)}</b><div class="muted">${h(it.d)}</div></div>`).join('')}</details>${items.some(it=>it.d)?'':'-->'}
-   <div class="row" style="margin-bottom:8px"><span class="grow small muted">칸을 누를 때마다 ○적합 → ×부적합 → -해당없음 → △기타의견 → 빈칸. 요일을 누르면 그날 전체 ○</span><button class="btn sm ghost" id="wkAll">오늘까지 모두 ○</button></div>
+   <div class="row" style="margin-bottom:8px"><span class="grow small muted">칸을 누르면 ○적합 ×부적합 -해당없음 △기타 순으로 바뀜</span><button class="btn sm ghost" id="wkAll">오늘까지 모두 ○</button></div>
    <div class="wkwrap"><table class="wkt"><tr><th class="it">점검 항목</th>${days.map((d,i)=>`<th><button type="button" class="wkh" data-col="${i}" ${d>t?'disabled':''}>${WD6[i]}<br><small>${md(d)}</small></button></th>`).join('')}</tr>
      ${items.map((it,r)=>`<tr><td class="it">${r+1}. ${h(it.t)}</td>${days.map((d,c)=>`<td><button type="button" class="wkc" data-r="${r}" data-c="${c}" ${d>t?'disabled':''}></button></td>`).join('')}</tr>`).join('')}</table></div>
    <div id="wkNotes"></div>

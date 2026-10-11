@@ -382,3 +382,5 @@ body:has(input:focus,textarea:focus,select:focus) .gb-fab{display:none} /* 입�
 .gq-box svg{display:block;width:100%;height:auto}
 .gq-box.off{opacity:.15}
 .gq-exp{text-align:center;margin-top:10px;font-size:15px}
+/* 장비 카드: 주간 점검표 · 주간 사진을 한 줄에 */
+.eq-acts{display:flex;gap:8px;margin-top:8px}.eq-acts>.btn{flex:1 1 0;min-width:0;padding-left:8px;padding-right:8px;white-space:nowrap}

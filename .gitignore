@@ -9,6 +9,7 @@
 
 # Local tooling
 .claude/
+.playwright-mcp/
 Thumbs.db
 node_modules/
 .wrangler/
