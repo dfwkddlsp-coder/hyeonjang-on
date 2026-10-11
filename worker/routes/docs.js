@@ -37,10 +37,11 @@ async function write({ req, env }) {
 
   // Everything below is set-based: one lookup for all previous versions, one upsert per chunk, one insert per photo.
   const prevRows = docs.length ? (await env.DB.prepare(
-    `SELECT d.store, d.id, d.data, d.deleted FROM docs d JOIN json_each(?) j
+    `SELECT d.store, d.id, d.data, d.deleted, d.created_by FROM docs d JOIN json_each(?) j
        ON d.store = json_extract(j.value,'$.s') AND d.id = json_extract(j.value,'$.i')`
   ).bind(JSON.stringify(docs.map((d) => ({ s: d.store, i: d.id })))).all()).results : [];
   const prev = new Map(prevRows.map((r) => [r.store + '|' + r.id, r.deleted ? null : JSON.parse(r.data)]));
+  const prevBy = new Map(prevRows.map((r) => [r.store + '|' + r.id, r.created_by]));
 
   const blobStmts = [], stmts = [];
   let ts = await stampBase(env);
@@ -55,7 +56,7 @@ async function write({ req, env }) {
   const saved = [], rows = [];
   for (const d of docs) {
     const old = prev.get(d.store + '|' + d.id) || null;
-    checkUpdate(u, d, old);
+    checkUpdate(u, d, old, prevBy.get(d.store + '|' + d.id));
     const data = await extractBlobs(env, d.data, u.id, blobStmts);
     data._by = old && old._by ? old._by : u.name; // who first recorded it
     const t = ts++;

@@ -92,3 +92,6 @@ function withGalleryConsent(go){
   $('#gcNo',ov).onclick=()=>ov.remove();
   $('#gcOk',ov).onclick=()=>{S.galleryConsent={at:nowLocal()};saveSettings();ov.remove();go()};
 }
+/* 두 번 탭 방지: 큰 버튼(저장·등록 등)을 0.7초 안에 다시 누르면 무시 → 같은 기록이 두 번 저장되지 않게 */
+{let lastBtn=null,lastAt=0;document.addEventListener('click',e=>{if(!e.isTrusted)return;const b=e.target.closest&&e.target.closest('.btn:not(.sm)');if(!b)return;
+  const t=Date.now();if(b===lastBtn&&t-lastAt<700){e.stopImmediatePropagation();e.preventDefault();return}lastBtn=b;lastAt=t},true)}

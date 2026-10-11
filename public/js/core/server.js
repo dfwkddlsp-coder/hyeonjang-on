@@ -27,7 +27,9 @@ async function applyDoc(d){
   if(d.store==='settings'){if(!d.deleted&&d.data){applyShared(d.data);await saveSettings()}return true}
   if(!STORE[d.store])return false;
   const pend=await DB.req(DB.st('outbox','readonly').get(d.store+'|'+d.id));if(pend)return false; // 내 기기에 더 새 수정이 있음
-  if(d.deleted){await DB.del(d.store,d.id);memDel(d.store,d.id)}else{const o={...d.data,id:d.id};await DB.put(d.store,o);memPut(d.store,o)}
+  const had=STORE[d.store]().find(x=>x.id===d.id);
+  if(d.deleted){if(!had)return false;await DB.del(d.store,d.id);memDel(d.store,d.id)}
+  else{const o={...d.data,id:d.id};if(had&&JSON.stringify(had)===JSON.stringify(o))return false;await DB.put(d.store,o);memPut(d.store,o)}
   return true}
 function softRerender(){const ae=document.activeElement;if(!$('#modal').classList.contains('hidden')||(ae&&/INPUT|TEXTAREA|SELECT/.test(ae.tagName))||$('canvas',V$()))return;R[cur]()}
 const Sync={busy:false,again:false,t:null,state:'',
@@ -39,13 +41,22 @@ const Sync={busy:false,again:false,t:null,state:'',
     if(changed)softRerender();badge()},
   async push(){const all=await DB.all('outbox');if(!all.length)return false;let i=0;
     while(i<all.length){const chunk=[];let size=0;while(i<all.length&&chunk.length<20){const n=JSON.stringify(all[i].data).length;if(chunk.length&&size+n>3e6)break;chunk.push(all[i]);size+=n;i++}
-      const r=await api('docs',{docs:chunk.map(o=>({store:o.store,id:o.id,data:o.data}))});
-      for(const o of chunk){const now=await DB.req(DB.st('outbox','readonly').get(o.k));if(now&&now.ts===o.ts)await DB.del('outbox',o.k)}
-      for(const d of r.saved)await applyDoc(d)}
+      await this.send(chunk)}
     return true},
-  async pull(){let since=(await kvGet('lastSync'))||0,changed=false,more=true;
+  /* 서버가 거절한 기록(권한 없음 등)이 전송 대기열을 영영 막지 않게: 묶음이 거절되면 하나씩 다시 보내고,
+     그래도 거절된 기록은 대기열에서 빼고 알린 뒤 서버 내용으로 다시 받음 */
+  async send(chunk){let r;
+    try{r=await api('docs',{docs:chunk.map(o=>({store:o.store,id:o.id,data:o.data}))})}
+    catch(e){if(![400,403,413].includes(e.status))throw e;
+      if(chunk.length>1){for(const o of chunk)await this.send([o]);return}
+      const o=chunk[0];await DB.del('outbox',o.k);if(STORE[o.store]){await DB.del(o.store,o.id);memDel(o.store,o.id)}await kvSet('lastSync',0);toast('저장되지 않음: '+e.message);return}
+    for(const o of chunk){const now=await DB.req(DB.st('outbox','readonly').get(o.k));if(now&&now.ts===o.ts)await DB.del('outbox',o.k)}
+    for(const d of r.saved)await applyDoc(d)},
+  /* 처음 한 쪽은 마지막 동기화 1분 전부터 다시 받음: 동시에 저장된 기록은 늦게 확정돼도 더 앞선 시각을 달고
+     들어올 수 있어서, 겹쳐 받지 않으면 다른 기기에 영영 안 보일 수 있음 (같은 내용은 applyDoc에서 건너뜀) */
+  async pull(){const last=(await kvGet('lastSync'))||0;let since=last?Math.max(0,last-60000):0,changed=false,more=true;
     while(more){const r=await api('sync?since='+since);for(const d of r.docs)if(await applyDoc(d))changed=true;since=r.cursor;more=r.more}
-    await kvSet('lastSync',since);return changed}
+    await kvSet('lastSync',Math.max(since,last));return changed}
 };
 async function badge(){const el=$('#netBadge');if(!SERVER){el.textContent=navigator.onLine?'온라인':'오프라인 · 기기 저장';return}
   const n=(await DB.all('outbox')).length;el.textContent=!navigator.onLine||Sync.state==='off'?(n?`오프라인 · 전송 대기 ${n}`:'오프라인'):(n?`전송 대기 ${n}`:'동기화됨')}

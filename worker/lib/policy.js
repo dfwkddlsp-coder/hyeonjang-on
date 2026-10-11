@@ -78,8 +78,18 @@ export async function checkWrite(env, u, docs, { replace = [], remove = null, is
   }
 }
 
-/** Per-document rules that need the stored previous version (`old`, null if new or deleted). */
-export function checkUpdate(u, d, old) {
+/* 적발·음주·카테고리 기록은 쓴 사람(과 운영자)만 고침. 다른 사람이 바꿔도 되는 칸:
+   2차 교육 이수(edu), 음주 재측정 결과(follow), 음주→삼진아웃 연결(linkedViolation) */
+const OWN_STORES = new Set(['violations', 'alcohol', 'records']);
+const SHARED_FIELDS = { violations: ['edu'], alcohol: ['follow', 'linkedViolation'] };
+
+/** Per-document rules that need the stored previous version (`old`, null if new or deleted; `oldBy` = its writer's id). */
+export function checkUpdate(u, d, old, oldBy) {
+  if (u.role !== 'admin' && old && oldBy && oldBy !== u.id && OWN_STORES.has(d.store)) {
+    const free = new Set(['_by', ...(SHARED_FIELDS[d.store] || [])]);
+    for (const k of new Set([...Object.keys(old), ...Object.keys(d.data)]))
+      if (!free.has(k) && JSON.stringify(old[k]) !== JSON.stringify(d.data[k])) fail(403, '본인이 작성한 기록만 수정할 수 있습니다');
+  }
   if (u.role === 'driver' && old && old.equipId !== d.data.equipId) fail(403, '본인 장비만 점검할 수 있습니다');
   if (u.role !== 'admin' && (d.store === 'violations' || d.store === 'alcohol') && !!(old && old.void) !== !!d.data.void)
     fail(403, '무효 처리는 운영자만 할 수 있습니다');

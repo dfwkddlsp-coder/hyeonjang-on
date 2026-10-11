@@ -108,6 +108,18 @@ await test('staff-only records are hidden from plain users', async () => {
   const ok = 'ra' + tag;
   assert.equal((await U('docs', { docs: [doc('records', ok, { scope: 'all' })] })).s, 200); del('records', ok);
 });
+await test('only the writer (or operator) edits a record; edu / follow / links stay shared', async () => {
+  const v = 'vo' + tag, a = 'ao' + tag;
+  const vd = { name: '홍길동', type: '안전모', level: 2, edu: { done: false } }, ad = { name: '홍길동', value: 0.04, follow: '' };
+  assert.equal((await U('docs', { docs: [doc('violations', v, vd), doc('alcohol', a, ad)] })).s, 200); del('violations', v); del('alcohol', a);
+  assert.equal((await U('docs', { docs: [doc('violations', v, { ...vd, place: '1동' })] })).s, 200, 'writer edits own');
+  assert.equal((await M('docs', { docs: [doc('violations', v, { ...vd, place: '2동' })] })).s, 403, 'manager edits other');
+  assert.equal((await M('docs', { docs: [doc('violations', v, { ...vd, place: '1동', edu: { done: true, by: 'M' } })] })).s, 200, 'edu is shared');
+  assert.equal((await M('docs', { docs: [doc('alcohol', a, { ...ad, follow: '재측정 → 정상', linkedViolation: v })] })).s, 200, 'follow/link shared');
+  assert.equal((await M('docs', { docs: [doc('alcohol', a, { ...ad, value: 0.01 })] })).s, 403, 'value is not');
+  assert.equal((await A('docs', { docs: [doc('violations', v, { ...vd, place: '3동' })] })).s, 200, 'operator edits any');
+});
+
 await test('driver sees and checks only their own equipment', async () => {
   const live = (await D('sync?since=0')).j.docs.filter((d) => !d.deleted);
   assert.deepEqual([...new Set(live.map((d) => d.store))].filter((s) => s !== 'settings'), ['equipment']);

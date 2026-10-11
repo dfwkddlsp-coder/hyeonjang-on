@@ -23,7 +23,7 @@
 
   const close = () => { if (!document.querySelector('#modal').classList.contains('hidden')) closeModal(); };
   await tryIt(out.modals, 'strikeForm', async () => { go('strike'); strikeForm(); await sl(200); close(); });
-  await tryIt(out.modals, 'alcForm', async () => { go('alcohol'); alcForm(); await sl(200); close(); });
+  await tryIt(out.modals, 'alcForm', async () => { go('alcohol'); alcForm({ name: '점검용', company: '시험업체' }); await sl(200); go('alcohol'); });
   const e0 = eqTargets()[0];
   if (e0) {
     const mon = weekMon(today());
