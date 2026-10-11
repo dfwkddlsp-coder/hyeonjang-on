@@ -6,9 +6,12 @@
 //        user    사용자 — sees and records everything except 취약근로자 (and categories the operator marked staff-only);
 //                        photos yes, files (Excel/PDF) no
 //        driver  장비운전원 — only their own equipment and its checks
+//        guest   임시 운전원 — QR로 하루만 들어온 운전원: 본인이 추가한 장비와 그 점검만 (자정에 세션 끝)
 import { fail } from './http.js';
 
-export const ROLES = ['admin', 'manager', 'user', 'driver'];
+export const ROLES = ['admin', 'manager', 'user', 'driver', 'guest'];
+/** 장비운전원처럼 본인 장비만 다루는 역할 */
+export const isDriverLike = (u) => u.role === 'driver' || u.role === 'guest';
 export const STORES = new Set(['workers', 'equipment', 'violations', 'alcohol', 'vuln', 'eqchecks', 'plans', 'records', 'settings']);
 export const REGISTER_STORES = new Set(['workers', 'equipment', 'vuln']); // replaced wholesale by Excel uploads
 const SCOPED_STORES = new Set(['plans', 'records']); // carry scope 'all' | 'staff' (운영자·관리자만)
@@ -24,6 +27,8 @@ export async function vulnAllowed(env, u) {
 
 /* 장비운전원 본인 장비: 장비 대장의 운전원 연락처 = 로그인 아이디(휴대폰 번호). 연락처가 없는 장비는 이름으로 */
 export async function driverEquipIds(env, u) {
+  if (u.role === 'guest') // 임시 운전원: 본인이 추가한 장비
+    return new Set((await env.DB.prepare("SELECT id FROM docs WHERE store='equipment' AND deleted=0 AND created_by=?").bind(u.id).all()).results.map((r) => r.id));
   const dg = (s) => String(s || '').replace(/\D/g, ''), nm = (s) => String(s || '').replace(/\s/g, '');
   const loginPhone = /^\d{10,11}$/.test(dg(u.login_id)) ? dg(u.login_id) : '';
   const r = await env.DB.prepare("SELECT id,data FROM docs WHERE store='equipment' AND deleted=0").all();
@@ -39,13 +44,13 @@ export async function driverEquipIds(env, u) {
 
 /** SQL condition limiting the stores a user's sync may read. */
 export async function syncStoreFilter(env, u) {
-  if (u.role === 'driver') return "AND store IN ('equipment','eqchecks','settings')";
-  return "AND store NOT IN ('feedback','aiuse') " + ((await vulnAllowed(env, u)) ? '' : "AND store<>'vuln'"); // 의견·AI 사용 횟수는 동기화하지 않음 (운영자는 /api/feedback)
+  if (isDriverLike(u)) return "AND store IN ('equipment','eqchecks','settings')";
+  return "AND store NOT IN ('feedback','aiuse','guestinv') " + ((await vulnAllowed(env, u)) ? '' : "AND store<>'vuln'"); // 의견·AI 사용 횟수는 동기화하지 않음 (운영자는 /api/feedback)
 }
 
 /** Row-level filter on sync results (rows straight from the docs table). */
 export async function syncRowFilter(env, u) {
-  if (u.role === 'driver') { // 본인 장비와 그 점검 기록만
+  if (isDriverLike(u)) { // 본인 장비와 그 점검 기록만
     const mine = await driverEquipIds(env, u);
     return (d) => {
       if (d.store === 'settings' || d.deleted) return true;
@@ -71,6 +76,12 @@ export async function checkWrite(env, u, docs, { replace = [], remove = null, is
   }
   if (docs.some((d) => d.store === 'vuln') && !(await vulnAllowed(env, u)))
     fail(403, '취약근로자 정보는 관리자·운영자만 다룰 수 있습니다');
+  if (u.role === 'guest') { // 임시 운전원: 본인 장비 추가 + 그 장비의 점검만 (남의 장비는 checkUpdate에서 막음)
+    if (docs.some((d) => d.store !== 'eqchecks' && d.store !== 'equipment')) fail(403, '임시 운전원은 본인 장비 추가와 장비점검만 할 수 있습니다');
+    const mine = await driverEquipIds(env, u);
+    for (const d of docs) if (d.store === 'equipment') mine.add(d.id);
+    if (docs.some((d) => d.store === 'eqchecks' && !mine.has(d.data.equipId))) fail(403, '본인 장비만 점검할 수 있습니다');
+  }
   if (u.role === 'driver') { // 장비운전원: 본인 장비의 장비점검만
     if (docs.some((d) => d.store !== 'eqchecks')) fail(403, '장비운전원은 장비점검만 할 수 있습니다');
     const mine = await driverEquipIds(env, u);
@@ -90,14 +101,15 @@ export function checkUpdate(u, d, old, oldBy) {
     for (const k of new Set([...Object.keys(old), ...Object.keys(d.data)]))
       if (!free.has(k) && JSON.stringify(old[k]) !== JSON.stringify(d.data[k])) fail(403, '본인이 작성한 기록만 수정할 수 있습니다');
   }
-  if (u.role === 'driver' && old && old.equipId !== d.data.equipId) fail(403, '본인 장비만 점검할 수 있습니다');
+  if (isDriverLike(u) && old && old.equipId !== d.data.equipId) fail(403, '본인 장비만 점검할 수 있습니다');
+  if (u.role === 'guest' && d.store === 'equipment' && old && oldBy !== u.id) fail(403, '본인이 추가한 장비만 고칠 수 있습니다');
   if (u.role !== 'admin' && (d.store === 'violations' || d.store === 'alcohol') && !!(old && old.void) !== !!d.data.void)
     fail(403, '무효 처리는 운영자만 할 수 있습니다');
 }
 
 /** May this user open the uploaded PDF? (driver never; plain users not for 'staff' 문서함) */
 export async function checkFileAccess(env, u, fileId) {
-  if (u.role === 'driver') fail(403, '열람 권한이 없습니다');
+  if (isDriverLike(u)) fail(403, '열람 권한이 없습니다');
   if (u.role !== 'user') return;
   const r = await env.DB.prepare("SELECT 1 FROM docs WHERE store='plans' AND deleted=0 AND json_extract(data,'$.fileId')=? AND json_extract(data,'$.scope')='staff'").bind(fileId).first();
   if (r) fail(403, '열람 권한이 없습니다');

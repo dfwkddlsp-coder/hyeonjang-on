@@ -39,14 +39,14 @@ function eqQuickAdd(){
   openModal('장비 추가',`<div class="small muted">관리대장에 없는 장비를 바로 등록하고 점검합니다. 장비 대장에도 함께 들어갑니다.</div>
     <label class="f">점검표 양식 *</label><select class="inp" id="qaF">${fs.map(f=>`<option value="${h(f.k)}">${h(f.name)}</option>`).join('')}<option value="base">기본 (굴착기 등)</option></select>
     <div class="grid g2"><div><label class="f">장비명 *</label><input class="inp" id="qaT" placeholder="예) 크레인(50톤)"></div><div><label class="f">차량번호</label><input class="inp" id="qaP"></div>
-    <div><label class="f">소속업체</label>${comboHtml('qaC','company','','업체명 직접 입력')}</div><div><label class="f">전담관리자</label><input class="inp" id="qaM" value="${h(S.inspector||'')}"></div>
-    <div><label class="f">운전원</label><input class="inp" id="qaO"></div><div><label class="f">운전원 연락처</label><input class="inp" id="qaPh" inputmode="tel" placeholder="010-0000-0000"></div></div>
+    <div><label class="f">소속업체</label>${comboHtml('qaC','company',isGuest()?ME.org||'':'','업체명 직접 입력')}</div><div><label class="f">전담관리자</label><input class="inp" id="qaM" value="${isGuest()?'':h(S.inspector||'')}"></div>
+    <div><label class="f">운전원</label><input class="inp" id="qaO" value="${isGuest()?h(ME.name):''}"></div><div><label class="f">운전원 연락처</label><input class="inp" id="qaPh" inputmode="tel" placeholder="010-0000-0000" value="${isGuest()?h(ME.title||''):''}"></div></div>
     <button class="btn xl" id="qaOk" style="width:100%;margin-top:14px">추가하고 점검표 열기</button>`,b=>{
     bindCombos(b);const sync=()=>{const f=fs.find(x=>x.k===$('#qaF',b).value);if(f&&!$('#qaT',b).dataset.typed)$('#qaT',b).value=f.name};sync();
     $('#qaF',b).onchange=sync;$('#qaT',b).oninput=()=>{$('#qaT',b).dataset.typed=1};
     $('#qaOk',b).onclick=async()=>{const type=$('#qaT',b).value.trim();if(!type)return toast('장비명을 입력하세요');
       const e={id:uid(),type,plate:$('#qaP',b).value.trim(),company:$('#qaC',b).value.trim(),manager:$('#qaM',b).value.trim(),operator:$('#qaO',b).value.trim(),phone:$('#qaPh',b).value.trim(),
-        inDate:today(),formK:$('#qaF',b).value,src:'장비점검 추가',created:nowLocal()};
+        inDate:today(),formK:$('#qaF',b).value,src:isGuest()?'임시 출입':'장비점검 추가',created:nowLocal()};
       try{await save('equipment',e);closeModal();toast('장비를 추가했습니다');R.eqcheck();eqWeekForm(e.id,weekMon(R.eqcheck.d||today()))}catch(x){toast(x.message)}}})}
 
 /* 설정 → 현장 기준: 장비 종류별 양식 편집 */
@@ -106,7 +106,7 @@ R.eqcheck=()=>{
   const done=inUse.filter(e=>eqDayMark(e.id,t)).length,mine=inUse.filter(isMine),mineTodo=mine.filter(e=>!eqDayMark(e.id,t));
   const slots=eqSlots().length,phDone=inUse.filter(e=>{const p=eqWeekPhoto(e.id,mon);return p&&(p.photos||[]).length>=slots}).length;
   const future=mon>weekMon(t);
-  V$().innerHTML=`<div class="row" style="justify-content:space-between"><h1>장비 점검</h1>${isDriver()?'':'<button class="btn sm" id="eqAdd"><i class="i i-plus"></i> 장비 추가</button>'}</div>
+  V$().innerHTML=`<div class="row" style="justify-content:space-between"><h1>장비 점검</h1>${isDriver()&&!isGuest()?'':'<button class="btn sm" id="eqAdd"><i class="i i-plus"></i> 장비 추가</button>'}</div>
   <div class="row" style="margin-bottom:10px"><button class="btn sm line" id="wPrev">◀</button><div class="grow" style="text-align:center"><b>${weekLabel(mon)}</b><div class="small muted">${md(days[0])} ~ ${md(days[5])}</div></div><button class="btn sm line" id="wNext">▶</button>${mon!==weekMon(t)?'<button class="btn sm ghost" id="wNow">이번 주</button>':''}</div>
   <div class="grid g4" style="margin-bottom:10px"><div class="stat"><div class="t">오늘 점검</div><div class="n">${done}<span class="small muted">/${inUse.length}대</span></div></div>
    <div class="stat"><div class="t">내 담당 미점검</div><div class="n" style="color:${mineTodo.length?'var(--bad)':'inherit'}">${mineTodo.length}<span class="small muted">/${mine.length}대</span></div></div>

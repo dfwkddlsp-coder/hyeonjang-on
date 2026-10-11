@@ -3,6 +3,7 @@ import { body, fail, json, now, uid } from '../lib/http.js';
 import { checkPw, hashPw, newSalt } from '../lib/crypto.js';
 import { publicUser, requireAdmin } from '../lib/session.js';
 import { ROLES } from '../lib/policy.js';
+const SETTABLE = ROLES.filter((r) => r !== 'guest'); // 임시 운전원은 QR로만 생김
 
 const userById = (env, id) => env.DB.prepare('SELECT * FROM users WHERE id=?').bind(id).first();
 
@@ -22,7 +23,7 @@ async function create({ req, env }) {
   if (await env.DB.prepare('SELECT 1 FROM users WHERE login_id=?').bind(loginId).first()) fail(409, '이미 있는 아이디입니다');
   const salt = newSalt(), id = uid(), t = now();
   await env.DB.prepare('INSERT INTO users (id,login_id,name,org,title,role,pw_hash,pw_salt,must_change,active,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,1,1,?,?)')
-    .bind(id, loginId, name, String(b.org || ''), String(b.title || ''), ROLES.includes(b.role) ? b.role : 'user', await hashPw(b.password, salt), salt, t, t).run();
+    .bind(id, loginId, name, String(b.org || ''), String(b.title || ''), SETTABLE.includes(b.role) ? b.role : 'user', await hashPw(b.password, salt), salt, t, t).run();
   return json({ user: publicUser(await userById(env, id)), by: a.id });
 }
 
@@ -32,7 +33,7 @@ async function update({ req, env, params: [id] }) {
   const b = await body(req);
   const u = await userById(env, id);
   if (!u) fail(404, '사용자가 없습니다');
-  const role = ROLES.includes(b.role) ? b.role : u.role;
+  const role = SETTABLE.includes(b.role) ? b.role : u.role;
   const active = b.active === undefined ? u.active : (b.active ? 1 : 0);
   if (u.id === a.id && (role !== 'admin' || !active)) fail(400, '본인의 운영자 권한은 해제할 수 없습니다');
   const stmts = [env.DB.prepare('UPDATE users SET name=?, org=?, title=?, role=?, active=?, updated_at=? WHERE id=?')

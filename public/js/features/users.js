@@ -3,13 +3,13 @@
 async function loadUsers(){const box=$('#usersBox');if(!box)return;
   try{const r=await api('users');LAST_USERS=r.users;const row=u=>`<div class="it" data-u="${u.id}"><span class="dot d0">${h(u.name.slice(0,1))}</span><div class="m"><b>${h(u.name)}</b> <span class="muted small">${h(u.loginId)}</span> ${u.role!=='user'?roleBadge(u.role):''}${!u.active?' <span class="badge bgray">사용 정지</span>':''}${u.mustChange?' <span class="badge bwarn">첫 로그인 전</span>':''}<div class="small muted ell">${h([u.org,u.title].filter(Boolean).join(' · ')||'-')}</div></div></div>`;
     /* 분류: 운영자·관리자 / 사용자 / 장비운전원 / 사용 정지 — 접기·펼치기는 기기에 기억 */
-    const G=[['staff','운영자 · 관리자',u=>u.active&&(u.role==='admin'||u.role==='manager')],['user','사용자',u=>u.active&&u.role==='user'],['driver','장비운전원',u=>u.active&&u.role==='driver'],['off','사용 정지',u=>!u.active]];
+    const G=[['staff','운영자 · 관리자',u=>u.active&&(u.role==='admin'||u.role==='manager')],['user','사용자',u=>u.active&&u.role==='user'],['driver','장비운전원',u=>u.active&&u.role==='driver'],['guest','임시 운전원 (QR)',u=>u.active&&u.role==='guest'],['off','사용 정지',u=>!u.active]];
     let fold={};try{fold=JSON.parse(localStorage.getItem('hjUserFold')||'{}')}catch(e){}
     const isOpen=k=>fold[k]!==undefined?fold[k]:(k==='staff'||k==='user');
     box.innerHTML=G.map(([k,t,f])=>{const us=r.users.filter(f);if(!us.length)return '';const wait=us.filter(u=>u.mustChange).length;
       return `<details class="ugrp" data-g="${k}" ${isOpen(k)?'open':''}><summary>${t} <span class="muted small">${us.length}명${wait?` · 첫 로그인 전 ${wait}`:''}</span></summary>${us.map(row).join('')}</details>`}).join('')||'<div class="empty">없음</div>';
     $$('details.ugrp',box).forEach(d=>d.ontoggle=()=>{fold[d.dataset.g]=d.open;try{localStorage.setItem('hjUserFold',JSON.stringify(fold))}catch(e){}});
-    $$('[data-u]',box).forEach(el=>el.onclick=()=>editUser(r.users.find(u=>u.id===el.dataset.u)))}
+    $$('[data-u]',box).forEach(el=>el.onclick=()=>{const u=r.users.find(x=>x.id===el.dataset.u);if(u.role==='guest')return toast('임시 운전원은 QR로만 들어오며 그날 자정에 끝납니다');editUser(u)})}
   catch(x){box.innerHTML=`<div class="empty">${h(x.status?x.message:'인터넷 연결이 필요합니다')}</div>`}}
 let LAST_USERS=[];
 /* 여러 명 한 번에 등록: 엑셀·조직도에서 복사해 붙여넣기, 또는 장비 대장의 운전원 불러오기 */

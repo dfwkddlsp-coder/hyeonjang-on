@@ -10,22 +10,24 @@ export function cookieToken(req) {
   return m ? m[1] : null;
 }
 
-export function sessionCookie(token, req) {
+export function sessionCookie(token, req, maxAgeSec = SESSION_DAYS * 86400) {
   const secure = new URL(req.url).protocol === 'https:' ? '; Secure' : '';
-  return `hs=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${SESSION_DAYS * 86400}${secure}`;
+  return `hs=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${Math.max(1, Math.floor(maxAgeSec))}${secure}`;
 }
 export const CLEAR_COOKIE = 'hs=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0';
 
-export async function startSession(env, userId, req) {
+/** expiresAt: 정해진 시각에 끝나는 세션 (임시 운전원 = 그날 자정). 없으면 SESSION_DAYS */
+export async function startSession(env, userId, req, expiresAt = 0) {
+  const exp = expiresAt || now() + SESSION_DAYS * DAY;
   const raw = b64(crypto.getRandomValues(new Uint8Array(32))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
   await env.DB.prepare('INSERT INTO sessions (token_hash,user_id,expires_at,created_at) VALUES (?,?,?,?)')
-    .bind(await sha256(raw), userId, now() + SESSION_DAYS * DAY, now()).run();
-  return sessionCookie(raw, req);
+    .bind(await sha256(raw), userId, exp, now()).run();
+  return sessionCookie(raw, req, (exp - now()) / 1000);
 }
 
 /** Push the expiry back to a full SESSION_DAYS once a day; returns a Set-Cookie header or null. */
 export async function renewSession(env, req, user) {
-  if (!user || user.s_exp - now() >= (SESSION_DAYS - 1) * DAY) return null;
+  if (!user || user.role === 'guest' || user.s_exp - now() >= (SESSION_DAYS - 1) * DAY) return null; // 임시 운전원은 연장 안 함
   const t = cookieToken(req);
   await env.DB.prepare('UPDATE sessions SET expires_at=? WHERE token_hash=?').bind(now() + SESSION_DAYS * DAY, await sha256(t)).run();
   return sessionCookie(t, req);

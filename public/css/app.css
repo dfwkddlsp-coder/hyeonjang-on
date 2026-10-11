@@ -377,3 +377,8 @@ body:has(input:focus,textarea:focus,select:focus) .gb-fab{display:none} /* 입�
 .imp-map{display:grid;grid-template-columns:minmax(90px,auto) 1fr;gap:6px 10px;align-items:center;margin-top:10px}
 .imp-map label{font-size:14px;color:var(--sub)}.imp-map label.key{color:var(--ink);font-weight:700}
 .imp-map select.inp{min-height:40px;padding:6px 8px;font-size:14px;min-width:0}
+/* 임시 출입 QR */
+.gq-box{background:#fff;border-radius:14px;padding:12px;max-width:320px;margin:0 auto}
+.gq-box svg{display:block;width:100%;height:auto}
+.gq-box.off{opacity:.15}
+.gq-exp{text-align:center;margin-top:10px;font-size:15px}

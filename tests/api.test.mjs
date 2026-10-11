@@ -145,6 +145,41 @@ await test('driver sees and checks only their own equipment', async () => {
   assert.equal((await D('docs', { docs: [doc('eqchecks', wk + 'o', { equipId: eqOther })] })).s, 403);
   assert.equal((await D('docs', { docs: [doc('violations', 'dv' + tag)] })).s, 403);
 });
+await test('임시 출입 QR: staff opens it, many join until closed, guests touch only their own equipment', async () => {
+  assert.equal((await U('guest/invite', { minutes: 30 })).s, 403, 'plain user cannot open a QR');
+  const inv = (await M('guest/invite', { minutes: 30 })).j;
+  assert.ok(inv.token && inv.id);
+  const G = client(), G2 = client();
+  const j = await G('guest/join', { token: inv.token, name: '임시테스트', phone: '010-1234-5678', company: '임시중기' });
+  assert.equal(j.s, 200);
+  assert.equal(j.j.user.role, 'guest');
+  const age = +(j.h.get('set-cookie').match(/Max-Age=(\d+)/) || [])[1];
+  assert.ok(age > 0 && age <= 86400, 'session ends by midnight');
+  cleanup.push(() => A(`users/${j.j.user.id}`, { active: false }));
+  const j2 = await G2('guest/join', { token: inv.token, name: '임시둘', phone: '010-9999-0000' });
+  assert.equal(j2.s, 200, 'same QR works for a second person');
+  cleanup.push(() => A(`users/${j2.j.user.id}`, { active: false }));
+  assert.equal((await G2('guest/join', { token: inv.token, name: '', phone: '010-9999-0000' })).s, 400);
+  const eqG = 'eqg' + tag, ckG = 'ckg' + tag;
+  assert.equal((await G('docs', { docs: [doc('equipment', eqG, { type: '지게차', operator: '임시테스트' }), doc('eqchecks', ckG, { equipId: eqG, kind: 'week' })] })).s, 200, 'adds own equipment and checks it');
+  del('equipment', eqG); del('eqchecks', ckG);
+  assert.equal((await G('docs', { docs: [doc('eqchecks', 'ckx' + tag, { equipId: eqOther })] })).s, 403, 'cannot check other equipment');
+  assert.equal((await G('docs', { docs: [doc('equipment', eqOther, { type: '바꿈' })] })).s, 403, 'cannot edit other equipment');
+  assert.equal((await G2('docs', { docs: [doc('equipment', eqG, { type: '바꿈' })] })).s, 403, 'another guest cannot edit it either');
+  assert.equal((await G('docs', { docs: [doc('workers', 'wg' + tag, { name: 'x' })] })).s, 403, 'no registers');
+  const seen = (await G('sync?since=0')).j.docs.filter((d) => d.store === 'equipment' && !d.deleted).map((d) => d.id); // 지운 기록은 id만 오는 표시라 제외
+  assert.deepEqual(seen, [eqG], 'sees only own equipment');
+  assert.equal((await G('users')).s, 403);
+  const st = (await M('guest/invite/' + inv.id)).j;
+  assert.deepEqual(st.joined.map((x) => x.name).sort(), ['임시둘', '임시테스트']);
+  assert.equal((await M('guest/invite/' + inv.id + '/close', {})).s, 200);
+  assert.equal((await client()('guest/join', { token: inv.token, name: '늦음', phone: '010-1111-1111' })).s, 403, 'closed QR');
+  assert.equal((await client()('guest/join', { token: 'nope', name: 'x', phone: '010-1111-1111' })).s, 403, 'bad token');
+  const byHand = (await A('users', { loginId: 'gx' + tag, name: 'x', password: 'init-pass-9', role: 'guest' })).j.user;
+  cleanup.push(() => A(`users/${byHand.id}`, { active: false }));
+  assert.equal(byHand.role, 'user', 'guest role cannot be given by hand');
+});
+
 await test('PDF upload: manager and operator only, real PDFs only, staff files hidden from users', async () => {
   const pdf = Buffer.from('%PDF-1.4\n%%EOF\n');
   assert.equal((await U('admin/files', pdf, 'application/pdf')).s, 403);

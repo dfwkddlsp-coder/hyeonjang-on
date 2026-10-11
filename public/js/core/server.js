@@ -3,10 +3,12 @@
 /* 서버 모드 (Cloudflare Worker + D1): 로그인하면 SERVER=true, ME=로그인 사용자 */
 let SERVER=false,ME=null;
 const isAdmin=()=>!SERVER||(ME&&ME.role==='admin');
-const isDriver=()=>SERVER&&!!ME&&ME.role==='driver';
+/* 장비운전원처럼 본인 장비만: driver(계정) · guest(QR 임시 운전원, 그날 자정까지) */
+const isDriver=()=>SERVER&&!!ME&&(ME.role==='driver'||ME.role==='guest');
+const isGuest=()=>SERVER&&!!ME&&ME.role==='guest';
 /* 관리자·운영자: 취약근로자 열람, 파일(대장 엑셀·PDF) 등록 */
 const isStaff=()=>!SERVER||(!!ME&&(ME.role==='admin'||ME.role==='manager'));
-const roleBadge=r=>r==='admin'?'<span class="badge">운영자</span>':r==='manager'?'<span class="badge">관리자</span>':r==='driver'?'<span class="badge bgray">장비운전원</span>':'<span class="badge bgray">사용자</span>';
+const roleBadge=r=>r==='guest'?'<span class="badge bwarn">임시 운전원</span>':r==='admin'?'<span class="badge">운영자</span>':r==='manager'?'<span class="badge">관리자</span>':r==='driver'?'<span class="badge bgray">장비운전원</span>':'<span class="badge bgray">사용자</span>';
 const SHARED_KEYS=['site','guide','colAlias','periodMonths','vtypes','levels','alcMode','alc','alcMsg','vulnAge','bp','eqItems','eqCheckItems','vulnScope','homeLayout','docCats','forms','eqForms','eqExclude'];
 async function api(path,body){
   const r=await fetch('/api/'+path,{method:body!==undefined?'POST':'GET',credentials:'same-origin',headers:body!==undefined?{'content-type':'application/json'}:{},body:body!==undefined?JSON.stringify(body):undefined});
@@ -105,8 +107,11 @@ async function authGate(){
   }
   SERVER=true;
   let u=st.user;
+  /* 임시 출입 QR(#g=토큰)으로 열었으면 이름·연락처만 받고 들어감 */
+  const gt=(location.hash.match(/^#g=([A-Za-z0-9]+)/)||[])[1];
+  if(gt){history.replaceState(null,'',location.pathname);u=await guestJoin(gt,u)||u}
   if(st.setupNeeded)u=await authScreen('setup');
-  else if(!u)u=await authScreen('login');
+  else if(!u){const last=await kvGet('me');if(last&&last.role==='guest')await guestEnded();u=await authScreen('login')}
   if(u.mustChange)u=await authScreen('pw');
   const prev=await kvGet('me');let reset=false;
   if(!prev||prev.id!==u.id||prev.role!==u.role){for(const s of [...STORE_NAMES,'outbox'])await DB.putMany(s,[],true);await kvSet('lastSync',0);reset=true}

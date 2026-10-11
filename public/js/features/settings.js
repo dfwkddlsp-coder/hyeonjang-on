@@ -34,7 +34,7 @@ R.settings=()=>{
   const adm=isAdmin();
   V$().innerHTML=`<h1>설정</h1>
   <section class="st" data-st="me">
-  ${SERVER?`<div class="card"><div class="row"><div class="grow"><b>${h(ME.name)}</b> <span class="muted small">${h(ME.loginId)}</span> ${roleBadge(ME.role)}</div><button class="btn sm line" id="pwBtn">비밀번호 변경</button><button class="btn sm line" id="outBtn">로그아웃</button></div></div>`:''}
+  ${SERVER?`<div class="card"><div class="row"><div class="grow"><b>${h(ME.name)}</b> <span class="muted small">${h(isGuest()?ME.title:ME.loginId)}</span> ${roleBadge(ME.role)}${isGuest()?'<div class="small muted">오늘 자정까지 쓸 수 있는 임시 출입입니다</div>':''}</div>${isGuest()?'':'<button class="btn sm line" id="pwBtn">비밀번호 변경</button>'}<button class="btn sm line" id="outBtn">${isGuest()?'나가기':'로그아웃'}</button></div></div>`:''}
   </section><section class="st" data-st="users">
   ${SERVER&&adm?`<div class="card"><div class="row"><b class="grow">사용자 관리</b><button class="btn sm line" id="uBulk"><i class="i i-plus"></i> 여러 명 등록</button><button class="btn sm" id="uAdd"><i class="i i-plus"></i> 사용자 등록</button></div><div class="small muted" style="margin-top:4px">등록한 사람만 로그인할 수 있습니다. 첫 로그인 때 비밀번호를 직접 바꾸게 됩니다.</div><div class="list" id="usersBox" style="margin-top:6px"><div class="empty">불러오는 중…</div></div></div>`:''}
   </section><section class="st" data-st="me">
