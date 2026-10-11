@@ -7,6 +7,8 @@ workers_dev = true
 directory = "./public"
 binding = "ASSETS"
 not_found_handling = "single-page-application"
+# 새 탭으로 여는 /api 주소(PDF 열기 등)가 앱 화면(index.html)으로 바뀌지 않게 Worker가 먼저 받음
+run_worker_first = ["/api/*"]
 
 [[d1_databases]]
 binding = "DB"
