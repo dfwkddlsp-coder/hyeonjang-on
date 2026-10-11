@@ -373,3 +373,7 @@ canvas.gbc{image-rendering:pixelated;display:block;width:32px;height:42px;flex:n
 .gb-new{display:flex;align-items:center;gap:8px;width:100%;border:1.5px solid #f2c9bf;background:#fff4f1;border-radius:12px;padding:12px;margin-bottom:12px;font-size:15px;cursor:pointer;color:var(--ink);text-align:left}
 .gb-new b{background:var(--bad);color:#fff;border-radius:999px;padding:1px 9px}
 body:has(input:focus,textarea:focus,select:focus) .gb-fab{display:none} /* 입력 중(키보드)에는 캐릭터 버튼 숨김 */
+/* 엑셀 인식 결과 확인 */
+.imp-map{display:grid;grid-template-columns:minmax(90px,auto) 1fr;gap:6px 10px;align-items:center;margin-top:10px}
+.imp-map label{font-size:14px;color:var(--sub)}.imp-map label.key{color:var(--ink);font-weight:700}
+.imp-map select.inp{min-height:40px;padding:6px 8px;font-size:14px;min-width:0}

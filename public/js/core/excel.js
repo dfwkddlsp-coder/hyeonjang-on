@@ -1,17 +1,20 @@
 // 현장ON — 엑셀 불러오기·내보내기
 'use strict';
 /* ---------- excel import ---------- */
-const WORKER_FIELDS={company:['소속업체','협력사명','업체명','소속','업체','협력사','회사'],name:['성명','이름','근로자명'],job:['직종','공종','직책','직무'],gender:['성별'],birth:['생년월일','생일'],phone:['연락처','전화번호','휴대폰','핸드폰'],emergency:['비상연락처'],elderly:['고령근로자','고령자'],foreign:['외국인근로자','외국인'],blood:['혈액형'],helmet:['안전모번호','출입번호','안전모','사번'],inDate:['최초투입일','투입일','입사일','출근일'],hireY:['연도'],hireM:['=월'],hireD:['=일'],eduY:['기초안전보건교육이수'],eduN:['=미이수'],note:['비고']};
-const EQUIP_FIELDS={no:['관리번호','번호'],company:['소속업체','업체명','소속','업체'],type:['장비명','장비종류','기종'],operator:['운전원','조종원','기사'],plate:['차량번호','등록번호'],phone:['운전원연락처','연락처','전화번호'],inDate:['반입일자','반입일'],outDate:['반출일자','반출일'],regCert:['건설기계등록증','등록증'],inspect:['검사기간','검사유효기간','검사일'],bizCert:['사업자등록증','사업자'],license:['운전원면허증','면허증','조종사면허'],moveIns:['동산보험'],insurance:['보험유효기간','보험기간','보험만료'],manager:['전담관리자','관리자'],checklist:['점검표'],note:['비고'],commander:['작업지휘자'],signal:['신호수','유도원']};
+const WORKER_FIELDS={company:['소속업체','협력사명','업체명','소속','업체','협력사','회사','협력업체','소속회사','근무처','하도급사','하청업체'],name:['성명','이름','근로자명','근로자성명','작업자명','작업자성명','작업자이름','근무자명','성함'],job:['직종','공종','직책','직무','공정','작업종류','담당업무'],gender:['성별','남녀'],birth:['생년월일','생일','생년','출생일','주민번호','주민등록번호'],phone:['연락처','전화번호','휴대폰','핸드폰','휴대전화','휴대폰번호','핸드폰번호','전화','hp'],emergency:['비상연락처','비상연락','비상전화','비상전화번호','긴급연락처','보호자연락처','보호자'],elderly:['고령근로자','고령자'],foreign:['외국인근로자','외국인'],blood:['혈액형'],helmet:['안전모번호','출입번호','안전모','사번','출입증번호','출입카드'],inDate:['최초투입일','투입일','입사일','출근일','투입일자','입사일자','입장일'],hireY:['연도'],hireM:['=월'],hireD:['=일'],eduY:['기초안전보건교육이수'],eduN:['=미이수'],note:['비고','특이사항','메모']};
+const EQUIP_FIELDS={no:['관리번호','번호'],company:['소속업체','업체명','소속','업체','협력사','협력업체','소속회사'],type:['장비명','장비종류','기종','장비명칭','건설기계명','기계명','차종'],operator:['운전원','조종원','기사','운전자','조종사','운전원명','운전원성명','기사명'],plate:['차량번호','등록번호','차량등록번호','장비번호','차번','번호판'],phone:['운전원연락처','연락처','전화번호','운전자연락처','기사연락처','조종사연락처','휴대폰','핸드폰','휴대전화','전화'],inDate:['반입일자','반입일','반입'],outDate:['반출일자','반출일','반출'],regCert:['건설기계등록증','등록증'],inspect:['검사기간','검사유효기간','검사일'],bizCert:['사업자등록증','사업자'],license:['운전원면허증','면허증','조종사면허'],moveIns:['동산보험'],insurance:['보험유효기간','보험기간','보험만료','보험만기','보험종료'],manager:['전담관리자','관리자','장비담당자','담당자','전담자'],checklist:['점검표'],note:['비고'],commander:['작업지휘자','작업지휘'],signal:['신호수','유도원','신호원','유도자']};
 const EQUIP_LABEL={no:'관리번호',company:'소속업체',type:'장비명',operator:'운전원',plate:'차량번호',phone:'운전원 연락처',inDate:'반입일자',outDate:'반출일자',regCert:'건설기계 등록증',inspect:'건설기계 검사기간',bizCert:'사업자 등록증',license:'운전원 면허증',moveIns:'동산보험',insurance:'보험유효기간',manager:'전담관리자',checklist:'점검표',note:'비고',commander:'작업지휘자',signal:'신호수'};
 const WORKER_LABEL={company:'소속업체',name:'성명',job:'직종',gender:'성별',birth:'생년월일',phone:'연락처',emergency:'비상연락처',inDate:'채용일자',elderly:'고령근로자',foreign:'외국인근로자',blood:'혈액형',eduBasic:'기초안전보건교육',note:'비고'};
 
+/* 엑셀 칸 찾기에 쓰는 말: 기본 목록 + 운영자가 확인 화면에서 직접 골라 기억한 제목(설정 → 현장 기준 → 엑셀 칸 이름) */
+function regFields(kind){const base=kind==='workers'?WORKER_FIELDS:EQUIP_FIELDS,add=(S.colAlias||{})[kind]||{},o={};
+  for(const k in base)o[k]=[...base[k],...(add[k]||[]).map(a=>'='+a)];return o}
 function buildMap(top,sub,FIELDS){
   const n=Math.max(top.length,sub?sub.length:0);const best={};
   for(let c=0;c<n;c++){
     const hd=norm((top[c]||'')+(sub?(sub[c]||''):''));if(!hd)continue;
     let bf=null,bl=0;
-    for(const [f,al] of Object.entries(FIELDS))for(const a of al){const ex=a[0]==='=',na=norm(ex?a.slice(1):a),L=na.length;if((ex?hd===na:hd.includes(na))&&L>bl){bf=f;bl=L}}
+    for(const [f,al] of Object.entries(FIELDS))for(const a of al){const ex=a[0]==='=',na=norm(ex?a.slice(1):a),L=na.length+(ex?100:0); /* 제목 전체가 똑같은 말(=…)이 가장 먼저 */if((ex?hd===na:hd.includes(na))&&L>bl){bf=f;bl=L}}
     if(bf&&(!best[bf]||best[bf].l<bl))best[bf]={c,l:bl};
   }
   const m={};for(const k in best)m[k]=best[k].c;return m;
@@ -33,17 +36,22 @@ function parseWorkbook(wb,FIELDS,minScore){
       const m1=buildMap(rows[r],null,FIELDS),m2=buildMap(rows[r],rows[r+1]||[],FIELDS);
       const two=Object.keys(m2).length>Object.keys(m1).length;
       const map=two?m2:m1,sc=Object.keys(map).length;
-      if(sc>=minScore&&(!best||sc>best.score))best={sn,rows,map,score:sc,start:r+(two?2:1)};
+      if(sc>=minScore&&(!best||sc>best.score||(sc===best.score&&!two&&best.two&&r===best.hr+1)))best={sn,rows,map,score:sc,start:r+(two?2:1),hr:r,two}; // 제목 줄+머리글로 잡힌 것보다 머리글 한 줄이 같은 점수면 그쪽
     }
   }
   if(!best)return null;
   if(best.map.hireY!=null&&best.map.hireM==null)best.map.hireM=best.map.hireY+1;
   if(best.map.hireM!=null&&best.map.hireD==null)best.map.hireD=best.map.hireM+1;
-  const out=[];
-  for(let r=best.start;r<best.rows.length;r++){const row=best.rows[r];const o={};
-    for(const f in best.map)o[f]=String(row[best.map[f]]??'').trim();out.push(o)}
-  return {sheet:best.sn,rows:out,fields:Object.keys(best.map)};
+  /* 확인 화면용: 열마다 머리글 글자(두 줄 머리글은 합침), 원본 행, 머리글 위치 */
+  const hrows=best.rows.slice(best.hr,best.start),nc=Math.max(0,...hrows.map(r=>r.length));
+  const head=Array.from({length:nc},(_,c)=>hrows.map(r=>String(r[c]??'').replace(/\s+/g,' ').trim()).filter(Boolean).join(' / '));
+  return applyMap({sheet:best.sn,raw:best.rows,start:best.start,headRow:best.hr+1,head},{...best.map});
 }
+/* 열 연결(map: 항목 → 열 번호)로 행을 다시 뽑음. 확인 화면에서 사람이 열을 바꾸면 이걸로 다시 계산 */
+function applyMap(res,map){const out=[];
+  for(let r=res.start;r<res.raw.length;r++){const row=res.raw[r];const o={};
+    for(const f in map)o[f]=String(row[map[f]]??'').trim();out.push(o)}
+  return Object.assign(res,{map,rows:out,fields:Object.keys(map)})}
 const readFile=f=>new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>{try{res(XLSX.read(fr.result,{type:'array'}))}catch(e){rej(e)}};fr.onerror=()=>rej(fr.error);fr.readAsArrayBuffer(f)});
 const eqKey=e=>(norm(e.plate)||norm(e.company)+'|'+norm(e.type))+'|'+norm(e.operator);
 const wKey=w=>norm(w.name)+'|'+(norm(w.birth)||norm(w.company));
@@ -52,12 +60,13 @@ const wKey=w=>norm(w.name)+'|'+(norm(w.birth)||norm(w.company));
 const regSig=o=>{const c={...o};delete c.src;delete c.updated;delete c.created;delete c._by;return JSON.stringify(c)};
 /* 엑셀 대장 불러오기. 같은 사람·장비는 같은 기록(id)을 이어 쓰고 바뀐 칸만 갱신 — 점검·적발·상담 기록과의 연결이 유지됨.
    sync=true (현재 대장으로 맞추기): 파일에 없는 장비는 반출 처리, 근로자는 대장에서 제외. 기록 자체는 지우지 않음 */
-async function importFiles(kind,files,sync){
+async function importFiles(kind,files,sync,pre){ // pre: 확인 화면에서 이미 읽고 열을 맞춘 결과 (Map 파일 → parseWorkbook 결과)
   if(kind==='vuln')return importVuln(files,sync);
-  const isW=kind==='workers';const FIELDS=isW?WORKER_FIELDS:EQUIP_FIELDS;let added=0,updated=0,same=0,skipped=0;const msgs=[];const touched=new Set(),seen=new Set();
+  const isW=kind==='workers';const FIELDS=regFields(kind);let added=0,updated=0,same=0,skipped=0;const msgs=[];const touched=new Set(),seen=new Set();
   const cur=(isW?W:E).map(x=>({...x}));const before=new Map(cur.map(x=>[x.id,regSig(x)]));const idx=new Map(cur.map(x=>[isW?wKey(x):eqKey(x),x]));
   for(const f of files){
-    let res;try{res=parseWorkbook(await readFile(f),FIELDS,isW?2:3)}catch(e){msgs.push(`${f.name}: 읽기 실패`);continue}
+    let res;if(pre&&pre.has(f))res=pre.get(f);else try{res=parseWorkbook(await readFile(f),FIELDS,isW?2:3)}catch(e){msgs.push(`${f.name}: 읽기 실패`);continue}
+    if(res===false){msgs.push(`${f.name}: 읽기 실패`);continue}
     if(!res){msgs.push(`${f.name}: 머리글(${isW?'성명/소속':'장비명/차량번호'}) 행을 찾지 못함`);continue}
     for(const o of res.rows){
       const valid=isW?!!o.name:!!(o.type||o.plate||o.operator);if(!valid){continue}

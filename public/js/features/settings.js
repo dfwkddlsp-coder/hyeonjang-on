@@ -49,6 +49,7 @@ R.settings=()=>{
   <div class="card"><label class="f">현장명</label><input class="inp" id="sS" value="${h(S.site)}" placeholder="현장명을 직접 입력하세요"></div>
   ${adm?'<div class="card"><b>카테고리</b> <span class="small muted">— 카테고리마다 홈 타일이 생깁니다. 유형: PDF 문서함 · 사진대지 · 점검표 · 작성 양식</span><div id="dcBox" style="margin-top:6px"></div></div>':''}
   ${adm?'<div class="card"><b>양식 문구</b> <span class="small muted">— 인쇄되는 확인서·통지서의 제목과 문구. 비우면 기본 문구</span><div id="fmBox" style="margin-top:6px"></div></div>':''}
+  ${adm?'<div class="card"><b>엑셀 칸 이름</b> <span class="small muted">— 근로자·장비 엑셀 확인 화면에서 직접 골라 기억한 칸 제목. 다음부터 자동으로 찾습니다</span><div id="caBox" style="margin-top:6px"></div></div>':''}
   ${adm?'<div class="card"><b>홈 화면 배치</b> <span class="small muted">— 바꾸는 즉시 저장되고 모든 사용자 홈에 같게 적용됩니다</span><div id="hlBox" style="margin-top:6px"></div></div>':''}
   <div class="card"><b>삼진아웃 기준</b>
    <label class="f">누적 기간</label><select class="inp" id="sP">${[[0,'공사 기간 전체 누적'],[3,'최근 3개월'],[6,'최근 6개월'],[12,'최근 12개월']].map(([v,t])=>`<option value="${v}" ${S.periodMonths==v?'selected':''}>${t}</option>`).join('')}</select>
@@ -128,6 +129,6 @@ R.settings=()=>{
   if($('#syncNow'))$('#syncNow').onclick=async()=>{await Sync.run();toast(Sync.state==='ok'?'동기화 완료':'서버에 연결할 수 없습니다');R.settings()};
   if($('#pwBtn'))$('#pwBtn').onclick=async()=>{const u=await authScreen('pw');await kvSet('me',u);applyMe(u);toast('비밀번호 변경됨')};
   if($('#outBtn'))$('#outBtn').onclick=()=>{if(confirm('로그아웃할까요?'))logout()};
-  if(adm){bindHomeLayout();bindDocCats();bindForms();bindEqForms()}
+  if(adm){bindHomeLayout();bindDocCats();bindForms();bindEqForms();bindColAlias()}
   if(SERVER&&adm){$('#uAdd').onclick=()=>editUser();$('#uBulk').onclick=()=>bulkUsers();if(R.settings.tab==='users')loadUsers()}
 };
