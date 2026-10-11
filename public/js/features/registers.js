@@ -14,52 +14,56 @@ R.workers=()=>{
   if($('#wf'))$('#wf').onchange=e=>importDialog('workers',[...e.target.files]);bindItems();
 };
 /* ---------- 엑셀 불러오기 전 인식 결과 확인: 어느 열을 무엇으로 읽었는지 보여주고, 틀리거나 빠진 칸은 직접 고름 ---------- */
-const IMP_LABEL={workers:{...WORKER_LABEL,emergency:'비상연락처',helmet:'안전모번호',inDate:'채용·투입일',hireY:'채용 연도',hireM:'채용 월',hireD:'채용 일',eduY:'기초교육 이수',eduN:'기초교육 미이수'},equipment:EQUIP_LABEL};
+const IMP_LABEL={workers:{...WORKER_LABEL,emergency:'비상연락처',helmet:'안전모번호',inDate:'채용·투입일',hireY:'채용 연도',hireM:'채용 월',hireD:'채용 일',eduY:'기초교육 이수',eduN:'기초교육 미이수'},equipment:EQUIP_LABEL,
+  vuln:{no:'순번',name:'성명',company:'업체명',job:'공종',age:'연령',exam:'검진명',grade:'건강구분',finding:'검진소견',follow1:'사후관리소견1',follow2:'사후관리소견2',note:'비고'}};
+/* 대장마다: 구분 칸(*), 한 줄이 사람·장비인지, 같은 사람·장비를 알아보는 열쇠, 경고 */
+const IMP_KIND={
+  workers:{unit:'명',noun:'사람',what:'근로자',list:()=>W,key:wKey,keyf:['name','company','birth'],keyTxt:'성명·생년월일·업체',drop:'근로자가 대장에서 제외',
+    valid:o=>!!o.name&&!/^(성명|이름)$/.test(o.name),
+    warn:m=>[m.name==null&&['bad','성명 칸을 찾지 못했습니다. 아래에서 성명 칸을 골라 주세요.'],m.birth==null&&['warn','생년월일 칸이 없습니다 → 같은 사람인지 성명+업체로 구분합니다 (같은 업체의 동명이인은 한 사람으로 합쳐짐).'],m.company==null&&['warn','소속업체 칸이 없습니다.']]},
+  equipment:{unit:'대',noun:'장비',what:'장비',list:()=>E,key:eqKey,keyf:['type','plate','operator','company'],keyTxt:'차량번호·운전원',drop:'장비가 반출 처리',
+    valid:o=>!!(o.type||o.plate||o.operator),
+    warn:m=>[m.plate==null&&['warn','차량번호 칸이 없습니다 → 같은 장비인지 업체+장비명+운전원으로 구분합니다.'],m.type==null&&m.plate==null&&m.operator==null&&['bad','장비명·차량번호·운전원 칸을 하나도 찾지 못했습니다.']]},
+  vuln:{unit:'명',noun:'사람',what:'취약근로자',list:()=>VU,key:o=>vKey(o),keyf:['name','company','job'],keyTxt:'성명·업체·공종',drop:'취약근로자가 퇴사 처리',
+    valid:o=>!!o.name&&!/예시/.test(o.name+(o.no||'')),
+    warn:m=>[m.name==null&&['bad','성명 칸을 찾지 못했습니다. 아래에서 성명 칸을 골라 주세요.'],m.exam==null&&m.finding==null&&['bad','검진명·검진소견 칸이 없어 검진 내용을 읽을 수 없습니다.'],(m.company==null||m.job==null)&&['warn','업체나 공종 칸이 없습니다 → 같은 사람인지 가려낼 정보가 줄어듭니다.']]},
+};
 const colName=c=>{let s='';c++;while(c){const m=(c-1)%26;s=String.fromCharCode(65+m)+s;c=(c-m-1)/26}return s};
 async function importDialog(kind,files){
   if(!files.length)return;
-  if(kind==='vuln')return importRun(kind,files);
-  const isW=kind==='workers',FIELDS=regFields(kind),learn={},KEYF=isW?['name','company','birth']:['type','plate','operator','company'];
-  const parsed=new Map(),LB=IMP_LABEL[kind];
+  const K=IMP_KIND[kind],FIELDS=regFields(kind),LB=IMP_LABEL[kind],learn={};
+  /* parsed: 파일 → 시트 결과 목록 (근로자·장비는 가장 잘 맞는 시트 하나, 취약근로자는 머리글이 있는 모든 시트). false = 읽기 실패 */
+  const parsed=new Map(),units=[];
   openModal('엑셀 인식 결과 확인','<div class="empty">파일을 읽는 중…</div>');
-  for(const f of files){try{parsed.set(f,parseWorkbook(await readFile(f),FIELDS,isW?2:3))}catch(e){parsed.set(f,false)}}
-  const idx=new Set((isW?W:E).map(x=>isW?wKey(x):eqKey(x)));
-  const valid=o=>isW?!!o.name&&!/^(성명|이름)$/.test(o.name):!!(o.type||o.plate||o.operator);
-  const fileCard=(f,i)=>{const res=parsed.get(f);
-    if(!res)return `<div class="card"><b>${h(f.name)}</b><div class="hint" style="color:var(--bad);margin-top:6px">${res===false?'파일을 읽지 못했습니다':`머리글(${isW?'성명·소속':'장비명·차량번호'}) 줄을 찾지 못했습니다 — 이 파일은 건너뜁니다`}</div></div>`;
-    const rows=res.rows.filter(valid),known=rows.filter(o=>idx.has(isW?wKey(o):eqKey(o))).length;
-    const m=res.map,warn=[];
-    if(isW&&m.name==null)warn.push(['bad','성명 칸을 찾지 못했습니다. 아래에서 성명 칸을 골라 주세요.']);
-    if(isW&&m.birth==null)warn.push(['warn','생년월일 칸이 없습니다 → 같은 사람인지 성명+업체로 구분합니다 (같은 업체의 동명이인은 한 사람으로 합쳐짐).']);
-    if(isW&&m.company==null)warn.push(['warn','소속업체 칸이 없습니다.']);
-    if(!isW&&m.plate==null)warn.push(['warn','차량번호 칸이 없습니다 → 같은 장비인지 업체+장비명+운전원으로 구분합니다.']);
-    if(!isW&&m.type==null&&m.plate==null&&m.operator==null)warn.push(['bad','장비명·차량번호·운전원 칸을 하나도 찾지 못했습니다.']);
-    if(rows.length&&(isW?W:E).length&&known===0)warn.push(['warn',`지금 대장과 같은 ${isW?'사람이':'장비가'} 하나도 없습니다. 구분 칸(${isW?'성명·생년월일·업체':'차량번호·운전원'})이 맞게 잡혔는지 확인하세요. "맞추기"를 하면 기존 ${isW?'근로자가 대장에서 제외':'장비가 반출 처리'}됩니다.`]);
+  for(const f of files){let rs;
+    try{const wb=await readFile(f);rs=kind==='vuln'?parseVulnSheets(wb,FIELDS):[parseWorkbook(wb,FIELDS,kind==='workers'?2:3)].filter(Boolean)}catch(e){rs=false}
+    parsed.set(f,rs);if(rs&&rs.length)rs.forEach(res=>units.push({f,res}));else units.push({f,res:rs})}
+  const idx=new Set(K.list().map(K.key));
+  const card=({f,res},i)=>{
+    if(!res||!res.raw)return `<div class="card"><b>${h(f.name)}</b><div class="hint" style="color:var(--bad);margin-top:6px">${res===false?'파일을 읽지 못했습니다':'머리글 줄을 찾지 못했습니다 — 이 파일은 건너뜁니다'}</div></div>`;
+    const rows=res.rows.filter(K.valid),known=rows.filter(o=>idx.has(K.key(o))).length,m=res.map;
+    const warn=K.warn(m).filter(Boolean);
+    if(rows.length&&K.list().length&&known===0)warn.push(['warn',`지금 대장과 같은 ${K.noun==='사람'?'사람이':'장비가'} 하나도 없습니다. 구분 칸(${K.keyTxt})이 맞게 잡혔는지 확인하세요. "맞추기"를 하면 기존 ${K.drop}됩니다.`]);
     const opts=sel=>`<option value="">— 사용 안 함</option>`+res.head.map((t,c)=>t||res.raw.slice(res.start,res.start+50).some(r=>String(r[c]??'').trim())?`<option value="${c}" ${sel===c?'selected':''}>${colName(c)}열 · ${h(t||'(머리글 없음)')}</option>`:'').join('');
-    const shown=Object.keys(FIELDS).filter(k=>KEYF.includes(k)||m[k]!=null);
-    const prev=rows.slice(0,3);
-    return `<div class="card" data-imf="${i}"><b>${h(f.name)}</b><div class="small muted">시트 [${h(res.sheet)}] · 머리글 ${res.headRow}행 · ${isW?'근로자':'장비'} <b>${rows.length}</b>${isW?'명':'대'} (지금 대장에 있음 ${known} · 새로 ${rows.length-known})</div>
+    const shown=Object.keys(FIELDS).filter(k=>K.keyf.includes(k)||m[k]!=null);
+    const prev=res.rows.filter(o=>Object.values(o).some(Boolean)).slice(0,3);
+    return `<div class="card" data-imu="${i}"><b>${h(f.name)}</b><div class="small muted">시트 [${h(res.sheet)}] · 머리글 ${res.headRow}행 · ${K.what} <b>${rows.length}</b>${K.unit} (지금 대장에 있음 ${known} · 새로 ${rows.length-known})</div>
       ${warn.map(([t,s])=>`<div class="hint small" style="margin-top:6px;${t==='bad'?'color:var(--bad);font-weight:700':''}">${t==='bad'?'⛔':'⚠️'} ${h(s)}</div>`).join('')}
-      <div class="imp-map">${shown.map(k=>`<label class="${KEYF.includes(k)?'key':''}">${h(LB[k]||k)}${KEYF.includes(k)?' *':''}</label><select class="inp" data-fk="${k}">${opts(m[k])}</select>`).join('')}</div>
+      <div class="imp-map">${shown.map(k=>`<label class="${K.keyf.includes(k)?'key':''}">${h(LB[k]||k)}${K.keyf.includes(k)?' *':''}</label><select class="inp" data-fk="${k}">${opts(m[k])}</select>`).join('')}</div>
       <details style="margin-top:8px"><summary class="small">다른 항목 연결하기 · 앞 3줄 미리 보기</summary>
         <div class="imp-map">${Object.keys(FIELDS).filter(k=>!shown.includes(k)).map(k=>`<label>${h(LB[k]||k)}</label><select class="inp" data-fk="${k}">${opts(m[k])}</select>`).join('')}</div>
         <div class="wkwrap" style="margin-top:8px"><table class="t"><tr>${shown.map(k=>`<th>${h(LB[k]||k)}</th>`).join('')}</tr>${prev.map(o=>`<tr>${shown.map(k=>`<td>${h(o[k]||'')}</td>`).join('')}</tr>`).join('')||'<tr><td>읽은 줄이 없습니다</td></tr>'}</table></div></details></div>`};
-  const draw=()=>{$('#mBody').innerHTML=`<div class="small muted" style="margin-bottom:10px">앱이 머리글 글자를 보고 칸을 찾았습니다. 틀리거나 빠진 칸(*는 같은 ${isW?'사람을':'장비를'} 알아보는 데 쓰는 칸)은 직접 골라 주세요. ${isAdmin()?'직접 고른 칸 제목은 기억해서 다음부터 자동으로 찾습니다.':'(운영자가 고르면 다음부터 자동으로 찾습니다)'}</div>
-    ${files.map(fileCard).join('')}<div id="imBtns"></div>`;
-    $$('[data-imf]').forEach(card=>{const res=parsed.get(files[+card.dataset.imf]);
-      $$('[data-fk]',card).forEach(s=>s.onchange=()=>{const map={...res.map},k=s.dataset.fk;if(s.value==='')delete map[k];else{map[k]=+s.value;const t=(res.head[+s.value]||'').split(' / ').join('');if(t)learn[k]=t}applyMap(res,map);draw()})});
-    const ok=[...parsed.values()].some(r=>r&&r.rows.some(valid));
+  const draw=()=>{$('#mBody').innerHTML=`<div class="small muted" style="margin-bottom:10px">앱이 머리글 글자를 보고 칸을 찾았습니다. 틀리거나 빠진 칸(*는 같은 ${K.noun==='사람'?'사람을':'장비를'} 알아보는 데 쓰는 칸)은 직접 골라 주세요. ${isAdmin()?'직접 고른 칸 제목은 기억해서 다음부터 자동으로 찾습니다.':'(운영자가 고르면 다음부터 자동으로 찾습니다)'}</div>
+    ${units.map(card).join('')}<div id="imBtns"></div>`;
+    $$('[data-imu]').forEach(el=>{const res=units[+el.dataset.imu].res;
+      $$('[data-fk]',el).forEach(s=>s.onchange=()=>{const map={...res.map},k=s.dataset.fk;if(s.value==='')delete map[k];else{map[k]=+s.value;const t=(res.head[+s.value]||'').split(' / ').join('');if(t)learn[k]=t}applyMap(res,map);draw()})});
+    const ok=units.some(u=>u.res&&u.res.rows&&u.res.rows.some(K.valid));
     importButtons(kind,files,$('#imBtns'),ok?parsed:null,()=>learnColumns(kind,learn))};
   draw();
 }
-function importRun(kind,files){
-  openModal('엑셀 불러오기',`<p>${files.map(f=>'<i class="i i-file"></i> '+h(f.name)).join('<br>')}</p><div id="imBtns"></div>`,b=>importButtons(kind,files,$('#imBtns',b)));
-}
-/* 추가·갱신 / 맞추기 버튼과 결과. pre = 확인 화면에서 맞춘 열 (없으면 파일을 다시 읽음, null이면 불러올 것이 없음) */
-/* 운영자가 직접 고른 칸 제목을 기억 → 다음부터 자동으로 찾음 (관리자가 고른 것은 이번에만 적용) */
 function bindColAlias(){const box=$('#caBox');if(!box)return;const all=S.colAlias||{},rows=[];
-  for(const kind of ['workers','equipment'])for(const [k,list] of Object.entries(all[kind]||{}))for(const t of list)rows.push({kind,k,t});
-  box.innerHTML=rows.map((r,i)=>`<div class="row" style="padding:6px 0;border-top:1px solid var(--line);gap:8px;flex-wrap:nowrap"><span class="badge bgray">${r.kind==='workers'?'근로자':'장비'}</span><span class="grow">"${h(r.t)}" → <b>${h(IMP_LABEL[r.kind][r.k]||r.k)}</b></span><button class="btn sm line" data-cad="${i}" aria-label="지우기"><i class="i i-x"></i></button></div>`).join('')||'<div class="small muted">아직 없습니다. 엑셀을 올릴 때 확인 화면에서 칸을 직접 고르면 여기에 쌓입니다.</div>';
+  for(const kind of ['workers','equipment','vuln'])for(const [k,list] of Object.entries(all[kind]||{}))for(const t of list)rows.push({kind,k,t});
+  box.innerHTML=rows.map((r,i)=>`<div class="row" style="padding:6px 0;border-top:1px solid var(--line);gap:8px;flex-wrap:nowrap"><span class="badge bgray">${IMP_KIND[r.kind].what}</span><span class="grow">"${h(r.t)}" → <b>${h(IMP_LABEL[r.kind][r.k]||r.k)}</b></span><button class="btn sm line" data-cad="${i}" aria-label="지우기"><i class="i i-x"></i></button></div>`).join('')||'<div class="small muted">아직 없습니다. 엑셀을 올릴 때 확인 화면에서 칸을 직접 고르면 여기에 쌓입니다.</div>';
   $$('[data-cad]',box).forEach(b=>b.onclick=async()=>{const r=rows[+b.dataset.cad];const c=JSON.parse(JSON.stringify(all));c[r.kind][r.k]=c[r.kind][r.k].filter(x=>x!==r.t);S.colAlias=c;await saveSettings();if(SERVER)await queueShared();toast('지웠습니다');bindColAlias()})}
 async function learnColumns(kind,learn){if(!isAdmin()||!Object.keys(learn).length)return;
   const all=JSON.parse(JSON.stringify(S.colAlias||{})),A=all[kind]=all[kind]||{};

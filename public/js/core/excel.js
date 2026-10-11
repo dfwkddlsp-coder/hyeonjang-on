@@ -7,7 +7,7 @@ const EQUIP_LABEL={no:'관리번호',company:'소속업체',type:'장비명',ope
 const WORKER_LABEL={company:'소속업체',name:'성명',job:'직종',gender:'성별',birth:'생년월일',phone:'연락처',emergency:'비상연락처',inDate:'채용일자',elderly:'고령근로자',foreign:'외국인근로자',blood:'혈액형',eduBasic:'기초안전보건교육',note:'비고'};
 
 /* 엑셀 칸 찾기에 쓰는 말: 기본 목록 + 운영자가 확인 화면에서 직접 골라 기억한 제목(설정 → 현장 기준 → 엑셀 칸 이름) */
-function regFields(kind){const base=kind==='workers'?WORKER_FIELDS:EQUIP_FIELDS,add=(S.colAlias||{})[kind]||{},o={};
+function regFields(kind){const base=kind==='workers'?WORKER_FIELDS:kind==='vuln'?VULN_FIELDS:EQUIP_FIELDS,add=(S.colAlias||{})[kind]||{},o={};
   for(const k in base)o[k]=[...base[k],...(add[k]||[]).map(a=>'='+a)];return o}
 function buildMap(top,sub,FIELDS){
   const n=Math.max(top.length,sub?sub.length:0);const best={};
@@ -61,11 +61,11 @@ const regSig=o=>{const c={...o};delete c.src;delete c.updated;delete c.created;d
 /* 엑셀 대장 불러오기. 같은 사람·장비는 같은 기록(id)을 이어 쓰고 바뀐 칸만 갱신 — 점검·적발·상담 기록과의 연결이 유지됨.
    sync=true (현재 대장으로 맞추기): 파일에 없는 장비는 반출 처리, 근로자는 대장에서 제외. 기록 자체는 지우지 않음 */
 async function importFiles(kind,files,sync,pre){ // pre: 확인 화면에서 이미 읽고 열을 맞춘 결과 (Map 파일 → parseWorkbook 결과)
-  if(kind==='vuln')return importVuln(files,sync);
+  if(kind==='vuln')return importVuln(files,sync,pre);
   const isW=kind==='workers';const FIELDS=regFields(kind);let added=0,updated=0,same=0,skipped=0;const msgs=[];const touched=new Set(),seen=new Set();
   const cur=(isW?W:E).map(x=>({...x}));const before=new Map(cur.map(x=>[x.id,regSig(x)]));const idx=new Map(cur.map(x=>[isW?wKey(x):eqKey(x),x]));
   for(const f of files){
-    let res;if(pre&&pre.has(f))res=pre.get(f);else try{res=parseWorkbook(await readFile(f),FIELDS,isW?2:3)}catch(e){msgs.push(`${f.name}: 읽기 실패`);continue}
+    let res;if(pre&&pre.has(f)){res=pre.get(f);if(Array.isArray(res))res=res[0]||null}else try{res=parseWorkbook(await readFile(f),FIELDS,isW?2:3)}catch(e){msgs.push(`${f.name}: 읽기 실패`);continue}
     if(res===false){msgs.push(`${f.name}: 읽기 실패`);continue}
     if(!res){msgs.push(`${f.name}: 머리글(${isW?'성명/소속':'장비명/차량번호'}) 행을 찾지 못함`);continue}
     for(const o of res.rows){

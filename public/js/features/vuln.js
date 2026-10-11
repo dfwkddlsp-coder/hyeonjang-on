@@ -1,7 +1,7 @@
 // 현장ON — 취약근로자
 'use strict';
 /* ---------- 취약근로자 ---------- */
-const VULN_FIELDS={no:['순번','번호'],name:['성명','이름'],company:['업체명','협력사명','소속업체','업체'],job:['공종명','공종','직종'],age:['연령','나이'],exam:['검진명','검진종류','유해인자'],grade:['건강구분1','건강구분'],finding:['검진소견1','검진소견'],follow1:['사후관리소견1','사후관리소견'],follow2:['사후관리소견2'],note:['비고']};
+const VULN_FIELDS={no:['순번','번호'],name:['성명','이름','근로자명','작업자명','성함'],company:['업체명','협력사명','소속업체','업체','협력업체','소속','근무처','회사'],job:['공종명','공종','직종','직무','공정'],age:['연령','나이','만나이'],exam:['검진명','검진종류','유해인자','검진구분','검사명'],grade:['건강구분1','건강구분','건강관리구분','판정'],finding:['검진소견1','검진소견','검진결과','소견'],follow1:['사후관리소견1','사후관리소견','사후관리','조치사항'],follow2:['사후관리소견2'],note:['비고','특이사항']};
 const compNorm=c=>norm(String(c||'').replace(/\((유|주)\)|㈜|주식회사|유한회사/g,''));
 const vKey=p=>norm(p.name)+'|'+compNorm(p.company)+'|'+norm(p.job);
 function vulnOf(name,company){const n=norm(name),c=compNorm(company);if(!n)return null;return VU.find(p=>!p.retired&&norm(p.name)===n&&(!c||!compNorm(p.company)||compNorm(p.company)===c))||null}
@@ -17,16 +17,25 @@ const isGenExam=i=>!i.exam||/^일반|혈압|당뇨|혈액|간기능/.test(i.exam
 const FIT=['가 (현재 조건에서 작업 가능)','나 (일정 조건하 작업 가능)','다 (한시적 작업 불가)','라 (영구적 작업 불가)'];
 const CVD=['저위험','중등도위험','고위험','최고위험'];
 
-async function importVuln(files,sync){
+/* 머리글(성명 + 검진명/검진소견)이 있는 시트를 모두 읽음. 결과 모양은 parseWorkbook과 같음 (확인 화면에서 열을 바꿀 수 있게) */
+function parseVulnSheets(wb,FIELDS){const out=[];
+  for(const sn of wb.SheetNames){
+    const ws=wb.Sheets[sn];trimRef(ws);const rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:false,defval:'',blankrows:true});
+    for(let r=0;r<Math.min(rows.length,15);r++){const m=buildMap(rows[r],null,FIELDS);
+      if(m.name!=null&&(m.exam!=null||m.finding!=null)){
+        out.push(applyMap({sheet:sn,raw:rows,start:r+1,headRow:r+1,head:rows[r].map(t=>String(t??'').replace(/\s+/g,' ').trim())},m));break}}
+  }
+  return out;
+}
+async function importVuln(files,sync,pre){ // pre: 확인 화면에서 열을 맞춘 결과 (Map 파일 → 시트 결과 목록)
   let added=0;const msgs=[];const cur=VU.map(p=>({...p}));const before=new Map(cur.map(p=>[p.id,regSig(p)]));const idx=new Map(cur.map(p=>[vKey(p),p]));const seen=new Set();
   for(const f of files){
-    let wb;try{wb=await readFile(f)}catch(e){msgs.push(`${f.name}: 읽기 실패`);continue}let found=0;
-    for(const sn of wb.SheetNames){
-      const ws=wb.Sheets[sn];trimRef(ws);const rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:false,defval:'',blankrows:true});
-      let hr=-1,map=null;for(let r=0;r<Math.min(rows.length,15);r++){const m=buildMap(rows[r],null,VULN_FIELDS);if(m.name!=null&&(m.exam!=null||m.finding!=null)){hr=r;map=m;break}}
-      if(hr<0)continue;found++;let curP=null,skip=false,n=0;
-      const g=(row,k)=>map[k]==null?'':String(row[map[k]]??'').replace(/\s*\n\s*/g,'').trim();
-      for(let r=hr+1;r<rows.length;r++){const row=rows[r];const name=g(row,'name'),no=g(row,'no');
+    let sheets;if(pre&&pre.has(f))sheets=pre.get(f);else try{sheets=parseVulnSheets(await readFile(f),regFields('vuln'))}catch(e){sheets=false}
+    if(sheets===false){msgs.push(`${f.name}: 읽기 실패`);continue}let found=0;
+    for(const res of sheets){
+      const sn=res.sheet;found++;let curP=null,skip=false,n=0;
+      const g=(row,k)=>String(row[k]??'').replace(/\s*\n\s*/g,'').trim();
+      for(const row of res.rows){const name=g(row,'name'),no=g(row,'no');
         if(name){
           if(/예시/.test(no)||/예시/.test(name)){skip=true;curP=null;continue}skip=false;
           const o={name,company:g(row,'company'),job:g(row,'job'),age:g(row,'age').replace(/\D/g,'')};const k=vKey(o);const ex=idx.get(k);
