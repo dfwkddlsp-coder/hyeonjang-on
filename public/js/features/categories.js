@@ -4,7 +4,8 @@
 /* 문서함(PDF) 카테고리 — 운영자가 설정 → 현장 기준에서 추가·이름·공개 범위 지정. 각 카테고리는 홈 타일 하나 */
 const docCats=()=>(Array.isArray(S.docCats)&&S.docCats.length?S.docCats:DEF.docCats);
 const catVisible=c=>!SERVER||c.scope!=='staff'||isAdmin()||(ME&&ME.role==='manager');
-const plansSorted=k=>PL.filter(p=>k===undefined||(p.cat||'plans')===k).sort((a,b)=>String(b.at).localeCompare(String(a.at)));
+/* 문서 순서: 관리자·운영자가 정한 순서(ord). 순서가 없는 문서(새로 올린 것)는 맨 위에 최신순 */
+const plansSorted=k=>PL.filter(p=>k===undefined||(p.cat||'plans')===k).sort((a,b)=>(b.ord==null)-(a.ord==null)||(a.ord==null?String(b.at).localeCompare(String(a.at)):a.ord-b.ord));
 const fmtSize=n=>n>=1048576?(n/1048576).toFixed(1)+'MB':Math.max(1,Math.round(n/1024))+'KB';
 const planUrl=p=>`/api/file/${p.fileId}?n=${encodeURIComponent(p.title)}`;
 
@@ -203,7 +204,7 @@ function catConfig(c,done){const t=catType(c);
       $('#ccOk',b).onclick=()=>{F=F.filter(f=>f.l.trim()).map(f=>({id:f.id,l:f.l.trim(),t:f.t,o:f.t==='sel'?(f.o||''):'',req:!!f.req}));if(!F.length)return toast('칸을 1개 이상 만드세요');c.fields=F;closeModal();done()}});return}
   toast(t==='photo'?'사진대지 형식(한 칸에 4장 / 1장)은 작성하는 사람이 기록마다 고릅니다':'PDF 문서함은 따로 구성할 것이 없습니다')}
 R.plans=(cat)=>{
-  if(typeof cat==='string')R.plans.cat=cat;
+  if(typeof cat==='string'){R.plans.cat=cat;R.plans.sorting=false}
   const C=docCats().find(x=>x.k===R.plans.cat)||docCats()[0];R.plans.cat=C.k;
   if(!catVisible(C)){V$().innerHTML=`<h1>${h(C.name)}</h1><div class="card empty">운영자·관리자만 볼 수 있는 항목입니다.</div>`;return}
   if(catType(C)!=='pdf')return R.recs(C);
@@ -214,8 +215,22 @@ R.plans=(cat)=>{
     <label class="f">PDF 파일</label><input class="inp" id="plF" type="file" accept="application/pdf,.pdf">
     <button class="btn" id="plUp" style="margin-top:10px">올리기</button></div>`:''}
   ${!SERVER?'<div class="hint">문서함은 서버에 로그인해서 사용할 때만 볼 수 있습니다.</div>':''}
-  <div class="card list">${pl.map(p=>`<div class="it"><span class="dot d0"><i class="i i-plans"></i></span><div class="m"><b>${h(p.title)}</b><div class="small muted ell">${fmtDT(p.at)} · ${h(p.by||'')} · ${fmtSize(p.size||0)}</div></div>
-    <a class="btn sm" href="${planUrl(p)}" target="_blank" rel="noopener">열기</a>${isAdmin()?`<button class="btn sm line" data-pdel="${h(p.id)}">삭제</button>`:''}</div>`).join('')||'<div class="empty">아직 올린 문서가 없습니다</div>'}</div>`;
+  ${isStaff()&&SERVER&&pl.length>1?`<div class="row" style="margin-bottom:8px"><span class="grow small muted" id="plSortHint">${R.plans.sorting?'▲ ▼로 옮기고 완료를 누르세요':''}</span><button class="btn sm ${R.plans.sorting?'':'line'}" id="plSort">${R.plans.sorting?'완료':'순서 바꾸기'}</button></div>`:''}
+  <div class="card list" id="plList"></div>`;
+  const order=pl.slice(),sorting=R.plans.sorting&&isStaff()&&SERVER;
+  const drawList=()=>{$('#plList').innerHTML=order.map((p,i)=>`<div class="it"><span class="dot d0"><i class="i i-plans"></i></span><div class="m"><b>${h(p.title)}</b><div class="small muted ell">${fmtDT(p.at)} · ${h(p.by||'')} · ${fmtSize(p.size||0)}</div></div>
+    ${sorting?`<button class="btn sm line" data-pu="${i}" ${i?'':'disabled'} aria-label="위로">▲</button><button class="btn sm line" data-pd="${i}" ${i<order.length-1?'':'disabled'} aria-label="아래로">▼</button>`
+    :`<a class="btn sm" href="${planUrl(p)}" target="_blank" rel="noopener">열기</a>${isAdmin()?`<button class="btn sm line" data-pdel="${h(p.id)}">삭제</button>`:''}`}</div>`).join('')||'<div class="empty">아직 올린 문서가 없습니다</div>';
+    $$('[data-pu]').forEach(b=>b.onclick=()=>{const i=+b.dataset.pu;[order[i-1],order[i]]=[order[i],order[i-1]];drawList()});
+    $$('[data-pd]').forEach(b=>b.onclick=()=>{const i=+b.dataset.pd;[order[i+1],order[i]]=[order[i],order[i+1]];drawList()});
+    $$('[data-pdel]').forEach(b=>b.onclick=async()=>{const p=PL.find(x=>x.id===b.dataset.pdel);if(!p||!confirm(`「${p.title}」을(를) 삭제할까요?\nPDF 파일도 서버에서 지워집니다.`))return;try{await remove('plans',p.id);toast('삭제했습니다');R.plans()}catch(x){toast(x.message)}})};
+  drawList();
+  const so=$('#plSort');if(so)so.onclick=async()=>{
+    if(!sorting){R.plans.sorting=true;return R.plans()}
+    so.disabled=true;let n=0;
+    try{for(let i=0;i<order.length;i++)if(order[i].ord!==i){await save('plans',{...order[i],ord:i});n++}
+      if(n)await Sync.run();R.plans.sorting=false;toast(n?'순서를 저장했습니다':'순서 그대로입니다');R.plans()}
+    catch(x){toast(x.message);so.disabled=false}};
   const f=$('#plF');if(f)f.onchange=()=>{const t=$('#plT');if(f.files[0]&&!t.value.trim())t.value=f.files[0].name.replace(/\.pdf$/i,'')};
   const up=$('#plUp');if(up)up.onclick=async()=>{
     const file=f.files[0],title=$('#plT').value.trim();
@@ -228,5 +243,4 @@ R.plans=(cat)=>{
       const j=await r.json().catch(()=>null);if(!r.ok||!j)throw new Error((j&&j.error)||'HTTP '+r.status);
       await save('plans',{id:uid(),cat:C.k,scope:C.scope==='staff'?'staff':'all',title,fileId:j.id,size:j.size,name:file.name,at:nowLocal(),by:S.inspector||''});await Sync.run();toast('올렸습니다');R.plans()}
     catch(x){toast(x.message);up.disabled=false;up.textContent='올리기'}};
-  $$('[data-pdel]').forEach(b=>b.onclick=async()=>{const p=PL.find(x=>x.id===b.dataset.pdel);if(!p||!confirm(`「${p.title}」을(를) 삭제할까요?\nPDF 파일도 서버에서 지워집니다.`))return;try{await remove('plans',p.id);toast('삭제했습니다');R.plans()}catch(x){toast(x.message)}});
 };
