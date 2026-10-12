@@ -7,9 +7,9 @@ async function printPages(pages){
   P.innerHTML=pages.map(p=>`<div class="pg${/class="doc eqw/.test(p)?' land':''}">${p}</div>`).join('');
   P.style.cssText='display:block;position:absolute;left:-10000px;top:0';
   await Promise.all($$('img',P).map(i=>i.complete?0:new Promise(r=>{i.onload=i.onerror=r})));
-  /* 내용이 A4 상자보다 크면 그 장만 비율 축소 */
+  /* 내용이 한 장 상자보다 크면(높이·너비) 그 장만 비율 축소 */
   $$('.pg',P).forEach(pg=>{const d=pg.firstElementChild;if(!d)return;d.style.zoom='';
-    const availH=pg.clientHeight-12*96/25.4,h=d.scrollHeight;if(h>availH)d.style.zoom=(availH/h).toFixed(3)});
+    const z=Math.min(1,(pg.clientHeight-2)/d.scrollHeight,(pg.clientWidth-2)/d.scrollWidth);if(z<1)d.style.zoom=z.toFixed(3)});
   P.style.cssText='';setTimeout(()=>window.print(),100);
 }
 const FORM_DEF={

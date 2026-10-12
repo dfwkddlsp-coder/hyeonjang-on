@@ -324,8 +324,10 @@ body.is-home #netBadge{background:rgba(0,0,0,.05)!important;color:var(--sub)!imp
 body.is-home .card{background:var(--tile);border-radius:22px;box-shadow:none}
 .hint a{color:var(--ink);font-weight:700;text-decoration:underline}
 /* 출력 페이지: 실제 A4 크기 상자. 여백 6mm, 브라우저 머리글/바닥글(날짜·주소) 없음 */
-#print .pg{width:210mm;height:296mm;padding:6mm;box-sizing:border-box;overflow:hidden;background:#fff;position:relative}
-#print .pg.land{width:297mm;height:209mm;page:land}
+/* 인쇄 한 장의 크기: A4보다 작게. 아이폰 사파리 등은 @page margin:0을 무시하고 자기 여백(약 14mm)과 주소·날짜를 넣어서,
+   A4 꽉 차게 만들면 오른쪽이 잘리고 다음 장으로 넘어감 → 어느 브라우저 여백에도 들어가는 178×258mm(가로 260×176mm) */
+#print .pg{width:178mm;height:258mm;margin:0 auto;padding:0;box-sizing:border-box;overflow:hidden;background:#fff;position:relative}
+#print .pg.land{width:260mm;height:176mm;page:land}
 #print .pg>.doc{transform-origin:top left;max-width:none;width:100%}
 @page land{size:A4 landscape;margin:0}
 @media print{
