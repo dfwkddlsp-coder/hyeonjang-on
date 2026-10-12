@@ -51,26 +51,31 @@ function eqQuickAdd(){
 
 /* 설정 → 현장 기준: 장비 종류별 양식 편집 */
 function bindEqForms(){const box=$('#efBox');if(!box)return;let L=eqForms().map(f=>({...f}));
-  const render=()=>{box.innerHTML=L.map((f,i)=>`<details class="card" style="margin:8px 0;padding:10px"><summary><b>${h(f.name)}</b> <span class="small muted">— 항목 ${parseItems(f.items).length}개 · 장비명에 "${h(f.match)}"</span></summary>
+  const render=()=>{box.innerHTML=L.map((f,i)=>`<details class="card" style="margin:8px 0;padding:10px"><summary><b>${h(f.name)}</b> <span class="small muted">— 점검 ${parseItems(f.items).length}개 · 사진 ${parseLines(String(f.photos||'').trim()?f.photos:f.items).length+1}칸 · 장비명에 "${h(f.match)}"</span></summary>
       <div class="grid g2" style="margin-top:8px"><div><label class="f">양식 이름</label><input class="inp" data-en="${i}" value="${h(f.name)}"></div><div><label class="f">장비명 키워드 (쉼표로 구분)</label><input class="inp" data-em="${i}" value="${h(f.match)}"></div></div>
       <label class="f">점검 항목 — 한 줄에 "점검항목|점검방법"</label><textarea class="inp" data-ei="${i}" style="min-height:200px;font-size:13px">${h(f.items)}</textarea>
+      <label class="f">주간 사진 항목 — 한 줄에 "사진항목|설명" <span class="small muted">(비우면 위 점검 항목을 그대로 씀 · 맨 앞 '점검사진'은 자동)</span></label><textarea class="inp" data-ep="${i}" style="min-height:110px;font-size:13px" placeholder="비우면 점검 항목과 같음">${h(f.photos||'')}</textarea>
       <button class="btn sm line" data-ex="${i}" style="margin-top:8px;color:var(--bad)">이 양식 삭제</button></details>`).join('')+
     `<label class="f">점검 대상에서 뺄 장비 — 장비명 키워드 (쉼표로 구분)</label><input class="inp" id="efEx" value="${h(S.eqExclude===undefined?EQ_EXCLUDE_DEF:S.eqExclude)}" placeholder="예) 살수차">
      <div class="row" style="margin-top:10px"><button class="btn sm line" id="efAdd"><i class="i i-plus"></i> 양식 추가</button><button class="btn sm ghost" id="efReset">기본 양식으로</button><span style="flex:1"></span><button class="btn sm" id="efSave">장비 양식 저장</button></div>`;
     $$('[data-en]',box).forEach(x=>x.oninput=()=>{L[+x.dataset.en].name=x.value});
     $$('[data-em]',box).forEach(x=>x.oninput=()=>{L[+x.dataset.em].match=x.value});
     $$('[data-ei]',box).forEach(x=>x.oninput=()=>{L[+x.dataset.ei].items=x.value});
+    $$('[data-ep]',box).forEach(x=>x.oninput=()=>{L[+x.dataset.ep].photos=x.value});
     $$('[data-ex]',box).forEach(x=>x.onclick=()=>{if(!confirm(`「${L[+x.dataset.ex].name}」 양식을 삭제할까요? 이 양식을 쓰던 장비는 기본 양식으로 점검합니다.`))return;L.splice(+x.dataset.ex,1);render()});
     $('#efAdd',box).onclick=()=>{L.push({k:uid(),name:'새 장비',match:'',items:''});render();const d=$$('details',box);d[d.length-1].open=true};
     $('#efReset',box).onclick=()=>{if(!confirm('장비별 양식을 처음 기본값(크레인·지게차·고소작업차·항타기·도저·천공기)으로 되돌릴까요?'))return;L=EQF_DEF.map(f=>({...f}));render()};
     $('#efSave',box).onclick=async()=>{if(L.some(f=>!f.name.trim()))return toast('양식 이름을 입력하세요');
-      S.eqForms=L.map(f=>({k:f.k,name:f.name.trim(),match:f.match.trim(),items:String(f.items).split('\n').map(x=>x.trim()).filter(Boolean).join('\n')}));S.eqExclude=$('#efEx',box).value.trim();
+      const clean=t=>String(t||'').split('\n').map(x=>x.trim()).filter(Boolean).join('\n');
+      S.eqForms=L.map(f=>({k:f.k,name:f.name.trim(),match:f.match.trim(),items:clean(f.items),photos:clean(f.photos)}));S.eqExclude=$('#efEx',box).value.trim();
       await saveSettings();if(SERVER)await queueShared();toast('장비 양식 저장됨')}};
   render()}
 
-/* 주간 사진 항목 (장비점검방법 PPT) */
-function eqPhotoItems(){return String(S.eqItems||DEF.eqItems).split('\n').map(l=>l.trim()).filter(Boolean).map(l=>{const i=l.indexOf('|');return i<0?{t:l,d:''}:{t:l.slice(0,i).trim(),d:l.slice(i+1).trim()}})}
-function eqSlots(){return [{t:'점검사진',d:'전담관리자와 장비가 함께 나온 사진'},...eqPhotoItems().map((it,i)=>({t:`${i+1}. ${it.t}`,d:it.d}))]}
+/* 주간 사진 항목: 장비 양식마다 (설정 → 장비 종류별 양식의 '주간 사진 항목'). 비우면 그 양식의 점검 항목,
+   기본(굴착기 등) 양식은 장비점검방법 PPT 항목(S.eqItems) */
+const parseLines=t=>String(t||'').split('\n').map(l=>l.trim()).filter(Boolean).map(l=>{const i=l.indexOf('|');return i<0?{t:l,d:''}:{t:l.slice(0,i).trim(),d:l.slice(i+1).trim()}});
+function eqPhotoItems(e){const f=eqFormOf(e);return parseLines(f?(String(f.photos||'').trim()?f.photos:f.items):(S.eqItems||DEF.eqItems))}
+function eqSlots(e){return [{t:'점검사진',d:'점검자와 장비가 함께 나온 사진'},...eqPhotoItems(e).map((it,i)=>({t:`${i+1}. ${it.t}`,d:it.d}))]}
 const eqName=e=>`${e.type||'장비'}${e.plate?`(${e.plate})`:''}`;
 const isMine=e=>!!S.inspector&&norm(e.manager)===norm(S.inspector);
 /* 점검은 둘로 따로: 관리자 점검(mgr — 운영자·관리자·사용자)과 운전원 점검(drv — 장비운전원·임시 운전원).
@@ -131,7 +136,7 @@ R.eqcheck=()=>{
   const list=inUse.filter(e=>(f!=='mine'||isMine(e))&&(f!=='todo'||!eqDayMark(e.id,t))&&(!q||norm([e.type,e.plate,e.company,e.manager,e.operator].join(' ')).includes(norm(q))))
     .sort((a,b)=>(isMine(b)-isMine(a))||(+a.no||999)-(+b.no||999));
   const done=inUse.filter(e=>eqDayMark(e.id,t)).length,mine=inUse.filter(isMine),mineTodo=mine.filter(e=>!eqDayMark(e.id,t));
-  const slots=eqSlots().length,phDone=inUse.filter(e=>{const p=eqWeekPhoto(e.id,mon);return p&&(p.photos||[]).length>=slots}).length;
+  const phDone=inUse.filter(e=>{const p=eqWeekPhoto(e.id,mon);return p&&(p.photos||[]).length>=eqSlots(e).length}).length;
   const future=mon>weekMon(t),drv=isDriver();
   V$().innerHTML=`<div class="row" style="justify-content:space-between"><h1>장비 점검</h1>${isDriver()&&!isGuest()?'':'<button class="btn sm" id="eqAdd"><i class="i i-plus"></i> 장비 추가</button>'}</div>
   <div class="row" style="margin-bottom:10px"><button class="btn sm line" id="wPrev">◀</button><div class="grow" style="text-align:center"><b>${weekLabel(mon)}</b><div class="small muted">${md(days[0])} ~ ${md(days[5])}</div></div><button class="btn sm line" id="wNext">▶</button>${mon!==weekMon(t)?'<button class="btn sm ghost" id="wNow">이번 주</button>':''}</div>
@@ -142,7 +147,7 @@ R.eqcheck=()=>{
   <div class="chips scroll" style="margin-bottom:8px">${[['mine','내 담당'],['all','전체'],['todo','오늘 미점검']].map(([k,l])=>`<button class="chip ${f===k?'on':''}" data-ef="${k}">${l}</button>`).join('')}</div>
   <input class="inp" id="eqq" type="search" placeholder="장비명·차량번호·업체·전담관리자" value="${h(q)}" style="margin-bottom:10px">`}
   ${!inUse.length?`<div class="card empty">${isGuest()?'<b>＋ 장비 추가</b>를 눌러 오늘 쓸 장비를 등록하세요.':drv?'내 장비가 없습니다. 장비 대장의 운전원 연락처가 로그인 번호와 같은지 관리자에게 확인해 주세요.':'장비 대장이 비어 있습니다. 관리대장 → 장비에서 엑셀을 불러오세요.'}</div>`:''}
-  ${list.map(e=>{const wp=eqWeekPhoto(e.id,mon),pn=wp?(wp.photos||[]).length:0;
+  ${list.map(e=>{const wp=eqWeekPhoto(e.id,mon),pn=wp?(wp.photos||[]).length:0,slots=eqSlots(e).length;
     return `<div class="card eqc"><div class="row" style="gap:8px"><div class="grow" style="min-width:0"><b>${h(eqName(e))}</b>${isMine(e)?' <span class="badge">내 담당</span>':''}${eqWeekComplete(e.id,mon)?' '+stampHtml('sm'):''}<div class="small muted ell">${h(e.company||'')} · 전담 ${h(e.manager||'미지정')}${e.operator?' · 운전원 '+h(e.operator):''} · 양식 ${h(eqFormName(e))}</div></div>${canDelEq(e)?`<button class="btn sm line" data-eqdel="${e.id}" aria-label="장비 삭제" title="장비 삭제"><i class="i i-x"></i></button>`:''}</div>
     <div class="eqdays">${days.map((d,i)=>{const m=eqDayMark(e.id,d);return `<div class="eqd${d===t?' today':''}${m==='O'?' ok':m==='X'?' bad':''}${d>t&&!m?' off':''}"><span>${WD6[i]} ${md(d)}</span><b>${m==='O'?'○':m==='X'?'×':m==='P'?'…':d>t?'':'–'}</b></div>`}).join('')}</div>
     ${future?'':`<div class="eq-acts"><button class="btn sm${eqWeekRec(e.id,mon)?' line':''}" data-wk="${e.id}"><i class="i i-pen"></i> ${eqWeekRec(e.id,mon)?'점검표 수정':'주간 점검표'}</button>
@@ -214,7 +219,7 @@ function eqWeekForm(eid,mon,fresh,tr){
 /* 주간 사진: 점검사진 + 항목별 1장 (장비당 주 1회 — 같은 주에 다시 열면 같은 기록을 수정) */
 function eqWeekPhotoForm(eid,mon,tr){
   tr=tr||myTrack();
-  const e=E.find(x=>x.id===eid);if(!e)return;const prev=eqWeekPhoto(eid,mon,tr);const slots=eqSlots();
+  const e=E.find(x=>x.id===eid);if(!e)return;const prev=eqWeekPhoto(eid,mon,tr);const slots=eqSlots(e);
   if(tr!==myTrack()){ // 관리자가 운전원 사진을 볼 때: 보기만
     const ph=((prev&&prev.photos)||[]);
     return openModal(`운전원 사진 (보기) · ${eqName(e)}`,`<div class="small muted" style="margin-bottom:8px">${weekLabel(mon)} · ${h(prev&&prev.by||'')} ${prev?fmtDT(prev.updated||prev.created):''}</div><div class="photos">${ph.map(p=>`<div class="ph"><a href="${h(p.src)}" target="_blank" rel="noopener"><img src="${h(p.src)}"></a><div class="small muted">${h(p.slot||'')}</div></div>`).join('')||'<div class="empty">사진이 없습니다</div>'}</div>`)}
@@ -275,7 +280,7 @@ function eqPhotoBlocks(list,mon,tr='mgr'){const drvT=tr==='drv';
   const out=[],label=weekLabel(mon),days=weekDays(mon);
   for(const e of list){
     const wp=eqWeekPhoto(e.id,mon,tr);
-    const order=eqSlots().map(s=>s.t);
+    const order=eqSlots(e).map(s=>s.t);
     const ph=[...((wp&&wp.photos)||[]).slice().sort((a,b)=>order.indexOf(a.slot)-order.indexOf(b.slot)),
       ...(drvT?[]:EC).filter(c=>!c.kind&&c.equipId===e.id&&!c.void&&c.date>=days[0]&&c.date<=days[5]).flatMap(c=>(c.photos||[]))];
     for(let i=0;i<ph.length;i+=4){const g=ph.slice(i,i+4);out.push({date:label,content:eqName(e)+(drvT?' · 운전원 점검':''),photos:g.map(p=>({src:p.src,cap:p.cap||p.slot||''}))})}
