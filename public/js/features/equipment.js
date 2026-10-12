@@ -97,7 +97,12 @@ const MARK_TXT={O:'적합',X:'부적합',N:'해당없음',E:'기타의견'};
 function eqWeekComplete(eid,mon,tr){const w=eqWeekRec(eid,mon,tr);if(!w)return false;const items=eqWeekItems(E.find(x=>x.id===eid),w);return items.length>0&&items.every(it=>{const a=(w.marks||{})[it.t];return a&&a.length>=6&&a.slice(0,6).every(Boolean)})}
 const stampHtml=(cls='')=>`<span class="stamp ${cls}">완료</span>`;
 /* 장비 1대 출력 묶음: 주간 점검표 + 사진대지 */
-function eqPrintPages(e,mon){const pages=[];if(weekDays(mon).some(d=>eqDayMark(e.id,d)))pages.push(docEqWeek(e,mon));pages.push(...docPhotoSheet(eqPhotoBlocks([e],mon)));return pages}
+/* 출력 순서: 관리자 점검표 → 운전원 점검표 → 관리자 사진대지 → 운전원 사진대지 (운전원 것은 있을 때만) */
+function eqPrintPages(e,mon){const pages=[],days=weekDays(mon);
+  for(const tr of ['mgr','drv'])if(days.some(d=>eqDayMark(e.id,d,tr)))pages.push(docEqWeek(e,mon,tr));
+  pages.push(...docPhotoSheet(eqPhotoBlocks([e],mon,'mgr')));
+  const dp=eqPhotoBlocks([e],mon,'drv');if(dp.length)pages.push(...docPhotoSheet(dp));
+  return pages}
 function eqCheckForm(eid,ds){eqWeekForm(eid,weekMon(ds||today()))}
 
 /* 관리자 목록의 장비 카드: 운전원이 따로 한 점검 요약 + 보기 */
@@ -226,21 +231,21 @@ function eqWeekPhotoForm(eid,mon,tr){
 }
 
 /* 주간 일일점검표 출력 — A4 가로 1장 / 장비 1대 (현장 엑셀 양식과 같은 배치) */
-function docEqWeek(e,mon){
-  const days=weekDays(mon),w=eqWeekRec(e.id,mon),legacy=days.map(d=>eqLegacyDay(e.id,d));
+function docEqWeek(e,mon,tr='mgr'){const drvT=tr==='drv';
+  const days=weekDays(mon),w=eqWeekRec(e.id,mon,tr),legacy=days.map(d=>drvT?null:eqLegacyDay(e.id,d));
   const its=eqWeekItems(e,w),titles=its.map(i=>i.t);
   const val=(t,i)=>{const v=w&&w.marks&&w.marks[t]?w.marks[t][i]:'';if(v)return v;const c=legacy[i];const it=c&&c.items.find(x=>x.t===t);return it?it.v:''};
   const sym=v=>v==='X'?'<b>×</b>':MARK_SYM[v]||'';
   const note=t=>{const n=[];if(w&&w.notes&&w.notes[t])n.push(h(w.notes[t]));legacy.forEach((c,i)=>{const it=c&&c.items.find(x=>x.t===t);if(it&&it.note)n.push(`${WD6[i]}: ${h(it.note)}`)});return n.join('<br>')};
   const sigSrc=w&&w.sig||(legacy.find(c=>c&&c.sig)||{}).sig;
   const remarks=[w&&w.remark?h(w.remark):'',...legacy.map((c,i)=>c&&c.remark?`${WD6[i]} ${h(c.remark)}`:'')].filter(Boolean);
-  const done=eqWeekComplete(e.id,mon);
+  const done=eqWeekComplete(e.id,mon,tr);
   const memo=[...titles.map((t,r)=>{const n=note(t);return n?`<div><b>${r+1}. ${h(t)}</b> — ${n}</div>`:''}).filter(Boolean),...remarks.map(x=>`<div>${x}</div>`)];
   const rowH=Math.max(7,Math.min(20,Math.floor(129/Math.max(titles.length,1))));
-  return `<div class="doc eqw">${done?stampHtml('doc'):''}<h1>${FT('eqTitle')}</h1>
+  return `<div class="doc eqw">${done?stampHtml('doc'):''}<h1>${drvT?(FT('eqTitle').includes('전담관리자')?FT('eqTitle').replace('전담관리자','운전원'):FT('eqTitle')+' (운전원 점검)'):FT('eqTitle')}</h1>
   <div class="eqf"><div><span>■ 소속협력사 :</span><u>${h(e.company||'')}</u></div>
     <div><span>■ 장비종류 :</span><u>${h(e.type||'')}${eqFormOf(e)?` (${h(w&&w.form||eqFormName(e))} 양식)`:''}</u><span style="margin-left:6mm">■ 장비번호 :</span><u>${h(e.plate||'')}</u><span class="wl">${weekLabel(mon)}</span></div>
-    <div><span>■ 장비 전담관리자 :</span><u>${h(w&&w.inspector||e.manager||'')}</u><span class="sg">(서명)${sigSrc?`<img src="${sigSrc}">`:''}</span></div></div>
+    <div><span>■ ${drvT?'운전원':'장비 전담관리자'} :</span><u>${h(w&&w.inspector||(drvT?e.operator:e.manager)||'')}</u><span class="sg">(서명)${sigSrc?`<img src="${sigSrc}">`:''}</span></div></div>
   <table class="grid6"><colgroup><col style="width:46%">${days.map(()=>'<col style="width:9%">').join('')}</colgroup>
   <tr><th class="it">점 검 항 목</th>${days.map((d,i)=>`<th>${WD6[i]}<br>( ${md(d)} )</th>`).join('')}</tr>
   ${titles.map((t,r)=>`<tr style="height:${rowH}mm"><td class="it">${r+1}. ${h(t)}${its[r].d?`<div class="md">${h(its[r].d)}</div>`:''}</td>${days.map((d,i)=>`<td class="mk">${sym(val(t,i))}</td>`).join('')}</tr>`).join('')}
@@ -250,14 +255,14 @@ function docEqWeek(e,mon){
 }
 
 /* 사진대지: 장비별 주간 사진을 4장씩 한 건으로 (사진마다 항목명 표시) */
-function eqPhotoBlocks(list,mon){
+function eqPhotoBlocks(list,mon,tr='mgr'){const drvT=tr==='drv';
   const out=[],label=weekLabel(mon),days=weekDays(mon);
   for(const e of list){
-    const wp=eqWeekPhoto(e.id,mon);
+    const wp=eqWeekPhoto(e.id,mon,tr);
     const order=eqSlots().map(s=>s.t);
     const ph=[...((wp&&wp.photos)||[]).slice().sort((a,b)=>order.indexOf(a.slot)-order.indexOf(b.slot)),
-      ...EC.filter(c=>!c.kind&&c.equipId===e.id&&!c.void&&c.date>=days[0]&&c.date<=days[5]).flatMap(c=>(c.photos||[]))];
-    for(let i=0;i<ph.length;i+=4){const g=ph.slice(i,i+4);out.push({date:label,content:eqName(e),photos:g.map(p=>({src:p.src,cap:p.cap||p.slot||''}))})}
+      ...(drvT?[]:EC).filter(c=>!c.kind&&c.equipId===e.id&&!c.void&&c.date>=days[0]&&c.date<=days[5]).flatMap(c=>(c.photos||[]))];
+    for(let i=0;i<ph.length;i+=4){const g=ph.slice(i,i+4);out.push({date:label,content:eqName(e)+(drvT?' · 운전원 점검':''),photos:g.map(p=>({src:p.src,cap:p.cap||p.slot||''}))})}
   }
   return out;
 }
