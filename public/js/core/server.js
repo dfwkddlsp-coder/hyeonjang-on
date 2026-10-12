@@ -11,7 +11,7 @@ const isGuest=()=>SERVER&&!!ME&&ME.role==='guest';
 /* 관리자·운영자: 취약근로자 열람, 파일(대장 엑셀·PDF) 등록 */
 const isStaff=()=>!SERVER||(!!ME&&(ME.role==='admin'||ME.role==='manager'));
 const roleBadge=r=>r==='guest'?'<span class="badge bwarn">임시 운전원</span>':r==='admin'?'<span class="badge">운영자</span>':r==='manager'?'<span class="badge">관리자</span>':r==='driver'?'<span class="badge bgray">장비운전원</span>':'<span class="badge bgray">사용자</span>';
-const SHARED_KEYS=['site','guide','colAlias','periodMonths','vtypes','levels','alcMode','alc','alcMsg','vulnAge','bp','eqItems','eqCheckItems','vulnScope','homeLayout','docCats','forms','eqForms','eqExclude'];
+const SHARED_KEYS=['site','guide','colAlias','joinOpen','periodMonths','vtypes','levels','alcMode','alc','alcMsg','vulnAge','bp','eqItems','eqCheckItems','vulnScope','homeLayout','docCats','forms','eqForms','eqExclude'];
 async function api(path,body){
   const r=await fetch('/api/'+path,{method:body!==undefined?'POST':'GET',credentials:'same-origin',headers:body!==undefined?{'content-type':'application/json'}:{},body:body!==undefined?JSON.stringify(body):undefined});
   let j=null;try{j=await r.json()}catch(e){}
@@ -84,8 +84,10 @@ function authScreen(kind){return new Promise(res=>{
     <h2 style="margin:10px 0 2px">${K.t}</h2><p class="small muted" style="margin:0 0 6px">${K.sub}</p>
     ${K.f.map(([n,l,t,ac])=>`<label class="f">${l}</label><input class="inp" name="${n}" type="${t}" autocomplete="${ac}" ${t==='text'?'autocapitalize="off" autocorrect="off" spellcheck="false"':''}>`).join('')}
     <div class="auth-err"></div><button class="btn xl" type="submit" style="margin-top:12px">${K.b}</button>
+    ${kind==='login'?'<button class="btn line" type="button" id="toJoin" style="width:100%;margin-top:8px">처음이세요? 가입 신청</button>':''}
     <p class="small muted" style="text-align:center;margin:10px 0 0">습관이 된 노력을 실력이라 한다.</p></form>`;
   document.body.appendChild(d);const fm=$('form',d);
+  const tj=$('#toJoin',d);if(tj)tj.onclick=async()=>{d.remove();await joinScreen();res(await authScreen('login'))};
   let savedId='';try{savedId=localStorage.getItem('hjLoginId')||''}catch(e){}
   if(kind==='login'&&savedId){fm.elements.loginId.value=savedId;setTimeout(()=>fm.elements.password.focus(),50)}else setTimeout(()=>fm.elements[0].focus(),50);
   fm.onsubmit=async e=>{e.preventDefault();const v=Object.fromEntries(new FormData(fm));const err=$('.auth-err',d);err.textContent='';
@@ -113,7 +115,10 @@ async function authGate(){
   const gt=(location.hash.match(/^#g=([A-Za-z0-9]+)/)||[])[1];
   if(gt){history.replaceState(null,'',location.pathname);u=await guestJoin(gt,u)||u}
   if(st.setupNeeded)u=await authScreen('setup');
-  else if(!u){const last=await kvGet('me');if(last&&last.role==='guest')await guestEnded();u=await authScreen('login')}
+  else if(!u){const last=await kvGet('me');if(last&&last.role==='guest')await guestEnded();
+    if(location.hash==='#join'){history.replaceState(null,'',location.pathname);await joinScreen()} // 초대 QR로 열었으면 가입 신청부터
+    u=await authScreen('login')}
+  if(location.hash==='#join')history.replaceState(null,'',location.pathname);
   if(u.mustChange)u=await authScreen('pw');
   const prev=await kvGet('me');let reset=false;
   if(!prev||prev.id!==u.id||prev.role!==u.role){for(const s of [...STORE_NAMES,'outbox'])await DB.putMany(s,[],true);await kvSet('lastSync',0);reset=true}

@@ -227,6 +227,25 @@ await test('category records (사진대지 등): the writer or the operator dele
   assert.equal((await A('docs/delete', { store: 'records', id: r2 })).s, 200, 'operator deletes any');
 });
 
+await test('가입 신청: anyone applies, only the operator approves; the chosen password works', async () => {
+  const ph = '0107' + tag.padStart(7, '0').slice(-7), X = client();
+  assert.equal((await X('join/request', { name: '신청테스트', phone: ph, company: '가나', job: '형틀', want: 'user', password: 'short' })).s, 400, 'password too short');
+  assert.equal((await X('join/request', { name: '신청테스트', phone: ph, company: '가나', job: '형틀', want: 'user', password: 'join-pass-9' })).s, 200);
+  assert.equal((await X('join/request', { name: 'x', phone: phone, company: '가', password: 'join-pass-9' })).s, 409, 'existing account');
+  assert.equal((await M('join/requests')).s, 403, 'manager cannot approve');
+  assert.ok((await A('join/requests')).j.items.some((r) => r.phone === ph));
+  assert.equal((await syncAll(A)).j.docs.some((d) => d.store === 'joinreq'), false, 'requests never synced');
+  assert.equal((await A('join/requests/' + ph, { action: 'approve', role: 'driver' })).s, 200);
+  const L = client(), lr = await L('login', { loginId: ph, password: 'join-pass-9' });
+  assert.equal(lr.s, 200, 'login with the password chosen at signup');
+  assert.equal(lr.j.user.role, 'driver', 'operator decided the role');
+  cleanup.push(() => A(`users/${lr.j.user.id}`, { active: false }));
+  const ph2 = '0106' + tag.padStart(7, '0').slice(-7);
+  await X('join/request', { name: '거절', phone: ph2, company: '가', password: 'join-pass-9' });
+  assert.equal((await A('join/requests/' + ph2, { action: 'reject' })).s, 200);
+  assert.equal((await client()('login', { loginId: ph2, password: 'join-pass-9' })).s, 401, 'rejected cannot log in');
+});
+
 await test('PDF upload: manager and operator only, real PDFs only, staff files hidden from users', async () => {
   const pdf = Buffer.from('%PDF-1.4\n%%EOF\n');
   assert.equal((await U('admin/files', pdf, 'application/pdf')).s, 403);

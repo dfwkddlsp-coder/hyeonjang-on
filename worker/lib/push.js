@@ -17,6 +17,7 @@ export const PUSH_EVENTS = {
   alcohol: { label: '음주 적발', from: ['staff', 'user'] },
   feedback: { label: '새 의견', from: ['staff', 'user', 'driver', 'guest'], adminOnly: true },
   guestjoin: { label: '임시 출입 입장', from: [] },
+  joinreq: { label: '가입 신청', from: [], adminOnly: true },
 };
 export const sourceOf = (u) => (u.role === 'admin' || u.role === 'manager' ? 'staff' : u.role);
 /** 저장한 적 없으면: 모두 켬, 다만 운영자·관리자가 한 일은 끔 */

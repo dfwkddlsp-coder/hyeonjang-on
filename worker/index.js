@@ -17,8 +17,9 @@ import admin from './routes/admin.js';
 import guide from './routes/guide.js';
 import guest from './routes/guest.js';
 import push from './routes/push.js';
+import join from './routes/join.js';
 
-const ROUTES = [...auth, ...users, ...docs, ...files, ...admin, ...guide, ...guest, ...push];
+const ROUTES = [...auth, ...users, ...docs, ...files, ...admin, ...guide, ...guest, ...push, ...join];
 
 function match(method, path) {
   for (const [m, p, handler] of ROUTES) {
