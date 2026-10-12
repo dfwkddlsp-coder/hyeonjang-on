@@ -102,16 +102,16 @@ function pushMessages(u, docs, prev) {
   return out;
 }
 
-// POST /api/docs/delete {store,id} — 운영자. 장비만: 추가한 사람·관리자도 (잘못 추가한 장비), 그 장비의 점검 기록도 함께
+// POST /api/docs/delete {store,id} — 운영자는 전부, 그 밖에는 본인이 쓴 기록만. 장비는 관리자도 (그 장비의 점검 기록도 함께)
 async function remove({ req, env }) {
   const u = await requireUser(req, env);
   const b = await body(req);
   if (!STORES.has(b.store) || b.store === 'settings' || !b.id) fail(400, '잘못된 요청');
-  if (u.role !== 'admin') {
-    if (b.store !== 'equipment') fail(403, '운영자만 할 수 있습니다');
-    const r = await env.DB.prepare("SELECT created_by FROM docs WHERE store='equipment' AND id=? AND deleted=0").bind(b.id).first();
-    if (!r) fail(404, '없는 장비입니다');
-    if (!isStaff(u) && r.created_by !== u.id) fail(403, '장비는 추가한 사람과 관리자·운영자만 삭제할 수 있습니다');
+  if (u.role !== 'admin') { // 본인이 쓴 기록은 본인이 지움. 장비는 관리자도 (잘못 추가한 장비 정리)
+    const r = await env.DB.prepare('SELECT created_by FROM docs WHERE store=? AND id=? AND deleted=0').bind(b.store, b.id).first();
+    if (!r) fail(404, '없는 기록입니다');
+    if (r.created_by !== u.id && !(b.store === 'equipment' && isStaff(u)))
+      fail(403, b.store === 'equipment' ? '장비는 추가한 사람과 관리자·운영자만 삭제할 수 있습니다' : '본인이 쓴 기록만 삭제할 수 있습니다');
   }
   if (b.store === 'plans' && env.PHOTOS) { // 문서함 PDF도 함께 지움
     const r = await env.DB.prepare("SELECT data FROM docs WHERE store='plans' AND id=?").bind(b.id).first();

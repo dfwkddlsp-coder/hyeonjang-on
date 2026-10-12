@@ -84,10 +84,12 @@ function showViolation(id){
    ${v.photos&&v.photos.length?`<div class="photos" style="margin-bottom:12px">${v.photos.map(p=>`<div class="ph"><img src="${p}"></div>`).join('')}</div>`:''}
    <div class="grid g2" style="margin-bottom:12px">${v.sigViolator?`<div class="card"><div class="small muted">위반자 서명</div><img src="${v.sigViolator}" style="max-width:100%;height:90px"></div>`:''}<div class="card"><div class="small muted">점검자 서명</div><img src="${v.sigInspector}" style="max-width:100%;height:90px"></div></div>
    ${v.level===2&&!v.void?`<div class="card">${v.edu&&v.edu.done?`<b style="color:var(--ok)"><i class="i i-check"></i> 교육 이수</b> ${fmtDT(v.edu.at)} · 교육자 ${h(v.edu.by)}`:`<b style="color:var(--warn)">교육 미이수</b><div class="row" style="margin-top:8px"><input class="inp grow" id="eduBy" placeholder="교육 실시자" value="${h(S.inspector)}"><button class="btn ok" id="eduOk">교육 이수 처리</button></div>`}</div>`:''}
-   <div class="row"><button class="btn" id="pv"><i class="i i-print"></i> 확인서 출력 / PDF</button>${!v.void&&isAdmin()?'<button class="btn line" id="vd">무효 처리</button>':''}<button class="btn line" id="wh">근로자 이력</button></div>`,b=>{
+   <div class="row"><button class="btn" id="pv"><i class="i i-print"></i> 확인서 출력 / PDF</button>${!v.void&&isAdmin()?'<button class="btn line" id="vd">무효 처리</button>':''}${ownRec(v)?'<button class="btn line" id="vdel" style="color:var(--bad)">삭제</button>':''}<button class="btn line" id="wh">근로자 이력</button></div>`,b=>{
     $('#pv',b).onclick=()=>printPages([docViolation(v)]);
     const wh=$('#wh',b);wh.onclick=()=>{closeModal();showPersonHistory(v.pkey,v.name,v.company)};
     const eo=$('#eduOk',b);if(eo)eo.onclick=async()=>{v.edu={done:true,at:nowLocal(),by:$('#eduBy').value.trim()};await save('violations',v);toast('교육 이수 처리됨');showViolation(v.id);R[cur]()};
+    const vx=$('#vdel',b);if(vx)vx.onclick=async()=>{if(!confirm(`${v.name}님의 ${v.level}차 적발 기록을 삭제할까요?
+이후 적발 차수 계산에서 빠집니다. (잘못 쓴 기록이 아니면 운영자의 '무효 처리'를 쓰세요)`))return;try{await remove('violations',v.id);closeModal();toast('삭제했습니다');R[cur]()}catch(x){if(x.message!=='offline')toast(x.message)}};
     const vd=$('#vd',b);if(vd)vd.onclick=async()=>{const r=prompt('무효 사유를 입력하세요 (기록은 삭제되지 않고 무효로 표시됩니다)');if(!r)return;v.void={reason:r,at:nowLocal()};await save('violations',v);toast('무효 처리됨');closeModal();R[cur]()};
   });
 }

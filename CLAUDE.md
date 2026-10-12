@@ -11,7 +11,7 @@ R2 `hyeonjang-on-photos`). Architecture and commands: see README.md.
 2. 사용자 (user): view and register everything except 취약근로자.
 3. 관리자 (manager): view and register everything except settings; can see 취약근로자.
 4. Settings: everyone sees 내 정보; 관리자 also sees 알림 (phone push, per person); the operator sees all settings.
-5. 운영자 (admin) runs everything; deletes, voids, users and backups are operator only — except equipment: whoever added it, 관리자 and 운영자 may delete it (its checks go with it).
+5. 운영자 (admin) runs everything; deletes, voids, users and backups are operator only — except that anyone may delete records they wrote, and 관리자 may also delete any equipment (its checks go with it).
 6. Photos can be added by anyone; **files** (register Excel uploads, PDF documents) only by manager and operator.
 7. Multi-photo pick fills the next slots; fixed-slot photo lists (장비 주간 사진) stay one at a time.
 8. 사진대지: the writer picks 4 photos per cell or 1 photo per cell (2 cells per page), editable later.

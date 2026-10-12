@@ -207,11 +207,24 @@ await test('equipment delete: whoever added it, manager and operator; checks go 
   assert.equal((await A('docs', { docs: [doc('equipment', ea, { type: '크레인' })] })).s, 200); del('equipment', ea);
   assert.equal((await U('docs/delete', { store: 'equipment', id: ea })).s, 403, 'user cannot delete equipment added by someone else');
   assert.equal((await D('docs/delete', { store: 'equipment', id: eqMine })).s, 403, 'driver cannot delete');
-  assert.equal((await U('docs/delete', { store: 'violations', id: 'x' + tag })).s, 403, 'other records stay operator only');
+  const vv = 'vdel' + tag;
+  assert.equal((await M('docs', { docs: [doc('violations', vv, { name: 'x', level: 1 })] })).s, 200);
+  assert.equal((await U('docs/delete', { store: 'violations', id: vv })).s, 403, 'cannot delete someone else’s violation');
+  assert.equal((await M('docs/delete', { store: 'violations', id: vv })).s, 200, 'writer deletes own violation');
   assert.equal((await U('docs/delete', { store: 'equipment', id: eu })).s, 200, 'adder deletes own equipment');
   const after = (await syncAll(A)).j.docs;
   assert.equal(after.some((d) => d.id === ck && !d.deleted), false, 'its checks are deleted too');
   assert.equal((await M('docs/delete', { store: 'equipment', id: ea })).s, 200, 'manager deletes any equipment');
+});
+
+await test('category records (사진대지 등): the writer or the operator deletes', async () => {
+  const r1 = 'rc' + tag;
+  assert.equal((await U('docs', { docs: [doc('records', r1, { cat: 'x', scope: 'all', type: 'photo', byId: 'u' })] })).s, 200);
+  assert.equal((await M('docs/delete', { store: 'records', id: r1 })).s, 403, 'manager cannot delete another person’s record');
+  assert.equal((await U('docs/delete', { store: 'records', id: r1 })).s, 200, 'writer deletes own record');
+  const r2 = 'rd' + tag;
+  assert.equal((await M('docs', { docs: [doc('records', r2, { cat: 'x', scope: 'all', type: 'photo' })] })).s, 200);
+  assert.equal((await A('docs/delete', { store: 'records', id: r2 })).s, 200, 'operator deletes any');
 });
 
 await test('PDF upload: manager and operator only, real PDFs only, staff files hidden from users', async () => {

@@ -117,7 +117,7 @@ function editVuln(id){
   openModal(id?'취약근로자 수정':'취약근로자 추가',`<div class="grid g2">${[['name','성명 *'],['company','업체명 *'],['job','공종'],['age','연령']].map(([k,l])=>`<div><label class="f">${l}</label><input class="inp" data-k="${k}" value="${h(p[k]||'')}" ${k==='company'?'list="companyList"':''}${k==='age'?' inputmode="numeric"':''}></div>`).join('')}</div>${companyDatalist()}
    <label class="f">메모</label><textarea class="inp" data-k="note">${h(p.note||'')}</textarea>
    <h2>검진 항목</h2><div id="irows">${its.map(row).join('')}</div><button class="btn ghost sm" id="iadd"><i class="i i-plus"></i> 항목 추가</button>
-   <div class="row" style="margin-top:14px"><button class="btn" id="us" style="flex:1">저장</button>${id&&isAdmin()?'<button class="btn bad" id="ud">삭제</button>':''}</div>`,b=>{
+   <div class="row" style="margin-top:14px"><button class="btn" id="us" style="flex:1">저장</button>${id&&ownRec(p)?'<button class="btn bad" id="ud">삭제</button>':''}</div>`,b=>{
     $('#iadd',b).onclick=()=>$('#irows',b).insertAdjacentHTML('beforeend',row({},$$('[data-row]',b).length));
     $('#us',b).onclick=async()=>{const o={...p,id:p.id||uid(),consults:p.consults||[],bp:p.bp||[]};$$('[data-k]',b).forEach(i=>o[i.dataset.k]=i.value.trim());
       if(!o.name||!o.company)return toast('성명과 업체명은 필수');o.age=String(o.age).replace(/\D/g,'');

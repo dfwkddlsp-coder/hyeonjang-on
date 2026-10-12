@@ -83,7 +83,7 @@ function importButtons(kind,files,host,pre,onRun){
 function editWorker(id){
   const w=id?W.find(x=>x.id===id):{};
   openModal(id?'근로자 수정':'근로자 추가',Object.entries(WORKER_LABEL).map(([k,l])=>`<label class="f">${l}${k==='name'||k==='company'?' *':''}</label>${k==='company'||k==='job'?comboHtml('ew_'+k,k,w[k],l+' 직접 입력',`data-k="${k}"`):`<input class="inp" data-k="${k}" value="${h(w[k]||'')}">`}`).join('')+companyDatalist()+
-   `${id?`<label class="row" style="margin-top:12px"><input type="checkbox" id="wb" ${w.banned?'checked':''} style="width:22px;height:22px"> 퇴출 상태</label>`:''}<div class="row" style="margin-top:14px"><button class="btn" id="ws" style="flex:1">저장</button>${id&&isAdmin()?'<button class="btn bad" id="wd">삭제</button>':''}</div>`,b=>{
+   `${id?`<label class="row" style="margin-top:12px"><input type="checkbox" id="wb" ${w.banned?'checked':''} style="width:22px;height:22px"> 퇴출 상태</label>`:''}<div class="row" style="margin-top:14px"><button class="btn" id="ws" style="flex:1">저장</button>${id&&ownRec(w)?'<button class="btn bad" id="wd">삭제</button>':''}</div>`,b=>{
     bindCombos(b);
     $('#ws',b).onclick=async()=>{const o={...w,id:w.id||uid()};$$('[data-k]',b).forEach(i=>o[i.dataset.k]=i.value.trim());if(!o.name||!o.company)return toast('성명과 소속업체는 필수');if(id)o.banned=$('#wb').checked;if(!id)o.created=nowLocal();await save('workers',o);closeModal();R[cur]()};
     const wd=$('#wd',b);if(wd)wd.onclick=async()=>{if(!confirm(`${w.name} 근로자를 대장에서 삭제할까요? (적발·측정 기록은 유지)`))return;await remove('workers',id);closeModal();R[cur]()};

@@ -19,7 +19,8 @@ const STORE={workers:()=>W,equipment:()=>E,violations:()=>V,alcohol:()=>A,vuln:(
 function memPut(store,obj){const arr=STORE[store]();const i=arr.findIndex(x=>x.id===obj.id);if(i>=0)arr[i]=obj;else arr.push(obj)}
 function memDel(store,id){const arr=STORE[store]();const i=arr.findIndex(x=>x.id===id);if(i>=0)arr.splice(i,1)}
 /* 서버 모드: 기기에 먼저 저장 → 전송 대기함(outbox) → 연결되면 서버로. 인터넷이 없어도 입력은 계속 됩니다 */
-async function save(store,obj){await DB.put(store,obj);memPut(store,obj);if(SERVER){await DB.put('outbox',{k:store+'|'+obj.id,store,id:obj.id,data:obj,ts:Date.now()});Sync.soon()}}
+/* 쓴 사람(byId): 새 기록이면 나, 고칠 때는 처음 쓴 사람을 그대로 → 본인 글 지우기·고치기 판단에 씀 */
+async function save(store,obj){if(SERVER&&ME&&!obj.byId&&STORE[store]){const old=STORE[store]().find(x=>x.id===obj.id);const by=old?old.byId:ME.id;if(by)obj.byId=by}await DB.put(store,obj);memPut(store,obj);if(SERVER){await DB.put('outbox',{k:store+'|'+obj.id,store,id:obj.id,data:obj,ts:Date.now()});Sync.soon()}}
 async function remove(store,id){if(SERVER){if(!navigator.onLine){toast('삭제는 인터넷 연결이 필요합니다');throw new Error('offline')}await api('docs/delete',{store,id})}await DB.del(store,id);memDel(store,id)}
 
 const DEF={

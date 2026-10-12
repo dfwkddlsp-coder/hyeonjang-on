@@ -18,7 +18,8 @@ const catItems=c=>String(c.items||'').split('\n').map(x=>x.trim()).filter(Boolea
 const recsOf=k=>RC.filter(r=>r.cat===k).sort((a,b)=>String(b.date||b.week||'').localeCompare(String(a.date||a.week||''))||String(b.at).localeCompare(String(a.at)));
 const CK_SYM={O:'○',X:'×',N:'-'};
 const canWriteCat=C=>!SERVER||(!isDriver()&&catVisible(C));
-const canEditRec=r=>isAdmin()||!SERVER||(ME&&r.byId===ME.id);
+/* 고치기·지우기: 쓴 사람과 운영자 (서버도 같은 규칙) */
+const canEditRec=r=>!SERVER||ownRec(r);
 
 /* 사진 여러 장 입력: 갤러리에서 여러 장을 고르면 빈 칸에 차례로 들어감 (카메라는 한 장씩).
    list = [{src,cap}], max = 최대 장수. opt.cap = 설명칸 안내문, opt.area = 설명을 여러 줄로. 반환: 현재 사진 목록을 돌려주는 함수 */
@@ -73,7 +74,7 @@ function recTitle(C,r){const t=catType(C);if(t==='photo')return (r.content||((r.
 function recView(C,r){if(!r)return;
   openModal(C.name,`<div style="overflow:auto;background:#fff;border-radius:10px;padding:8px;border:1px solid var(--line)"><div style="zoom:.55">${recPages(C,[r]).join('<hr>')}</div></div>
     <div class="grid g2" style="margin-top:12px"><button class="btn" id="rvPrint"><i class="i i-print"></i> 인쇄</button>${canEditRec(r)?'<button class="btn line" id="rvEdit">수정</button>':'<span></span>'}</div>
-    ${isAdmin()?'<button class="btn line" id="rvDel" style="width:100%;margin-top:8px;color:var(--bad)">삭제</button>':''}`,b=>{
+    ${canEditRec(r)?'<button class="btn line" id="rvDel" style="width:100%;margin-top:8px;color:var(--bad)">삭제</button>':''}`,b=>{
     $('#rvPrint',b).onclick=()=>printPages(recPages(C,[r]));
     if($('#rvEdit',b))$('#rvEdit',b).onclick=()=>recEdit(C,r);
     if($('#rvDel',b))$('#rvDel',b).onclick=async()=>{if(!confirm('이 기록을 삭제할까요?'))return;try{await remove('records',r.id);closeModal();R.recs(C)}catch(x){toast(x.message)}}})}
@@ -220,7 +221,7 @@ R.plans=(cat)=>{
   const order=pl.slice(),sorting=R.plans.sorting&&isStaff()&&SERVER;
   const drawList=()=>{$('#plList').innerHTML=order.map((p,i)=>`<div class="it"><span class="dot d0"><i class="i i-plans"></i></span><div class="m"><b>${h(p.title)}</b><div class="small muted ell">${fmtDT(p.at)} · ${h(p.by||'')} · ${fmtSize(p.size||0)}</div></div>
     ${sorting?`<button class="btn sm line" data-pu="${i}" ${i?'':'disabled'} aria-label="위로">▲</button><button class="btn sm line" data-pd="${i}" ${i<order.length-1?'':'disabled'} aria-label="아래로">▼</button>`
-    :`<a class="btn sm" href="${planUrl(p)}" target="_blank" rel="noopener">열기</a>${isAdmin()?`<button class="btn sm line" data-pdel="${h(p.id)}">삭제</button>`:''}`}</div>`).join('')||'<div class="empty">아직 올린 문서가 없습니다</div>';
+    :`<a class="btn sm" href="${planUrl(p)}" target="_blank" rel="noopener">열기</a>${ownRec(p)?`<button class="btn sm line" data-pdel="${h(p.id)}">삭제</button>`:''}`}</div>`).join('')||'<div class="empty">아직 올린 문서가 없습니다</div>';
     $$('[data-pu]').forEach(b=>b.onclick=()=>{const i=+b.dataset.pu;[order[i-1],order[i]]=[order[i],order[i-1]];drawList()});
     $$('[data-pd]').forEach(b=>b.onclick=()=>{const i=+b.dataset.pd;[order[i+1],order[i]]=[order[i],order[i+1]];drawList()});
     $$('[data-pdel]').forEach(b=>b.onclick=async()=>{const p=PL.find(x=>x.id===b.dataset.pdel);if(!p||!confirm(`「${p.title}」을(를) 삭제할까요?\nPDF 파일도 서버에서 지워집니다.`))return;try{await remove('plans',p.id);toast('삭제했습니다');R.plans()}catch(x){toast(x.message)}})};

@@ -5,6 +5,8 @@ let SERVER=false,ME=null;
 const isAdmin=()=>!SERVER||(ME&&ME.role==='admin');
 /* 장비운전원처럼 본인 장비만: driver(계정) · guest(QR 임시 운전원, 그날 자정까지) */
 const isDriver=()=>SERVER&&!!ME&&(ME.role==='driver'||ME.role==='guest');
+/* 본인 글인가: 운영자는 전부, 그 밖에는 쓴 사람만 (예전 기록은 서버가 남긴 작성자 이름으로). 서버도 같은 규칙 */
+const ownRec=o=>!!o&&(isAdmin()||(!!ME&&(o.byId?o.byId===ME.id:!!o._by&&o._by===ME.name)));
 const isGuest=()=>SERVER&&!!ME&&ME.role==='guest';
 /* 관리자·운영자: 취약근로자 열람, 파일(대장 엑셀·PDF) 등록 */
 const isStaff=()=>!SERVER||(!!ME&&(ME.role==='admin'||ME.role==='manager'));

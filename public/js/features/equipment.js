@@ -181,7 +181,7 @@ function eqWeekForm(eid,mon,fresh,tr){
    <div id="wkNotes"></div>
    <div class="card"><label class="f">비고</label><textarea class="inp" id="wkR" placeholder="특이사항">${h(prev&&prev.remark||'')}</textarea>
      <div class="grid g2"><div><label class="f">점검자 (${drvT?'운전원':'전담관리자'})</label><input class="inp" id="wkBy" ${ro?'readonly':''} value="${h(prev&&prev.inspector||(ro?'':S.inspector)||'')}"></div></div><div id="wkSig" style="margin-top:10px"></div></div>
-   ${ro?'':`<div class="grid g2"><button class="btn xl" id="wkSave">저장</button>${prev&&isAdmin()?'<button class="btn xl line" id="wkDel">이 주 점검표 삭제</button>':''}</div>`}`,b=>{
+   ${ro?'':`<div class="grid g2"><button class="btn xl" id="wkSave">저장</button>${prev&&ownRec(prev)?'<button class="btn xl line" id="wkDel">이 주 점검표 삭제</button>':''}</div>`}`,b=>{
     const paint=()=>{
       $$('.wkc',b).forEach(x=>{const v=st.marks[items[+x.dataset.r].t][+x.dataset.c];x.textContent=SYM[v];x.className='wkc'+(v?' v'+v:'')});
       const bad=items.filter(it=>st.marks[it.t].some(v=>v==='X'||v==='E'));
@@ -225,7 +225,7 @@ function eqWeekPhotoForm(eid,mon,tr){
      <div class="small" style="margin-top:6px" id="wpProg"></div></div>
    <div id="wpSlots"></div>
    <input type="file" accept="image/*" capture="environment" hidden id="wpCam"><input type="file" accept="image/*" hidden id="wpGalIn">
-   <div class="grid g2"><button class="btn xl" id="wpSave">${prev?'수정 저장':'저장'}</button>${prev&&isAdmin()?'<button class="btn xl line" id="wpDel">이 주 사진 삭제</button>':''}</div>`,b=>{
+   <div class="grid g2"><button class="btn xl" id="wpSave">${prev?'수정 저장':'저장'}</button>${prev&&ownRec(prev)?'<button class="btn xl line" id="wpDel">이 주 사진 삭제</button>':''}</div>`,b=>{
     const draw=()=>{
       $('#wpProg',b).innerHTML=`등록 <b>${slots.filter(s=>st[s.t]).length}</b> / ${slots.length}`;
       $('#wpSlots',b).innerHTML=slots.map((s,i)=>`<div class="card wpslot${st[s.t]?' done':''}"><div class="row" style="gap:10px;align-items:flex-start">

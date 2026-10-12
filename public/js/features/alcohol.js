@@ -99,7 +99,7 @@ function alcBadSection(){
   <div class="card list">${bad.length?bad.map(a=>`<div class="it" data-aid="${a.id}"><span class="badge ${judgeCls(a.judge)}">${a.judge}</span><div class="m"><b>${h(a.name)}</b> <span class="muted small">${h(a.company)}</span><div class="small muted ell">${fmtDT(a.at)} · ${a.refused?'측정 거부':f3(a.value)+'%'}${a.badNo?' · '+a.badNo+'회 적발':''}${a.out?' · 영구퇴출':''}${a.notice?' · 통지서 완료':''}</div></div>${a.notice?`<button class="btn sm line" data-np="${a.id}"><i class="i i-print"></i> 출력</button>`:`<button class="btn sm bad" data-nw="${a.id}"><i class="i i-pen"></i> 통지서 작성</button>`}</div>`).join(''):'<div class="empty">최근 30일 적발자 없음</div>'}</div>`;
 }
 /* 사진은 쓴 사람과 운영자만 고침 (서버도 같은 규칙). 예전 기록은 작성자 이름으로 */
-const canEditAlc=a=>isAdmin()||!SERVER||(!!ME&&(a.byId?a.byId===ME.id:a._by===ME.name));
+const canEditAlc=a=>!SERVER||ownRec(a);
 function alcPhotos(a){
   let get=()=>[];
   openModal(`음주측정 사진 · ${a.name}`,`<div class="small muted" style="margin-bottom:8px">측정기 화면 등 · 4장까지</div><div id="ePh"></div><button class="btn xl" id="ePhS" style="width:100%;margin-top:12px">저장</button>`,b=>{
@@ -115,7 +115,7 @@ function showAlcohol(id){
    <div class="row" style="margin-top:14px">
    ${isAlcBad(a)&&!a.void?`<button class="btn bad" id="nt"><i class="i i-pen"></i> ${a.notice?'통지서 다시 작성':'측정결과 통지서 작성'}</button>${a.notice?'<button class="btn" id="np"><i class="i i-print"></i> 통지서 출력</button>':''}<button class="btn line" id="ms"><i class="i i-share"></i> 알림 문구</button>`:''}
    ${a.judge!=='정상'&&!ch&&!a.void?'<button class="btn line" id="rt">재측정 입력</button>':''}
-   <button class="btn line" id="fm">사후조치 메모</button>${canEditAlc(a)&&!a.void?'<button class="btn line" id="aphE"><i class="i i-camera"></i> 사진</button>':''}
+   <button class="btn line" id="fm">사후조치 메모</button>${canEditAlc(a)&&!a.void?'<button class="btn line" id="aphE"><i class="i i-camera"></i> 사진</button>':''}${canEditAlc(a)?'<button class="btn line" id="adel" style="color:var(--bad)">삭제</button>':''}
    ${!a.void&&isAdmin()?'<button class="btn line" id="vd">무효 처리</button>':''}</div>`,b=>{
     const rt=$('#rt',b);if(rt)rt.onclick=()=>{closeModal();go('alcohol');alcForm({name:a.name,company:a.company,job:a.job,workerId:a.workerId,equip:a.equip,plate:a.plate},a)};
     const nt=$('#nt',b);if(nt)nt.onclick=()=>alcNotice(a.id);
@@ -123,6 +123,8 @@ function showAlcohol(id){
     const ms=$('#ms',b);if(ms)ms.onclick=()=>shareAlcMessage(a);
     $('#fm',b).onclick=async()=>{const r=prompt('사후조치 내용',a.follow||'');if(r===null)return;a.follow=r;await save('alcohol',a);showAlcohol(a.id);R[cur]()};
     const pe=$('#aphE',b);if(pe)pe.onclick=()=>alcPhotos(a);
+    const ax=$('#adel',b);if(ax)ax.onclick=async()=>{if(!confirm(`${a.name}님의 음주측정 기록을 삭제할까요?
+이후 적발 횟수 계산에서 빠집니다. (잘못 쓴 기록이 아니면 운영자의 '무효 처리'를 쓰세요)`))return;try{await remove('alcohol',a.id);closeModal();toast('삭제했습니다');R[cur]()}catch(x){if(x.message!=='offline')toast(x.message)}};
     const vd=$('#vd',b);if(vd)vd.onclick=async()=>{const r=prompt('무효 사유 (기록은 삭제되지 않음)');if(!r)return;a.void={reason:r,at:nowLocal()};await save('alcohol',a);closeModal();R[cur]()};
   });
 }
