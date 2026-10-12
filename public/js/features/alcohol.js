@@ -33,8 +33,9 @@ function alcForm(p,parent){
    <div><label class="f">판정</label><div class="judge" id="aj" style="background:var(--chip)">—</div></div></div>
    <div class="row" style="margin-top:10px"><button class="btn ok" id="a0" style="flex:1">0.000 (정상) 바로 저장</button><button class="btn bad" id="ar">측정 거부</button></div>
    <div class="grid g2"><div><label class="f">소속업체</label>${comboHtml('aCo','company',p.company,'업체명 직접 입력')}</div><div><label class="f">직종</label>${comboHtml('aJob','job',p.job,'직종 직접 입력')}</div><div><label class="f">측정인</label><input class="inp" id="am" value="${h(S.inspector)}"></div></div>
+   <label class="f">사진 <span class="small muted">(측정기 화면 등 · 선택 · 4장까지)</span></label><div id="aPh"></div>
    <button class="btn xl" id="as" style="margin-top:12px">저장</button>`;
-  bindCombos($('#aform'));
+  bindCombos($('#aform'));const getPh=photoInputs($('#aPh'),[],4,{cap:'설명 (선택)'});
   const cancel=()=>{$('#aform').innerHTML='';$('#ap').style.display='block';$('#ap input').focus()};
   $('#ac').onclick=cancel;
   const show=()=>{const v=parseFloat($('#av').value);if(isNaN(v)){$('#aj').textContent='—';$('#aj').className='judge';return}
@@ -45,7 +46,8 @@ function alcForm(p,parent){
     if(!refused&&(isNaN(val)||val<0||val>1))return toast('측정값을 확인하세요 (예: 0.012)');
     const at=nowLocal();const j=judge(val,refused,!!parent);
     const a={id:uid(),at,date:at.slice(0,10),name:p.name,company:$('#aCo').value.trim()||p.company,job:$('#aJob').value.trim(),equip:p.equip||'',plate:p.plate||'',workerId:p.workerId||'',pkey:k,
-      value:refused?null:val,refused,judge:j,action:JUDGE_ACT[j],measurer:$('#am').value.trim(),follow:'',retestOf:parent?parent.id:'',created:at};
+      value:refused?null:val,refused,judge:j,action:JUDGE_ACT[j],measurer:$('#am').value.trim(),follow:'',retestOf:parent?parent.id:'',created:at,
+      photos:getPh().map(x=>({src:x.src,cap:x.cap||''})),byId:ME?ME.id:''};
     if(isAlcBad(a)){a.badNo=prevBadN+1;if(a.badNo>=S.alc.outCount){a.out=true;a.action+=` / ${a.badNo}회 적발 – 영구퇴출`}}
     await save('alcohol',a);
     if(a.out){const w=workerByKey(k);if(w){w.banned=true;w.bannedAt=at;w.bannedReason='음주 '+a.badNo+'회 적발';await save('workers',w)}}
@@ -96,21 +98,31 @@ function alcBadSection(){
   <div class="hint small" style="margin-bottom:8px">측정값이 기준 이상이면 저장할 때 통지서 화면이 자동으로 열립니다. 그때 못 했으면 아래 <b>[통지서 작성]</b>을 누르세요. 근로자·측정자 서명까지 받으면 기록으로 남고 출력할 수 있습니다.</div>
   <div class="card list">${bad.length?bad.map(a=>`<div class="it" data-aid="${a.id}"><span class="badge ${judgeCls(a.judge)}">${a.judge}</span><div class="m"><b>${h(a.name)}</b> <span class="muted small">${h(a.company)}</span><div class="small muted ell">${fmtDT(a.at)} · ${a.refused?'측정 거부':f3(a.value)+'%'}${a.badNo?' · '+a.badNo+'회 적발':''}${a.out?' · 영구퇴출':''}${a.notice?' · 통지서 완료':''}</div></div>${a.notice?`<button class="btn sm line" data-np="${a.id}"><i class="i i-print"></i> 출력</button>`:`<button class="btn sm bad" data-nw="${a.id}"><i class="i i-pen"></i> 통지서 작성</button>`}</div>`).join(''):'<div class="empty">최근 30일 적발자 없음</div>'}</div>`;
 }
+/* 사진은 쓴 사람과 운영자만 고침 (서버도 같은 규칙). 예전 기록은 작성자 이름으로 */
+const canEditAlc=a=>isAdmin()||!SERVER||(!!ME&&(a.byId?a.byId===ME.id:a._by===ME.name));
+function alcPhotos(a){
+  let get=()=>[];
+  openModal(`음주측정 사진 · ${a.name}`,`<div class="small muted" style="margin-bottom:8px">측정기 화면 등 · 4장까지</div><div id="ePh"></div><button class="btn xl" id="ePhS" style="width:100%;margin-top:12px">저장</button>`,b=>{
+    get=photoInputs($('#ePh',b),(a.photos||[]).map(x=>({src:x.src,cap:x.cap||''})),4,{cap:'설명 (선택)'});
+    $('#ePhS',b).onclick=async()=>{a.photos=get().map(x=>({src:x.src,cap:x.cap||''}));await save('alcohol',a);toast('사진을 저장했습니다');showAlcohol(a.id);R[cur]()}});
+}
 function showAlcohol(id){
   const a=A.find(x=>x.id===id);if(!a)return;const ch=retestChild(a);const par=a.retestOf&&A.find(x=>x.id===a.retestOf);
   openModal(`음주측정 · ${a.name}`,`<div class="judge badge ${judgeCls(a.judge)}" style="display:block;margin-bottom:12px">${a.refused?'측정 거부':f3(a.value)+'%'} · ${a.judge}${a.badNo?` · ${a.badNo}회 적발`:''}${a.out?' · 영구퇴출':''}</div>
    <dl class="kv"><dt>소속</dt><dd>${h(a.company)}</dd><dt>직종</dt><dd>${h(a.job)}</dd>${a.equip?`<dt>장비</dt><dd>${h(a.equip)} ${h(a.plate)}</dd>`:''}<dt>측정일시</dt><dd>${fmtDT(a.at)}</dd><dt>조치</dt><dd>${h(a.action)}</dd><dt>측정인</dt><dd>${h(a.measurer)}</dd><dt>사후조치</dt><dd>${h(a.follow||'-')}</dd>
    ${par?`<dt>1차 측정</dt><dd>${hm(par.at)} ${par.value.toFixed(3)}%</dd>`:''}${ch?`<dt>재측정</dt><dd>${hm(ch.at)} ${ch.refused?'거부':ch.value.toFixed(3)+'%'} → ${ch.judge}</dd>`:''}${a.void?`<dt>무효</dt><dd>${h(a.void.reason)}</dd>`:''}</dl>
+   ${(a.photos||[]).length?`<div class="photos" style="margin-top:12px">${a.photos.map(x=>`<div class="ph"><a href="${h(x.src)}" target="_blank" rel="noopener"><img src="${h(x.src)}"></a>${x.cap?`<div class="small muted">${h(x.cap)}</div>`:''}</div>`).join('')}</div>`:''}
    <div class="row" style="margin-top:14px">
    ${isAlcBad(a)&&!a.void?`<button class="btn bad" id="nt"><i class="i i-pen"></i> ${a.notice?'통지서 다시 작성':'측정결과 통지서 작성'}</button>${a.notice?'<button class="btn" id="np"><i class="i i-print"></i> 통지서 출력</button>':''}<button class="btn line" id="ms"><i class="i i-share"></i> 알림 문구</button>`:''}
    ${a.judge!=='정상'&&!ch&&!a.void?'<button class="btn line" id="rt">재측정 입력</button>':''}
-   <button class="btn line" id="fm">사후조치 메모</button>
+   <button class="btn line" id="fm">사후조치 메모</button>${canEditAlc(a)&&!a.void?'<button class="btn line" id="aphE"><i class="i i-camera"></i> 사진</button>':''}
    ${!a.void&&isAdmin()?'<button class="btn line" id="vd">무효 처리</button>':''}</div>`,b=>{
     const rt=$('#rt',b);if(rt)rt.onclick=()=>{closeModal();go('alcohol');alcForm({name:a.name,company:a.company,job:a.job,workerId:a.workerId,equip:a.equip,plate:a.plate},a)};
     const nt=$('#nt',b);if(nt)nt.onclick=()=>alcNotice(a.id);
     const np=$('#np',b);if(np)np.onclick=()=>printPages([docAlcohol(a)]);
     const ms=$('#ms',b);if(ms)ms.onclick=()=>shareAlcMessage(a);
     $('#fm',b).onclick=async()=>{const r=prompt('사후조치 내용',a.follow||'');if(r===null)return;a.follow=r;await save('alcohol',a);showAlcohol(a.id);R[cur]()};
+    const pe=$('#aphE',b);if(pe)pe.onclick=()=>alcPhotos(a);
     const vd=$('#vd',b);if(vd)vd.onclick=async()=>{const r=prompt('무효 사유 (기록은 삭제되지 않음)');if(!r)return;a.void={reason:r,at:nowLocal()};await save('alcohol',a);closeModal();R[cur]()};
   });
 }

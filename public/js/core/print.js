@@ -62,7 +62,8 @@ function docAlcohol(a){
   <table>${alcCriteria().map((c,i)=>`<tr><td>${i+1}. ${h(c)}</td></tr>`).join('')}</table>
   <div class="sec">3. 조치 내용</div>
   <table>${NOTICE_ITEMS.map(([k])=>`<tr><td>${ck(k)} ${label(k)}</td></tr>`).join('')}</table>
-  <div class="sec">4. 근로자 서약 및 확인</div>
+  ${(a.photos||[]).length?`<div class="sec">4. 측정 사진</div><div>${a.photos.map(x=>`<img class="ph" src="${x.src}">`).join('')}</div>`:''}
+  <div class="sec">${(a.photos||[]).length?5:4}. 근로자 서약 및 확인</div>
   <div class="note">${FN('aPledge')}</div>
   <p style="text-align:center;margin:4mm 0">${d[0]}년 ${+d[1]}월 ${+d[2]}일</p>
   <table><tr><th>근로자</th><td>${h(a.company)} &nbsp; ${h(a.name)}</td><td style="width:65mm;text-align:center">${n.refusedSign?`서명 거부 (입회자: ${h(n.witness||'')})`:n.sigW?`<img class="sigimg" src="${n.sigW}">`:'( 서명 또는 인 )'}</td></tr>
