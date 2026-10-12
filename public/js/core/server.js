@@ -117,4 +117,4 @@ async function authGate(){
   if(!prev||prev.id!==u.id||prev.role!==u.role){for(const s of [...STORE_NAMES,'outbox'])await DB.putMany(s,[],true);await kvSet('lastSync',0);reset=true}
   await kvSet('me',u);applyMe(u);return reset;
 }
-async function logout(){try{await api('logout',{})}catch(e){}await kvSet('me',null);location.reload()}
+async function logout(){try{await pushOff()}catch(e){}/* 이 기기 알림도 끊음: 다른 사람이 로그인해도 내 알림이 오지 않게 */try{await api('logout',{})}catch(e){}await kvSet('me',null);location.reload()}

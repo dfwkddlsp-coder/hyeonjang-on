@@ -3,6 +3,7 @@
 import { body, fail, json, now, uid } from '../lib/http.js';
 import { requireAdmin, requireUser } from '../lib/session.js';
 import { extractBlobs, stampBase } from '../lib/storage.js';
+import { notify } from '../lib/push.js';
 
 const KINDS = ['불편해요', '오류 같아요', '이런 기능 있으면', '기타', '봇이 모른 질문'];
 const AI_PER_DAY = 30; // 1인당 하루 AI 질문 수
@@ -32,14 +33,16 @@ async function saveFeedback(env, u, kind, text, photos = []) {
 }
 
 // POST /api/feedback {kind,text,photos:[dataURL]} — 누구나 (장비운전원 포함)
-async function sendFeedback({ req, env }) {
+async function sendFeedback({ req, env, ctx }) {
   const u = await requireUser(req, env);
   const b = await body(req);
   const text = String(b.text || '').trim();
   if (!text) fail(400, '내용을 입력하세요');
   if (text.length > 2000) fail(400, '내용은 2000자까지 보낼 수 있습니다');
   const photos = (Array.isArray(b.photos) ? b.photos : []).filter((p) => typeof p === 'string').slice(0, 3);
-  await saveFeedback(env, u, KINDS.includes(b.kind) ? b.kind : '기타', text, photos);
+  const kind = KINDS.includes(b.kind) ? b.kind : '기타';
+  await saveFeedback(env, u, kind, text, photos);
+  if (ctx) ctx.waitUntil(notify(env, new URL(req.url).origin, 'feedback', u, { title: `새 의견 · ${kind}`, body: `${u.name}: ${text.slice(0, 80)}`, url: '/' }).catch(() => {}));
   return json({ ok: true });
 }
 

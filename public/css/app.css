@@ -387,3 +387,14 @@ body:has(input:focus,textarea:focus,select:focus) .gb-fab{display:none} /* 입�
 /* 관리자 목록: 운전원 점검 요약 줄 */
 .eq-drv{display:flex;align-items:center;gap:6px;margin-top:8px;padding:8px 10px;border-radius:10px;background:var(--chip)}
 #gearBtn[hidden]{display:none} /* 운영자만: .gear의 display가 hidden을 덮지 않게 */
+/* 좌우 켜기/끄기 스위치 (설정 → 알림) */
+.sw{position:relative;display:inline-block;width:52px;height:30px;flex:none}
+.sw input{position:absolute;inset:0;opacity:0;margin:0;width:100%;height:100%;cursor:pointer;z-index:1}
+.sw i{position:absolute;inset:0;border-radius:999px;background:#cfcbc2;transition:background .2s}
+.sw i::after{content:'';position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .2s}
+.sw input:checked+i{background:#2a94ff}.sw input:checked+i::after{transform:translateX(22px)}
+.sw input:focus-visible+i{outline:2px solid var(--ink);outline-offset:2px}
+.sw.sm{width:42px;height:24px}.sw.sm i::after{width:18px;height:18px}.sw.sm input:checked+i::after{transform:translateX(18px)}
+.n-ev{border-top:1px solid var(--line);padding:10px 0}.n-ev:first-child{border-top:0}
+.n-main{min-height:40px;cursor:pointer}.n-from{margin:6px 0 0 12px;padding-left:10px;border-left:3px solid var(--line);display:grid;gap:6px}
+.n-from.off{opacity:.4;pointer-events:none}

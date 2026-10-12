@@ -45,7 +45,7 @@ export async function runBackup(env, kind) {
   const out = { app: 'fieldsafety', v: 2, source: 'server', at, users };
   for (const r of rows) {
     const d = JSON.parse(r.data);
-    if (r.store === 'aiuse' || r.store === 'guestinv') continue;
+    if (['aiuse', 'guestinv', 'pushkey', 'pushsub', 'pushpref'].includes(r.store)) continue; // 기기·키·사용량은 백업하지 않음
     if (r.store === 'settings') { out.settings = d; continue; }
     (out[r.store] = out[r.store] || []).push({ ...d, id: r.id });
   }

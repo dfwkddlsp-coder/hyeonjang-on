@@ -52,6 +52,7 @@ npm run db:local      # create local D1 tables
 npm run dev           # http://localhost:8787
 npm run check         # every script parses; index.html and sw.js list the same files
 TEST_ADMIN_ID=… TEST_ADMIN_PW=… npm test   # permission tests against the local server
+TEST_ADMIN_ID=… TEST_ADMIN_PW=… npm run test:push   # phone-push encryption/signature check with a fake receiver on this PC
 npm run deploy        # requires: npx wrangler login
 ```
 Apply schema changes to the live database with `npx wrangler d1 execute hyeonjang-on-db --remote --file migrations/<file>.sql`.

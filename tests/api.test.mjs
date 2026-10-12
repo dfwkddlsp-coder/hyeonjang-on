@@ -184,6 +184,17 @@ await test('임시 출입 QR: staff opens it, many join until closed, guests tou
   assert.equal(byHand.role, 'user', 'guest role cannot be given by hand');
 });
 
+await test('폰 알림: only manager and operator subscribe and set preferences', async () => {
+  assert.equal((await U('push/key')).s, 403);
+  assert.equal((await D('push/prefs')).s, 403);
+  assert.equal((await M('push/key')).s, 200);
+  const ev = (await M('push/prefs')).j.events;
+  assert.ok(ev.eqcheck && !ev.feedback, 'manager has no 새 의견 (operator only)');
+  assert.ok((await A('push/prefs')).j.events.feedback);
+  assert.equal((await M('push/subscribe', { endpoint: 'ftp://x', keys: { p256dh: 'a', auth: 'b' } })).s, 400);
+  assert.equal((await A('sync?since=0')).j.docs.some((d) => /^push/.test(d.store)), false, 'push data never synced');
+});
+
 await test('PDF upload: manager and operator only, real PDFs only, staff files hidden from users', async () => {
   const pdf = Buffer.from('%PDF-1.4\n%%EOF\n');
   assert.equal((await U('admin/files', pdf, 'application/pdf')).s, 403);

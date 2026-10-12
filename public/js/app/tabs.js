@@ -1,7 +1,8 @@
 // 현장ON — sub tabs for 관리대장 / 설정
 'use strict';
 /* ---------- 하위 탭 (관리대장 / 설정) ---------- */
-function setTabs(){const adm=isAdmin();if(!adm)return [['settings:me','내 정보']];return [['settings:me','내 정보'],...(adm?[['settings:site','현장 기준']]:[]),...(SERVER&&adm?[['settings:users','사용자 관리'],['settings:guide','안내·의견']]:[]),['records','기록·보고'],['settings:data','데이터·앱']]}
+/* 설정 탭: 모두 내 정보, 관리자는 + 알림, 운영자는 전부 */
+function setTabs(){const adm=isAdmin(),noti=SERVER&&isStaff()?[['settings:noti','알림']]:[];if(!adm)return [['settings:me','내 정보'],...noti];return [['settings:me','내 정보'],...(adm?[['settings:site','현장 기준']]:[]),...(SERVER&&adm?[['settings:users','사용자 관리'],['settings:guide','안내·의견']]:[]),...noti,['records','기록·보고'],['settings:data','데이터·앱']]}
 function segBar(items,active){
   const h1=$('h1',V$());const html=`<div class="seg">${items.map(([k,l])=>`<button type="button" data-seg="${k}" class="${k===active?'on':''}">${l}</button>`).join('')}</div>`;
   if(h1)h1.insertAdjacentHTML('afterend',html);else V$().insertAdjacentHTML('afterbegin',html);

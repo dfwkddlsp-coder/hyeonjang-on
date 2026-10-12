@@ -3,6 +3,7 @@ import { body, fail, json } from '../lib/http.js';
 import { requireAdmin, requireUser } from '../lib/session.js';
 import { STORES, checkUpdate, checkWrite, syncRowFilter, syncStoreFilter } from '../lib/policy.js';
 import { extractBlobs, stampBase } from '../lib/storage.js';
+import { notify } from '../lib/push.js';
 
 const SYNC_PAGE = 300;
 const MAX_BATCH = 500;
@@ -25,7 +26,7 @@ async function sync({ req, env, url }) {
 }
 
 // POST /api/docs {docs:[{store,id,data}], import?, remove?:{store,ids}, replaceStores? (legacy)}
-async function write({ req, env }) {
+async function write({ req, env, ctx }) {
   const u = await requireUser(req, env);
   const b = await body(req);
   const docs = Array.isArray(b.docs) ? b.docs : [];
@@ -73,7 +74,32 @@ async function write({ req, env }) {
   flush();
   if (blobStmts.length + stmts.length > MAX_STATEMENTS) fail(413, '사진이 너무 많습니다. 나눠서 저장하세요');
   await env.DB.batch([...blobStmts, ...stmts]); // one transaction
+  const msgs = pushMessages(u, docs, prev);
+  if (msgs.length && ctx) ctx.waitUntil(Promise.all(msgs.map(([ev, m]) => notify(env, new URL(req.url).origin, ev, u, m))).catch((e) => console.error('notify', e)));
   return json({ saved });
+}
+
+/* 폰 알림으로 보낼 일: 새 삼진아웃 적발, 새 음주 적발(정상 아님), 장비 주간 점검표 저장. 한 번에 많이 오면(엑셀·오프라인 묶음) 종류별 3건 + 요약 */
+function pushMessages(u, docs, prev) {
+  const by = {};
+  const add = (ev, m) => (by[ev] = by[ev] || []).push(m);
+  for (const d of docs) {
+    const x = d.data, isNew = !prev.get(d.store + '|' + d.id);
+    if (d.store === 'violations' && isNew && !x.void)
+      add('violation', { title: `삼진아웃 ${x.level || ''}차 적발`, body: `${x.name || ''} (${x.company || ''}) · ${x.type || ''} — ${u.name}`, url: '/' });
+    if (d.store === 'alcohol' && isNew && x.judge && x.judge !== '정상')
+      add('alcohol', { title: `음주 ${x.judge}`, body: `${x.name || ''} (${x.company || ''}) ${x.refused ? '측정 거부' : (+x.value || 0).toFixed(3) + '%'} — ${u.name}`, url: '/' });
+    if (d.store === 'eqchecks' && x.kind === 'week') {
+      const bad = Object.values(x.marks || {}).some((a) => (a || []).includes('X'));
+      add('eqcheck', { title: `${x.track === 'drv' ? '운전원' : '관리자'} 장비점검 · ${x.type || ''}${x.plate ? `(${x.plate})` : ''}`, body: `${u.name} 저장${bad ? ' · ⚠ 부적합 있음' : ''}`, url: '/' });
+    }
+  }
+  const out = [];
+  for (const [ev, list] of Object.entries(by)) {
+    list.slice(0, 3).forEach((m) => out.push([ev, m]));
+    if (list.length > 3) out.push([ev, { title: list[0].title.split(' ')[0] + ' 외', body: `${list.length - 3}건 더 — ${u.name}`, url: '/' }]);
+  }
+  return out;
 }
 
 // POST /api/docs/delete {store,id} — operator only

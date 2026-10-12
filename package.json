@@ -7,7 +7,8 @@
     "db:remote": "wrangler d1 execute hyeonjang-on-db --remote --file schema.sql",
     "deploy": "wrangler deploy",
     "test": "node tests/api.test.mjs",
-    "check": "node tests/check.mjs"
+    "check": "node tests/check.mjs",
+    "test:push": "node tests/push-check.mjs"
   },
   "devDependencies": {
     "wrangler": "^4"

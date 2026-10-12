@@ -6,6 +6,7 @@ import { requireUser, startSession, publicUser } from '../lib/session.js';
 import { isStaff } from '../lib/policy.js';
 import { hashPw, newSalt, sha256 } from '../lib/crypto.js';
 import { stampBase } from '../lib/storage.js';
+import { notify } from '../lib/push.js';
 
 const DAY = 864e5, KST = 9 * 3600e3;
 const parse = (s) => { try { return JSON.parse(s); } catch { return null; } };
@@ -59,7 +60,7 @@ async function closeInvite({ req, env, params: [id] }) {
 }
 
 // POST /api/guest/join {token, name, phone, company} → 임시 운전원 계정 + 자정까지 세션
-async function join({ req, env }) {
+async function join({ req, env, ctx }) {
   const b = await body(req);
   const id = await sha256(String(b.token || ''));
   const inv = await getInvite(env, id);
@@ -72,6 +73,7 @@ async function join({ req, env }) {
     .bind(userId, prefixOf(id) + uid().slice(0, 8), name, company, phone, 'guest', await hashPw(uid() + uid(), salt), salt, t, t).run(); // 비밀번호는 아무도 모름 → QR로만 들어옴
   const cookie = await startSession(env, userId, req, kstMidnight());
   const u = await env.DB.prepare('SELECT * FROM users WHERE id=?').bind(userId).first();
+  if (ctx) ctx.waitUntil(notify(env, new URL(req.url).origin, 'guestjoin', null, { title: '임시 출입', body: `${name}${company ? ` (${company})` : ''} 님이 QR로 들어왔습니다`, url: '/' }).catch(() => {}));
   return json({ user: publicUser(u) }, 200, { 'set-cookie': cookie });
 }
 

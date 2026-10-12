@@ -16,8 +16,9 @@ import files from './routes/files.js';
 import admin from './routes/admin.js';
 import guide from './routes/guide.js';
 import guest from './routes/guest.js';
+import push from './routes/push.js';
 
-const ROUTES = [...auth, ...users, ...docs, ...files, ...admin, ...guide, ...guest];
+const ROUTES = [...auth, ...users, ...docs, ...files, ...admin, ...guide, ...guest, ...push];
 
 function match(method, path) {
   for (const [m, p, handler] of ROUTES) {
@@ -30,13 +31,13 @@ function match(method, path) {
 }
 
 export default {
-  async fetch(req, env) {
+  async fetch(req, env, ctx) {
     const url = new URL(req.url);
     if (!url.pathname.startsWith('/api/')) return env.ASSETS.fetch(req);
     try {
       const hit = match(req.method, url.pathname.replace(/\/+$/, ''));
       if (!hit) fail(404, '없는 주소');
-      return await hit.handler({ req, env, url, params: hit.params });
+      return await hit.handler({ req, env, url, params: hit.params, ctx });
     } catch (e) {
       if (e instanceof HttpError) return json({ error: e.message }, e.status);
       console.error(e);

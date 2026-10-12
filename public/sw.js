@@ -5,13 +5,13 @@
 //   fonts  — cache first, never change
 //   photos — cache first (immutable), but only the most recent PHOTO_MAX are kept
 //            so the phone's storage does not keep growing week after week.
-const C='fieldsafety-v30';
+const C='fieldsafety-v32';
 const FONTS='fieldsafety-fonts';
 const PHOTOS='fieldsafety-photos';
 const PHOTO_MAX=250; // ≈ 30MB at ~120KB per photo
 const KEEP=[C,FONTS,PHOTOS];
 // app shell for offline start; keep in sync with the <link>/<script> tags in index.html
-const FILES=['./','index.html','css/app.css','js/core/util.js','js/core/store.js','js/core/rules.js','js/core/excel.js','js/core/ui.js','js/core/haptic.js','js/core/print.js','js/core/server.js','js/app/nav.js','js/features/categories.js','js/features/site-config.js','js/features/home.js','js/features/strike.js','js/features/alcohol.js','js/features/registers.js','js/features/settings.js','js/features/vuln.js','js/features/users.js','js/features/equipment.js','js/features/guide.js','js/features/guest.js','js/app/tabs.js','js/app/boot.js','vendor/xlsx.full.min.js','vendor/qrcode.js','manifest.webmanifest','icon.svg','icon-192.png','icon-512.png','icon-maskable-512.png','apple-touch-icon.png'];
+const FILES=['./','index.html','css/app.css','js/core/util.js','js/core/store.js','js/core/rules.js','js/core/excel.js','js/core/ui.js','js/core/haptic.js','js/core/print.js','js/core/server.js','js/app/nav.js','js/features/categories.js','js/features/site-config.js','js/features/home.js','js/features/strike.js','js/features/alcohol.js','js/features/registers.js','js/features/settings.js','js/features/vuln.js','js/features/users.js','js/features/equipment.js','js/features/guide.js','js/features/guest.js','js/features/notify.js','js/app/tabs.js','js/app/boot.js','vendor/xlsx.full.min.js','vendor/qrcode.js','manifest.webmanifest','icon.svg','icon-192.png','icon-512.png','icon-maskable-512.png','apple-touch-icon.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(C).then(c=>c.addAll(FILES.map(f=>new Request(f,{cache:'reload'})))));self.skipWaiting()});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>!KEEP.includes(k)).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
 const put=(name,req,res)=>{if(res&&(res.ok||res.type==='opaque')){const cp=res.clone();caches.open(name).then(c=>c.put(req,cp))}return res};
@@ -35,3 +35,8 @@ self.addEventListener('fetch',e=>{
   if(url.pathname.startsWith('/api/'))return;
   e.respondWith(fetch(req.url,{cache:'no-store',credentials:'same-origin'}).then(r=>put(C,req,r)).catch(()=>caches.match(req,{ignoreSearch:true}).then(hit=>hit||caches.match('index.html'))));
 });
+/* 폰 알림 (운영자·관리자, 설정 → 알림) */
+self.addEventListener('push',e=>{let d={};try{d=e.data.json()}catch(x){d={title:'현장ON',body:e.data?e.data.text():''}}
+  e.waitUntil(self.registration.showNotification(d.title||'현장ON',{body:d.body||'',icon:'icon-192.png',badge:'icon-192.png',silent:!!d.silent,requireInteraction:!!d.sticky,...(d.silent?{}:{vibrate:[200,100,200]}),data:{url:d.url||'/'}}))});
+self.addEventListener('notificationclick',e=>{e.notification.close();const url=(e.notification.data&&e.notification.data.url)||'/';
+  e.waitUntil(self.clients.matchAll({type:'window',includeUncontrolled:true}).then(ws=>{const w=ws.find(x=>'focus' in x);return w?w.focus():self.clients.openWindow(url)}))});
