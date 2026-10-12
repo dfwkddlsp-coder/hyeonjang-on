@@ -1,7 +1,7 @@
 // Record sync: every record type is a JSON document in `docs`; deletes are soft so devices can sync them.
 import { body, fail, json } from '../lib/http.js';
-import { requireAdmin, requireUser } from '../lib/session.js';
-import { STORES, checkUpdate, checkWrite, syncRowFilter, syncStoreFilter } from '../lib/policy.js';
+import { requireUser } from '../lib/session.js';
+import { STORES, checkUpdate, checkWrite, isStaff, syncRowFilter, syncStoreFilter } from '../lib/policy.js';
 import { extractBlobs, stampBase } from '../lib/storage.js';
 import { notify } from '../lib/push.js';
 
@@ -102,18 +102,29 @@ function pushMessages(u, docs, prev) {
   return out;
 }
 
-// POST /api/docs/delete {store,id} — operator only
+// POST /api/docs/delete {store,id} — 운영자. 장비만: 추가한 사람·관리자도 (잘못 추가한 장비), 그 장비의 점검 기록도 함께
 async function remove({ req, env }) {
-  const u = await requireAdmin(req, env);
+  const u = await requireUser(req, env);
   const b = await body(req);
   if (!STORES.has(b.store) || b.store === 'settings' || !b.id) fail(400, '잘못된 요청');
+  if (u.role !== 'admin') {
+    if (b.store !== 'equipment') fail(403, '운영자만 할 수 있습니다');
+    const r = await env.DB.prepare("SELECT created_by FROM docs WHERE store='equipment' AND id=? AND deleted=0").bind(b.id).first();
+    if (!r) fail(404, '없는 장비입니다');
+    if (!isStaff(u) && r.created_by !== u.id) fail(403, '장비는 추가한 사람과 관리자·운영자만 삭제할 수 있습니다');
+  }
   if (b.store === 'plans' && env.PHOTOS) { // 문서함 PDF도 함께 지움
     const r = await env.DB.prepare("SELECT data FROM docs WHERE store='plans' AND id=?").bind(b.id).first();
     let f = ''; try { f = r ? JSON.parse(r.data).fileId : ''; } catch {}
     if (/^[a-f0-9]+$/.test(f || '')) await env.PHOTOS.delete(`f/${f}`);
   }
-  const t = await stampBase(env);
-  await env.DB.prepare('UPDATE docs SET deleted=1, data=\'{}\', updated_at=?, updated_by=? WHERE store=? AND id=?').bind(t, u.id, b.store, b.id).run();
+  let t = await stampBase(env);
+  const stmts = [env.DB.prepare('UPDATE docs SET deleted=1, data=\'{}\', updated_at=?, updated_by=? WHERE store=? AND id=?').bind(t, u.id, b.store, b.id)];
+  if (b.store === 'equipment') { // 그 장비의 점검표·사진 기록도 (기록마다 다른 시각 → 동기화 페이지가 나뉘어도 빠지지 않음)
+    const ck = (await env.DB.prepare("SELECT id FROM docs WHERE store='eqchecks' AND deleted=0 AND json_extract(data,'$.equipId')=?").bind(b.id).all()).results;
+    for (const c of ck) stmts.push(env.DB.prepare("UPDATE docs SET deleted=1, data='{}', updated_at=?, updated_by=? WHERE store='eqchecks' AND id=?").bind(++t, u.id, c.id));
+  }
+  await env.DB.batch(stmts);
   return json({ ok: true, updatedAt: t });
 }
 

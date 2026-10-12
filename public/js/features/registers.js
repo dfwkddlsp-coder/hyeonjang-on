@@ -142,9 +142,9 @@ function showEquip(id){
 function editEquip(id){
   const e=id?E.find(x=>x.id===id):{};
   openModal(id?'장비 수정':'장비 추가',`<div class="grid g2">${Object.entries(EQUIP_LABEL).map(([k,l])=>`<div><label class="f">${l}</label><input class="inp" data-k="${k}" value="${h(e[k]||'')}" ${k==='company'?'list="companyList"':''}></div>`).join('')}</div>${companyDatalist()}
-   <div class="row" style="margin-top:14px"><button class="btn" id="qs" style="flex:1">저장</button>${id&&isAdmin()?'<button class="btn bad" id="qd">삭제</button>':''}</div>`,b=>{
+   <div class="row" style="margin-top:14px"><button class="btn" id="qs" style="flex:1">저장</button>${id&&canDelEq(e)?'<button class="btn bad" id="qd">삭제</button>':''}</div>`,b=>{
     $('#qs',b).onclick=async()=>{const o={...e,id:e.id||uid()};$$('[data-k]',b).forEach(i=>o[i.dataset.k]=i.value.trim());if(!o.type&&!o.plate)return toast('장비명 또는 차량번호 입력');if(!id){o.created=nowLocal();o.src='직접입력'}else o.updated=nowLocal();await save('equipment',o);closeModal();R[cur]()};
-    const qd=$('#qd',b);if(qd)qd.onclick=async()=>{if(!confirm('이 장비를 대장에서 삭제할까요?'))return;await remove('equipment',id);closeModal();R[cur]()};
+    const qd=$('#qd',b);if(qd)qd.onclick=()=>eqDelete(e,closeModal);
   });
 }
 

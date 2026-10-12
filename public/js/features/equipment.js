@@ -46,7 +46,7 @@ function eqQuickAdd(){
     $('#qaF',b).onchange=sync;$('#qaT',b).oninput=()=>{$('#qaT',b).dataset.typed=1};
     $('#qaOk',b).onclick=async()=>{const type=$('#qaT',b).value.trim();if(!type)return toast('장비명을 입력하세요');
       const e={id:uid(),type,plate:$('#qaP',b).value.trim(),company:$('#qaC',b).value.trim(),manager:$('#qaM',b).value.trim(),operator:$('#qaO',b).value.trim(),phone:$('#qaPh',b).value.trim(),
-        inDate:today(),formK:$('#qaF',b).value,src:isGuest()?'임시 출입':'장비점검 추가',created:nowLocal()};
+        inDate:today(),formK:$('#qaF',b).value,src:isGuest()?'임시 출입':'장비점검 추가',created:nowLocal(),byId:ME?ME.id:''};
       try{await save('equipment',e);closeModal();toast('장비를 추가했습니다');R.eqcheck();eqWeekForm(e.id,weekMon(R.eqcheck.d||today()))}catch(x){toast(x.message)}}})}
 
 /* 설정 → 현장 기준: 장비 종류별 양식 편집 */
@@ -97,14 +97,29 @@ const MARK_TXT={O:'적합',X:'부적합',N:'해당없음',E:'기타의견'};
 function eqWeekComplete(eid,mon,tr){const w=eqWeekRec(eid,mon,tr);if(!w)return false;const items=eqWeekItems(E.find(x=>x.id===eid),w);return items.length>0&&items.every(it=>{const a=(w.marks||{})[it.t];return a&&a.length>=6&&a.slice(0,6).every(Boolean)})}
 const stampHtml=(cls='')=>`<span class="stamp ${cls}">완료</span>`;
 /* 장비 1대 출력 묶음: 주간 점검표 + 사진대지 */
-/* 출력 순서: 관리자 점검표 → 운전원 점검표 → 관리자 사진대지 → 운전원 사진대지 (운전원 것은 있을 때만) */
-function eqPrintPages(e,mon){const pages=[],days=weekDays(mon);
-  for(const tr of ['mgr','drv'])if(days.some(d=>eqDayMark(e.id,d,tr)))pages.push(docEqWeek(e,mon,tr));
-  pages.push(...docPhotoSheet(eqPhotoBlocks([e],mon,'mgr')));
-  const dp=eqPhotoBlocks([e],mon,'drv');if(dp.length)pages.push(...docPhotoSheet(dp));
+/* 출력: which = 'both'(함께) · 'mgr'(관리자 점검만) · 'drv'(운전원 점검만). 있는 것만 나옴
+   함께일 때 순서: 관리자 점검표 → 운전원 점검표 → 관리자 사진대지 → 운전원 사진대지 */
+function eqPrintPages(e,mon,which='both'){const pages=[],days=weekDays(mon),trs=which==='both'?['mgr','drv']:[which];
+  for(const tr of trs)if(days.some(d=>eqDayMark(e.id,d,tr)))pages.push(docEqWeek(e,mon,tr));
+  for(const tr of trs){const bl=eqPhotoBlocks([e],mon,tr);if(bl.length)pages.push(...docPhotoSheet(bl))}
   return pages}
+/* 출력 버튼: 함께 / 관리자만 / 운전원만 고르기 (쪽수 표시, 없는 쪽은 못 누름) */
+function eqPrintChoose(list,mon,title){
+  const opt=[['both','관리자 + 운전원 함께'],['mgr','관리자 점검만'],['drv','운전원 점검만']].map(([k,t])=>({k,t,pg:list.flatMap(e=>eqPrintPages(e,mon,k))}));
+  if(!opt[0].pg.length)return toast('이번 주 점검표·사진이 없습니다');
+  openModal(title,`<div class="small muted" style="margin-bottom:10px">${weekLabel(mon)} · 장비 ${list.length}대</div>${opt.map(o=>`<button class="btn ${o.k==='both'?'':'line'}" data-pk="${o.k}" style="width:100%;margin-bottom:8px" ${o.pg.length?'':'disabled'}><i class="i i-print"></i> ${o.t} <span class="small" style="opacity:.7">(${o.pg.length}쪽)</span></button>`).join('')}`,b=>{
+    $$('[data-pk]',b).forEach(x=>x.onclick=()=>{const o=opt.find(y=>y.k===x.dataset.pk);closeModal();printPages(o.pg)})});
+}
 function eqCheckForm(eid,ds){eqWeekForm(eid,weekMon(ds||today()))}
 
+/* 장비 삭제: 추가한 사람·관리자·운영자 (잘못 추가한 장비). 그 장비의 점검 기록도 함께 지워짐 — 서버도 같은 규칙 */
+const canDelEq=e=>!!e&&(isStaff()||(!!ME&&!!e.byId&&e.byId===ME.id));
+async function eqDelete(e,after){if(!e)return;
+  const n=EC.filter(c=>c.equipId===e.id).length;
+  if(!confirm(`「${eqName(e)}」을(를) 삭제할까요?${n?`
+이 장비의 점검표·사진 기록 ${n}건도 함께 지워집니다.`:''}`))return;
+  try{await remove('equipment',e.id);for(const c of EC.filter(c=>c.equipId===e.id)){await DB.del('eqchecks',c.id);memDel('eqchecks',c.id)}
+    toast('장비를 삭제했습니다');if(after)after();R[cur]()}catch(x){if(x.message!=='offline')toast(x.message)}}
 /* 관리자 목록의 장비 카드: 운전원이 따로 한 점검 요약 + 보기 */
 function eqDrvLine(e,mon,days){const w=eqWeekRec(e.id,mon,'drv'),p=eqWeekPhoto(e.id,mon,'drv');if(!w&&!p)return '';
   const n=days.filter(d=>eqDayMark(e.id,d,'drv')).length,bad=days.some(d=>eqDayMark(e.id,d,'drv')==='X');
@@ -128,7 +143,7 @@ R.eqcheck=()=>{
   <input class="inp" id="eqq" type="search" placeholder="장비명·차량번호·업체·전담관리자" value="${h(q)}" style="margin-bottom:10px">`}
   ${!inUse.length?`<div class="card empty">${isGuest()?'<b>＋ 장비 추가</b>를 눌러 오늘 쓸 장비를 등록하세요.':drv?'내 장비가 없습니다. 장비 대장의 운전원 연락처가 로그인 번호와 같은지 관리자에게 확인해 주세요.':'장비 대장이 비어 있습니다. 관리대장 → 장비에서 엑셀을 불러오세요.'}</div>`:''}
   ${list.map(e=>{const wp=eqWeekPhoto(e.id,mon),pn=wp?(wp.photos||[]).length:0;
-    return `<div class="card eqc"><div class="row" style="gap:8px"><div class="grow" style="min-width:0"><b>${h(eqName(e))}</b>${isMine(e)?' <span class="badge">내 담당</span>':''}${eqWeekComplete(e.id,mon)?' '+stampHtml('sm'):''}<div class="small muted ell">${h(e.company||'')} · 전담 ${h(e.manager||'미지정')}${e.operator?' · 운전원 '+h(e.operator):''} · 양식 ${h(eqFormName(e))}</div></div></div>
+    return `<div class="card eqc"><div class="row" style="gap:8px"><div class="grow" style="min-width:0"><b>${h(eqName(e))}</b>${isMine(e)?' <span class="badge">내 담당</span>':''}${eqWeekComplete(e.id,mon)?' '+stampHtml('sm'):''}<div class="small muted ell">${h(e.company||'')} · 전담 ${h(e.manager||'미지정')}${e.operator?' · 운전원 '+h(e.operator):''} · 양식 ${h(eqFormName(e))}</div></div>${canDelEq(e)?`<button class="btn sm line" data-eqdel="${e.id}" aria-label="장비 삭제" title="장비 삭제"><i class="i i-x"></i></button>`:''}</div>
     <div class="eqdays">${days.map((d,i)=>{const m=eqDayMark(e.id,d);return `<div class="eqd${d===t?' today':''}${m==='O'?' ok':m==='X'?' bad':''}${d>t&&!m?' off':''}"><span>${WD6[i]} ${md(d)}</span><b>${m==='O'?'○':m==='X'?'×':m==='P'?'…':d>t?'':'–'}</b></div>`}).join('')}</div>
     ${future?'':`<div class="eq-acts"><button class="btn sm${eqWeekRec(e.id,mon)?' line':''}" data-wk="${e.id}"><i class="i i-pen"></i> ${eqWeekRec(e.id,mon)?'점검표 수정':'주간 점검표'}</button>
       <button class="btn sm ${pn>=slots?'line':'ghost'}" data-wp="${e.id}"><i class="i i-camera"></i> 주간 사진 ${pn}/${slots}</button></div>
@@ -141,10 +156,11 @@ R.eqcheck=()=>{
   $$('[data-wk]').forEach(b=>b.onclick=()=>eqWeekForm(b.dataset.wk,mon));
   if($('#eqAdd'))$('#eqAdd').onclick=eqQuickAdd;
   $$('[data-wp]').forEach(b=>b.onclick=()=>eqWeekPhotoForm(b.dataset.wp,mon));
+  $$('[data-eqdel]').forEach(b=>b.onclick=()=>eqDelete(E.find(x=>x.id===b.dataset.eqdel)));
   $$('[data-dwk]').forEach(b=>b.onclick=()=>eqWeekForm(b.dataset.dwk,mon,false,'drv'));
   $$('[data-dwp]').forEach(b=>b.onclick=()=>eqWeekPhotoForm(b.dataset.dwp,mon,'drv'));
-  $$('[data-pr]').forEach(b=>b.onclick=()=>{const e=E.find(x=>x.id===b.dataset.pr);const pg=eqPrintPages(e,mon);if(!pg.length)return toast('이번 주 점검표·사진이 없습니다');printPages(pg)});
-  if($('#pAll'))$('#pAll').onclick=()=>{const pg=list.flatMap(e=>eqPrintPages(e,mon));if(!pg.length)return toast('이번 주 점검표·사진이 없습니다');printPages(pg)};
+  $$('[data-pr]').forEach(b=>b.onclick=()=>{const e=E.find(x=>x.id===b.dataset.pr);eqPrintChoose([e],mon,`출력 · ${eqName(e)}`)});
+  if($('#pAll'))$('#pAll').onclick=()=>eqPrintChoose(list,mon,'주간 출력 — 목록의 모든 장비');
 };
 
 /* 주간 점검표: 항목 × 월~토 표에서 칸을 눌러 ○ → × → - → 빈칸 */

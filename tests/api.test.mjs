@@ -31,6 +31,10 @@ const test = async (name, fn) => {
   try { await fn(); results.push(['ok', name]); } catch (e) { results.push(['FAIL', name, e.message]); }
 };
 const cleanup = [];
+/* 동기화는 한 번에 300건씩 → 시험 서버에 기록이 쌓여도 전부 받아서 확인 */
+const syncAll = async (c) => { let since = 0, more = true; const docs = [];
+  while (more) { const r = await c('sync?since=' + since); if (r.s !== 200) return r; docs.push(...r.j.docs); since = r.j.cursor; more = r.j.more; }
+  return { s: 200, j: { docs } }; };
 
 const A = client();
 assert.equal((await A('login', ADMIN)).s, 200, 'admin login');
@@ -70,9 +74,9 @@ await test('unknown route → 404', async () => assert.equal((await A('nope')).s
 await test('취약근로자: manager and operator only', async () => {
   const id = 'vu' + tag;
   assert.equal((await A('docs', { docs: [doc('vuln', id, { name: 'x' })] })).s, 200); del('vuln', id);
-  assert.equal((await U('sync?since=0')).j.docs.some((d) => d.id === id), false);
+  assert.equal((await syncAll(U)).j.docs.some((d) => d.id === id), false);
   assert.equal((await U('docs', { docs: [doc('vuln', id + 'u')] })).s, 403);
-  assert.equal((await M('sync?since=0')).j.docs.some((d) => d.id === id), true);
+  assert.equal((await syncAll(M)).j.docs.some((d) => d.id === id), true);
 });
 await test('only the operator changes settings, deletes, voids, users, backups', async () => {
   assert.equal((await M('docs', { docs: [doc('settings', 'shared', { site: 'x' })] })).s, 403);
@@ -95,15 +99,15 @@ await test('register upload can drop listed entries only, others untouched', asy
   del('workers', keep);
   assert.equal((await A('docs', { import: true, docs: [], remove: { store: 'violations', ids: [drop] } })).s, 400);
   assert.equal((await A('docs', { import: true, docs: [], remove: { store: 'workers', ids: [drop] } })).s, 200);
-  const live = (await A('sync?since=0')).j.docs;
+  const live = (await syncAll(A)).j.docs;
   assert.equal(live.find((d) => d.id === drop).deleted, true);
   assert.equal(live.find((d) => d.id === keep).deleted, false);
 });
 await test('staff-only records are hidden from plain users', async () => {
   const id = 'rs' + tag;
   assert.equal((await A('docs', { docs: [doc('records', id, { cat: 'x', scope: 'staff' })] })).s, 200); del('records', id);
-  assert.equal((await U('sync?since=0')).j.docs.some((d) => d.id === id), false);
-  assert.equal((await M('sync?since=0')).j.docs.some((d) => d.id === id), true);
+  assert.equal((await syncAll(U)).j.docs.some((d) => d.id === id), false);
+  assert.equal((await syncAll(M)).j.docs.some((d) => d.id === id), true);
   assert.equal((await U('docs', { docs: [doc('records', id + 'u', { scope: 'staff' })] })).s, 403);
   const ok = 'ra' + tag;
   assert.equal((await U('docs', { docs: [doc('records', ok, { scope: 'all' })] })).s, 200); del('records', ok);
@@ -132,12 +136,12 @@ await test('feedback: anyone sends, only the operator reads; never synced', asyn
   assert.ok(mine && mine.status === 'new' && mine.by === '일반테스트');
   assert.equal((await A('feedback/' + mine.id, { status: 'done', memo: 'ok' })).s, 200);
   assert.equal((await A('feedback')).j.items.find((x) => x.id === mine.id).status, 'done');
-  assert.equal((await A('sync?since=0')).j.docs.some((d) => d.store === 'feedback' || d.store === 'aiuse'), false);
+  assert.equal((await syncAll(A)).j.docs.some((d) => d.store === 'feedback' || d.store === 'aiuse'), false);
   assert.equal((await U('docs', { docs: [doc('feedback', 'fx' + tag, { text: 'x' })] })).s, 400, 'not writable through docs');
 });
 
 await test('driver sees and checks only their own equipment', async () => {
-  const live = (await D('sync?since=0')).j.docs.filter((d) => !d.deleted);
+  const live = (await syncAll(D)).j.docs.filter((d) => !d.deleted);
   assert.deepEqual([...new Set(live.map((d) => d.store))].filter((s) => s !== 'settings'), ['equipment']);
   assert.deepEqual(live.filter((d) => d.store === 'equipment').map((d) => d.id), [eqMine]);
   const wk = 'wkd-' + tag;
@@ -145,7 +149,7 @@ await test('driver sees and checks only their own equipment', async () => {
   assert.equal((await D('docs', { docs: [doc('eqchecks', wk + 'o', { equipId: eqOther })] })).s, 403);
   assert.equal((await D('docs', { docs: [doc('eqchecks', 'wk-' + tag, { equipId: eqMine })] })).s, 403, 'driver writes only the driver check');
   assert.equal((await A('docs', { docs: [doc('eqchecks', 'wk-m' + tag, { equipId: eqMine })] })).s, 200); del('eqchecks', 'wk-m' + tag);
-  assert.equal((await D('sync?since=0')).j.docs.some((d) => d.id === 'wk-m' + tag && !d.deleted), false, 'manager check is not sent to the driver');
+  assert.equal((await syncAll(D)).j.docs.some((d) => d.id === 'wk-m' + tag && !d.deleted), false, 'manager check is not sent to the driver');
   assert.equal((await A('docs', { docs: [doc('eqchecks', 'wkd-a' + tag, { equipId: eqMine })] })).s, 403, 'staff cannot write the driver check');
   assert.equal((await D('docs', { docs: [doc('violations', 'dv' + tag)] })).s, 403);
 });
@@ -171,7 +175,7 @@ await test('임시 출입 QR: staff opens it, many join until closed, guests tou
   assert.equal((await G('docs', { docs: [doc('equipment', eqOther, { type: '바꿈' })] })).s, 403, 'cannot edit other equipment');
   assert.equal((await G2('docs', { docs: [doc('equipment', eqG, { type: '바꿈' })] })).s, 403, 'another guest cannot edit it either');
   assert.equal((await G('docs', { docs: [doc('workers', 'wg' + tag, { name: 'x' })] })).s, 403, 'no registers');
-  const seen = (await G('sync?since=0')).j.docs.filter((d) => d.store === 'equipment' && !d.deleted).map((d) => d.id); // 지운 기록은 id만 오는 표시라 제외
+  const seen = (await syncAll(G)).j.docs.filter((d) => d.store === 'equipment' && !d.deleted).map((d) => d.id); // 지운 기록은 id만 오는 표시라 제외
   assert.deepEqual(seen, [eqG], 'sees only own equipment');
   assert.equal((await G('users')).s, 403);
   const st = (await M('guest/invite/' + inv.id)).j;
@@ -179,6 +183,8 @@ await test('임시 출입 QR: staff opens it, many join until closed, guests tou
   assert.equal((await M('guest/invite/' + inv.id + '/close', {})).s, 200);
   assert.equal((await client()('guest/join', { token: inv.token, name: '늦음', phone: '010-1111-1111' })).s, 403, 'closed QR');
   assert.equal((await client()('guest/join', { token: 'nope', name: 'x', phone: '010-1111-1111' })).s, 403, 'bad token');
+  assert.equal((await G2('docs/delete', { store: 'equipment', id: eqG })).s, 403, 'another guest cannot delete it');
+  assert.equal((await G('docs/delete', { store: 'equipment', id: eqG })).s, 200, 'guest deletes own equipment');
   const byHand = (await A('users', { loginId: 'gx' + tag, name: 'x', password: 'init-pass-9', role: 'guest' })).j.user;
   cleanup.push(() => A(`users/${byHand.id}`, { active: false }));
   assert.equal(byHand.role, 'user', 'guest role cannot be given by hand');
@@ -192,7 +198,20 @@ await test('폰 알림: only manager and operator subscribe and set preferences'
   assert.ok(ev.eqcheck && !ev.feedback, 'manager has no 새 의견 (operator only)');
   assert.ok((await A('push/prefs')).j.events.feedback);
   assert.equal((await M('push/subscribe', { endpoint: 'ftp://x', keys: { p256dh: 'a', auth: 'b' } })).s, 400);
-  assert.equal((await A('sync?since=0')).j.docs.some((d) => /^push/.test(d.store)), false, 'push data never synced');
+  assert.equal((await syncAll(A)).j.docs.some((d) => /^push/.test(d.store)), false, 'push data never synced');
+});
+
+await test('equipment delete: whoever added it, manager and operator; checks go with it', async () => {
+  const eu = 'eqdu' + tag, ea = 'eqda' + tag, ck = 'wk-' + eu + '-2026-10-12';
+  assert.equal((await U('docs', { docs: [doc('equipment', eu, { type: '지게차' }), doc('eqchecks', ck, { equipId: eu, kind: 'week' })] })).s, 200);
+  assert.equal((await A('docs', { docs: [doc('equipment', ea, { type: '크레인' })] })).s, 200); del('equipment', ea);
+  assert.equal((await U('docs/delete', { store: 'equipment', id: ea })).s, 403, 'user cannot delete equipment added by someone else');
+  assert.equal((await D('docs/delete', { store: 'equipment', id: eqMine })).s, 403, 'driver cannot delete');
+  assert.equal((await U('docs/delete', { store: 'violations', id: 'x' + tag })).s, 403, 'other records stay operator only');
+  assert.equal((await U('docs/delete', { store: 'equipment', id: eu })).s, 200, 'adder deletes own equipment');
+  const after = (await syncAll(A)).j.docs;
+  assert.equal(after.some((d) => d.id === ck && !d.deleted), false, 'its checks are deleted too');
+  assert.equal((await M('docs/delete', { store: 'equipment', id: ea })).s, 200, 'manager deletes any equipment');
 });
 
 await test('PDF upload: manager and operator only, real PDFs only, staff files hidden from users', async () => {
