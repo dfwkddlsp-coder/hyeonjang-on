@@ -140,9 +140,13 @@ await test('driver sees and checks only their own equipment', async () => {
   const live = (await D('sync?since=0')).j.docs.filter((d) => !d.deleted);
   assert.deepEqual([...new Set(live.map((d) => d.store))].filter((s) => s !== 'settings'), ['equipment']);
   assert.deepEqual(live.filter((d) => d.store === 'equipment').map((d) => d.id), [eqMine]);
-  const wk = 'wk' + tag;
+  const wk = 'wkd-' + tag;
   assert.equal((await D('docs', { docs: [doc('eqchecks', wk, { equipId: eqMine })] })).s, 200); del('eqchecks', wk);
   assert.equal((await D('docs', { docs: [doc('eqchecks', wk + 'o', { equipId: eqOther })] })).s, 403);
+  assert.equal((await D('docs', { docs: [doc('eqchecks', 'wk-' + tag, { equipId: eqMine })] })).s, 403, 'driver writes only the driver check');
+  assert.equal((await A('docs', { docs: [doc('eqchecks', 'wk-m' + tag, { equipId: eqMine })] })).s, 200); del('eqchecks', 'wk-m' + tag);
+  assert.equal((await D('sync?since=0')).j.docs.some((d) => d.id === 'wk-m' + tag && !d.deleted), false, 'manager check is not sent to the driver');
+  assert.equal((await A('docs', { docs: [doc('eqchecks', 'wkd-a' + tag, { equipId: eqMine })] })).s, 403, 'staff cannot write the driver check');
   assert.equal((await D('docs', { docs: [doc('violations', 'dv' + tag)] })).s, 403);
 });
 await test('임시 출입 QR: staff opens it, many join until closed, guests touch only their own equipment', async () => {
@@ -160,10 +164,10 @@ await test('임시 출입 QR: staff opens it, many join until closed, guests tou
   assert.equal(j2.s, 200, 'same QR works for a second person');
   cleanup.push(() => A(`users/${j2.j.user.id}`, { active: false }));
   assert.equal((await G2('guest/join', { token: inv.token, name: '', phone: '010-9999-0000' })).s, 400);
-  const eqG = 'eqg' + tag, ckG = 'ckg' + tag;
+  const eqG = 'eqg' + tag, ckG = 'wkd-g' + tag;
   assert.equal((await G('docs', { docs: [doc('equipment', eqG, { type: '지게차', operator: '임시테스트' }), doc('eqchecks', ckG, { equipId: eqG, kind: 'week' })] })).s, 200, 'adds own equipment and checks it');
   del('equipment', eqG); del('eqchecks', ckG);
-  assert.equal((await G('docs', { docs: [doc('eqchecks', 'ckx' + tag, { equipId: eqOther })] })).s, 403, 'cannot check other equipment');
+  assert.equal((await G('docs', { docs: [doc('eqchecks', 'wkd-x' + tag, { equipId: eqOther })] })).s, 403, 'cannot check other equipment');
   assert.equal((await G('docs', { docs: [doc('equipment', eqOther, { type: '바꿈' })] })).s, 403, 'cannot edit other equipment');
   assert.equal((await G2('docs', { docs: [doc('equipment', eqG, { type: '바꿈' })] })).s, 403, 'another guest cannot edit it either');
   assert.equal((await G('docs', { docs: [doc('workers', 'wg' + tag, { name: 'x' })] })).s, 403, 'no registers');

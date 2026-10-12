@@ -55,6 +55,7 @@ export async function syncRowFilter(env, u) {
     return (d) => {
       if (d.store === 'settings' || d.deleted) return true;
       if (d.store === 'equipment') return mine.has(d.id);
+      if (/^(wk|wp)-/.test(d.id)) return false; // 관리자 점검은 운전원 기기로 보내지 않음 (운전원 점검은 wkd-·wpd-)
       return mine.has((parse(d.data) || {}).equipId);
     };
   }
@@ -74,6 +75,9 @@ export async function checkWrite(env, u, docs, { replace = [], remove = null, is
     if (d.store === 'plans' && !isStaff(u)) fail(403, 'PDF 문서는 관리자·운영자만 올릴 수 있습니다');
     if (d.store === 'records' && u.role === 'user' && d.data.scope === 'staff') fail(403, '운영자·관리자만 작성할 수 있는 항목입니다');
   }
+  /* 장비 주간 점검은 둘로 따로: 운전원 점검(wkd-·wpd-)은 장비운전원·임시 운전원만, 관리자 점검(그 밖)은 나머지만 */
+  for (const d of docs) if (d.store === 'eqchecks' && /^(wkd|wpd)-/.test(d.id) !== isDriverLike(u))
+    fail(403, isDriverLike(u) ? '운전원 점검만 할 수 있습니다' : '운전원 점검 기록은 운전원만 쓸 수 있습니다');
   if (docs.some((d) => d.store === 'vuln') && !(await vulnAllowed(env, u)))
     fail(403, '취약근로자 정보는 관리자·운영자만 다룰 수 있습니다');
   if (u.role === 'guest') { // 임시 운전원: 본인 장비 추가 + 그 장비의 점검만 (남의 장비는 checkUpdate에서 막음)

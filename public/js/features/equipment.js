@@ -73,17 +73,20 @@ function eqPhotoItems(){return String(S.eqItems||DEF.eqItems).split('\n').map(l=
 function eqSlots(){return [{t:'점검사진',d:'전담관리자와 장비가 함께 나온 사진'},...eqPhotoItems().map((it,i)=>({t:`${i+1}. ${it.t}`,d:it.d}))]}
 const eqName=e=>`${e.type||'장비'}${e.plate?`(${e.plate})`:''}`;
 const isMine=e=>!!S.inspector&&norm(e.manager)===norm(S.inspector);
-const weekRecId=(eid,mon)=>`wk-${eid}-${mon}`;
-const weekPhotoId=(eid,mon)=>`wp-${eid}-${mon}`;
-const eqWeekRec=(eid,mon)=>EC.find(c=>c.id===weekRecId(eid,mon)&&!c.void);
-const eqWeekPhoto=(eid,mon)=>EC.find(c=>c.id===weekPhotoId(eid,mon)&&!c.void);
+/* 점검은 둘로 따로: 관리자 점검(mgr — 운영자·관리자·사용자)과 운전원 점검(drv — 장비운전원·임시 운전원).
+   기록이 따로라 한쪽이 체크한 것이 다른 쪽 점검표에 뜨지 않음. tr을 안 주면 내 쪽 */
+const myTrack=()=>isDriver()?'drv':'mgr';
+const weekRecId=(eid,mon,tr=myTrack())=>`${tr==='drv'?'wkd':'wk'}-${eid}-${mon}`;
+const weekPhotoId=(eid,mon,tr=myTrack())=>`${tr==='drv'?'wpd':'wp'}-${eid}-${mon}`;
+const eqWeekRec=(eid,mon,tr)=>EC.find(c=>c.id===weekRecId(eid,mon,tr)&&!c.void);
+const eqWeekPhoto=(eid,mon,tr)=>EC.find(c=>c.id===weekPhotoId(eid,mon,tr)&&!c.void);
 /* 예전 방식(하루 1건) 기록도 같이 읽음 */
 const eqLegacyDay=(eid,ds)=>EC.filter(c=>!c.kind&&c.equipId===eid&&c.date===ds&&!c.void).sort((a,b)=>(b.created||'').localeCompare(a.created||''))[0];
 /* 특정 날짜 칸의 표시: 'O' 양호 · 'X' 불량 있음 · 'P' 일부만 체크 · '' 미점검 */
-function eqDayMark(eid,ds){
-  const mon=weekMon(ds),i=weekDays(mon).indexOf(ds),w=eqWeekRec(eid,mon);
+function eqDayMark(eid,ds,tr){
+  const mon=weekMon(ds),i=weekDays(mon).indexOf(ds),w=eqWeekRec(eid,mon,tr);
   if(w){const vals=Object.values(w.marks||{}).map(a=>a[i]||'');if(vals.some(v=>v)){if(vals.includes('X'))return 'X';return vals.every(v=>v)?'O':'P'}}
-  const c=eqLegacyDay(eid,ds);if(c)return c.items.some(x=>x.v==='X')?'X':'O';
+  const c=(tr||myTrack())==='mgr'&&eqLegacyDay(eid,ds);if(c)return c.items.some(x=>x.v==='X')?'X':'O';
   return '';
 }
 const eqCheckOf=(eid,ds)=>eqDayMark(eid,ds)||undefined;
@@ -91,12 +94,16 @@ const eqCheckOf=(eid,ds)=>eqDayMark(eid,ds)||undefined;
 const MARK_SYM={O:'○',X:'×',N:'-',E:'△','':''};
 const MARK_TXT={O:'적합',X:'부적합',N:'해당없음',E:'기타의견'};
 /* 월~토 모든 칸이 채워지면 '완료' */
-function eqWeekComplete(eid,mon){const w=eqWeekRec(eid,mon);if(!w)return false;const items=eqWeekItems(E.find(x=>x.id===eid),w);return items.length>0&&items.every(it=>{const a=(w.marks||{})[it.t];return a&&a.length>=6&&a.slice(0,6).every(Boolean)})}
+function eqWeekComplete(eid,mon,tr){const w=eqWeekRec(eid,mon,tr);if(!w)return false;const items=eqWeekItems(E.find(x=>x.id===eid),w);return items.length>0&&items.every(it=>{const a=(w.marks||{})[it.t];return a&&a.length>=6&&a.slice(0,6).every(Boolean)})}
 const stampHtml=(cls='')=>`<span class="stamp ${cls}">완료</span>`;
 /* 장비 1대 출력 묶음: 주간 점검표 + 사진대지 */
 function eqPrintPages(e,mon){const pages=[];if(weekDays(mon).some(d=>eqDayMark(e.id,d)))pages.push(docEqWeek(e,mon));pages.push(...docPhotoSheet(eqPhotoBlocks([e],mon)));return pages}
 function eqCheckForm(eid,ds){eqWeekForm(eid,weekMon(ds||today()))}
 
+/* 관리자 목록의 장비 카드: 운전원이 따로 한 점검 요약 + 보기 */
+function eqDrvLine(e,mon,days){const w=eqWeekRec(e.id,mon,'drv'),p=eqWeekPhoto(e.id,mon,'drv');if(!w&&!p)return '';
+  const n=days.filter(d=>eqDayMark(e.id,d,'drv')).length,bad=days.some(d=>eqDayMark(e.id,d,'drv')==='X');
+  return `<div class="eq-drv"><span class="grow small"><b>운전원 점검</b> · 점검표 ${n}일${bad?' <span class="badge bbad">부적합</span>':''} · 사진 ${p?(p.photos||[]).length:0}장</span>${w?`<button class="btn sm line" data-dwk="${e.id}">점검표</button>`:''}${p?`<button class="btn sm line" data-dwp="${e.id}">사진</button>`:''}</div>`}
 R.eqcheck=()=>{
   const ds=R.eqcheck.d||today();const mon=weekMon(ds);const days=weekDays(mon);const t=today();
   const f=R.eqcheck.f||(E.some(isMine)?'mine':'all');const q=R.eqcheck.q||'';
@@ -120,7 +127,7 @@ R.eqcheck=()=>{
     <div class="eqdays">${days.map((d,i)=>{const m=eqDayMark(e.id,d);return `<div class="eqd${d===t?' today':''}${m==='O'?' ok':m==='X'?' bad':''}${d>t&&!m?' off':''}"><span>${WD6[i]} ${md(d)}</span><b>${m==='O'?'○':m==='X'?'×':m==='P'?'…':d>t?'':'–'}</b></div>`}).join('')}</div>
     ${future?'':`<div class="eq-acts"><button class="btn sm${eqWeekRec(e.id,mon)?' line':''}" data-wk="${e.id}"><i class="i i-pen"></i> ${eqWeekRec(e.id,mon)?'점검표 수정':'주간 점검표'}</button>
       <button class="btn sm ${pn>=slots?'line':'ghost'}" data-wp="${e.id}"><i class="i i-camera"></i> 주간 사진 ${pn}/${slots}</button></div>
-      ${drv?'':`<button class="btn sm line" data-pr="${e.id}" style="width:100%;margin-top:8px"><i class="i i-print"></i> 이 장비 출력</button>`}`}</div>`}).join('')}
+      ${drv?'':`<button class="btn sm line" data-pr="${e.id}" style="width:100%;margin-top:8px"><i class="i i-print"></i> 이 장비 출력</button>`}`}${drv?'':eqDrvLine(e,mon,days)}</div>`}).join('')}
   ${inUse.length&&!list.length?'<div class="card empty">해당 장비 없음</div>':''}`;
   const setD=v=>{R.eqcheck.d=v;R.eqcheck()};
   $('#wPrev').onclick=()=>setD(addDays(mon,-7));$('#wNext').onclick=()=>setD(addDays(mon,7));if($('#wNow'))$('#wNow').onclick=()=>setD(t);
@@ -129,28 +136,31 @@ R.eqcheck=()=>{
   $$('[data-wk]').forEach(b=>b.onclick=()=>eqWeekForm(b.dataset.wk,mon));
   if($('#eqAdd'))$('#eqAdd').onclick=eqQuickAdd;
   $$('[data-wp]').forEach(b=>b.onclick=()=>eqWeekPhotoForm(b.dataset.wp,mon));
+  $$('[data-dwk]').forEach(b=>b.onclick=()=>eqWeekForm(b.dataset.dwk,mon,false,'drv'));
+  $$('[data-dwp]').forEach(b=>b.onclick=()=>eqWeekPhotoForm(b.dataset.dwp,mon,'drv'));
   $$('[data-pr]').forEach(b=>b.onclick=()=>{const e=E.find(x=>x.id===b.dataset.pr);const pg=eqPrintPages(e,mon);if(!pg.length)return toast('이번 주 점검표·사진이 없습니다');printPages(pg)});
   if($('#pAll'))$('#pAll').onclick=()=>{const pg=list.flatMap(e=>eqPrintPages(e,mon));if(!pg.length)return toast('이번 주 점검표·사진이 없습니다');printPages(pg)};
 };
 
 /* 주간 점검표: 항목 × 월~토 표에서 칸을 눌러 ○ → × → - → 빈칸 */
-function eqWeekForm(eid,mon,fresh){
-  const e=E.find(x=>x.id===eid);if(!e)return;const prev=eqWeekRec(eid,mon);const items=prev&&!fresh?eqWeekItems(e,prev):eqItemsFor(e),days=weekDays(mon),t=today();
+function eqWeekForm(eid,mon,fresh,tr){
+  tr=tr||myTrack();const ro=tr!==myTrack(),drvT=tr==='drv'; // ro: 관리자가 운전원 점검을 볼 때 (고칠 수 없음)
+  const e=E.find(x=>x.id===eid);if(!e)return;const prev=eqWeekRec(eid,mon,tr);const items=prev&&!fresh?eqWeekItems(e,prev):eqItemsFor(e),days=weekDays(mon),t=today();
   const st={marks:{},notes:{...(prev&&prev.notes||{})}};
   for(const it of items)st.marks[it.t]=[...((prev&&prev.marks&&prev.marks[it.t])||['','','','','',''])];
   /* 예전 방식 하루 기록이 있으면 빈칸에 채워 넣음 */
-  days.forEach((d,i)=>{const c=eqLegacyDay(eid,d);if(c)c.items.forEach(x=>{if(st.marks[x.t]&&!st.marks[x.t][i])st.marks[x.t][i]=x.v;if(x.note&&!st.notes[x.t])st.notes[x.t]=x.note})});
+  if(!drvT)days.forEach((d,i)=>{const c=eqLegacyDay(eid,d);if(c)c.items.forEach(x=>{if(st.marks[x.t]&&!st.marks[x.t][i])st.marks[x.t][i]=x.v;if(x.note&&!st.notes[x.t])st.notes[x.t]=x.note})});
   const SYM=MARK_SYM,NEXT={'':'O',O:'X',X:'N',N:'E',E:''};
-  openModal(`주간 점검표 · ${eqName(e)}`,`<div class="card"><dl class="kv"><dt>소속협력사</dt><dd>${h(e.company||'-')}</dd><dt>장비</dt><dd>${h(eqName(e))}</dd><dt>전담관리자</dt><dd>${h(e.manager||'미지정')}</dd><dt>점검표 양식</dt><dd>${isDriver()?h(eqFormName(e)):`<select class="inp" id="wkF" style="padding:4px 6px;width:auto">${eqForms().map(f=>`<option value="${h(f.k)}" ${eqFormOf(e)===f?'selected':''}>${h(f.name)}</option>`).join('')}<option value="base" ${eqFormOf(e)?'':'selected'}>기본 (굴착기 등)</option></select>`}</dd></dl>
+  openModal(`${drvT?'운전원 점검':'주간 점검표'}${ro?' (보기)':''} · ${eqName(e)}`,`<div class="card"><dl class="kv"><dt>소속협력사</dt><dd>${h(e.company||'-')}</dd><dt>장비</dt><dd>${h(eqName(e))}</dd><dt>전담관리자</dt><dd>${h(e.manager||'미지정')}</dd><dt>점검표 양식</dt><dd>${isDriver()||ro?h(eqFormName(e)):`<select class="inp" id="wkF" style="padding:4px 6px;width:auto">${eqForms().map(f=>`<option value="${h(f.k)}" ${eqFormOf(e)===f?'selected':''}>${h(f.name)}</option>`).join('')}<option value="base" ${eqFormOf(e)?'':'selected'}>기본 (굴착기 등)</option></select>`}</dd></dl>
      <div style="margin-top:8px"><b>${weekLabel(mon)}</b> <span class="muted small">(${md(days[0])}~${md(days[5])})</span> <span id="wkStamp"></span></div></div>
    ${items.some(it=>it.d)?'':'<!--'}<details class="card small"><summary><b>점검 방법 보기</b> (${h(eqFormName(e))})</summary>${items.map((it,i)=>`<div style="margin-top:8px"><b>${i+1}. ${h(it.t)}</b><div class="muted">${h(it.d)}</div></div>`).join('')}</details>${items.some(it=>it.d)?'':'-->'}
-   <div class="row" style="margin-bottom:8px"><span class="grow small muted">칸을 누르면 ○적합 ×부적합 -해당없음 △기타 순으로 바뀜</span><button class="btn sm ghost" id="wkAll">오늘까지 모두 ○</button></div>
+   <div class="row" style="margin-bottom:8px"><span class="grow small muted">칸을 누르면 ○적합 ×부적합 -해당없음 △기타 순으로 바뀜</span>${ro?'':'<button class="btn sm ghost" id="wkAll">오늘까지 모두 ○</button>'}</div>
    <div class="wkwrap"><table class="wkt"><tr><th class="it">점검 항목</th>${days.map((d,i)=>`<th><button type="button" class="wkh" data-col="${i}" ${d>t?'disabled':''}>${WD6[i]}<br><small>${md(d)}</small></button></th>`).join('')}</tr>
      ${items.map((it,r)=>`<tr><td class="it">${r+1}. ${h(it.t)}</td>${days.map((d,c)=>`<td><button type="button" class="wkc" data-r="${r}" data-c="${c}" ${d>t?'disabled':''}></button></td>`).join('')}</tr>`).join('')}</table></div>
    <div id="wkNotes"></div>
    <div class="card"><label class="f">비고</label><textarea class="inp" id="wkR" placeholder="특이사항">${h(prev&&prev.remark||'')}</textarea>
-     <div class="grid g2"><div><label class="f">점검자 (전담관리자)</label><input class="inp" id="wkBy" value="${h(prev&&prev.inspector||S.inspector||'')}"></div></div><div id="wkSig" style="margin-top:10px"></div></div>
-   <div class="grid g2"><button class="btn xl" id="wkSave">저장</button>${prev&&isAdmin()?'<button class="btn xl line" id="wkDel">이 주 점검표 삭제</button>':''}</div>`,b=>{
+     <div class="grid g2"><div><label class="f">점검자 (${drvT?'운전원':'전담관리자'})</label><input class="inp" id="wkBy" ${ro?'readonly':''} value="${h(prev&&prev.inspector||(ro?'':S.inspector)||'')}"></div></div><div id="wkSig" style="margin-top:10px"></div></div>
+   ${ro?'':`<div class="grid g2"><button class="btn xl" id="wkSave">저장</button>${prev&&isAdmin()?'<button class="btn xl line" id="wkDel">이 주 점검표 삭제</button>':''}</div>`}`,b=>{
     const paint=()=>{
       $$('.wkc',b).forEach(x=>{const v=st.marks[items[+x.dataset.r].t][+x.dataset.c];x.textContent=SYM[v];x.className='wkc'+(v?' v'+v:'')});
       const bad=items.filter(it=>st.marks[it.t].some(v=>v==='X'||v==='E'));
@@ -160,11 +170,11 @@ function eqWeekForm(eid,mon,fresh){
       $$('[data-note]',box).forEach(i=>i.oninput=()=>st.notes[i.dataset.note]=i.value)};
     $$('.wkc',b).forEach(x=>x.onclick=()=>{const a=st.marks[items[+x.dataset.r].t],c=+x.dataset.c;a[c]=NEXT[a[c]];paint()});
     $$('.wkh',b).forEach(x=>x.onclick=()=>{const c=+x.dataset.col;items.forEach(it=>{if(!st.marks[it.t][c])st.marks[it.t][c]='O'});paint()});
-    $('#wkAll',b).onclick=()=>{days.forEach((d,c)=>{if(d<=t)items.forEach(it=>{if(!st.marks[it.t][c])st.marks[it.t][c]='O'})});paint()};
-    paint();
+    if(ro){$$('.wkc,.wkh',b).forEach(x=>x.disabled=true)}else $('#wkAll',b).onclick=()=>{days.forEach((d,c)=>{if(d<=t)items.forEach(it=>{if(!st.marks[it.t][c])st.marks[it.t][c]='O'})});paint()};
+    paint();if(ro){$('#wkSig',b).innerHTML=prev&&prev.sig?`<div class="small muted">서명</div><img src="${prev.sig}" style="max-width:100%;height:90px">`:'';return}
     const wf=$('#wkF',b);if(wf)wf.onchange=async()=>{if(prev&&!confirm('양식을 바꾸면 이번 주 체크 중 같은 이름의 항목만 남습니다. 바꿀까요?')){wf.value=eqFormOf(e)?eqFormOf(e).k:'base';return}
       await save('equipment',{...e,formK:wf.value});closeModal();toast('점검표 양식을 바꿨습니다');eqWeekForm(eid,mon,true)};
-    const sig=sigPad($('#wkSig',b),'전담관리자 서명',prev&&prev.sig?prev.sig:(($('#wkBy',b).value.trim()===S.inspector)?S.mySig:''));
+    const sig=sigPad($('#wkSig',b),drvT?'운전원 서명':'전담관리자 서명',prev&&prev.sig?prev.sig:(($('#wkBy',b).value.trim()===S.inspector)?S.mySig:''));
     $('#wkBy',b).addEventListener('change',()=>{$('#wkBy').value.trim()===S.inspector?sig.useMine():sig.clear()});
     const del=$('#wkDel',b);if(del)del.onclick=async()=>{if(!confirm('이 주 점검표를 삭제할까요?'))return;try{await remove('eqchecks',prev.id);closeModal();R[cur]()}catch(x){toast(x.message)}};
     $('#wkSave',b).onclick=async()=>{
@@ -173,7 +183,7 @@ function eqWeekForm(eid,mon,fresh){
       const bad=items.find(it=>st.marks[it.t].some(v=>v==='X'||v==='E')&&!String(st.notes[it.t]||'').trim());if(bad){toast(`비고를 꼭 적어주세요: ${bad.t}`);const i=$(`[data-note="${CSS.escape(bad.t)}"]`,b);if(i)i.focus();return}
       const by=$('#wkBy').value.trim();if(!by)return toast('점검자 이름을 입력하세요');if(sig.isEmpty())return toast('서명이 필요합니다');
       const notes={};items.forEach(it=>{if(st.marks[it.t].some(v=>v==='X'||v==='E'))notes[it.t]=String(st.notes[it.t]||'').trim()});
-      await save('eqchecks',{id:weekRecId(eid,mon),kind:'week',week:mon,equipId:e.id,type:e.type||'',plate:e.plate||'',company:e.company||'',manager:e.manager||'',
+      await save('eqchecks',{id:weekRecId(eid,mon,tr),kind:'week',track:tr,week:mon,equipId:e.id,type:e.type||'',plate:e.plate||'',company:e.company||'',manager:e.manager||'',
         marks:Object.fromEntries(items.map(it=>[it.t,st.marks[it.t]])),itemList:items.map(it=>it.t),form:eqFormName(e),notes,remark:$('#wkR').value.trim(),inspector:by,sig:sig.data(),created:prev?prev.created:nowLocal(),updated:nowLocal()});
       closeModal();toast(items.every(it=>st.marks[it.t].every(Boolean))?'주간 점검 완료':items.some(it=>st.marks[it.t].includes('X'))?'저장됨 — 부적합 항목 조치를 확인하세요':'주간 점검표 저장됨');R[cur]();
     };
@@ -181,12 +191,16 @@ function eqWeekForm(eid,mon,fresh){
 }
 
 /* 주간 사진: 점검사진 + 항목별 1장 (장비당 주 1회 — 같은 주에 다시 열면 같은 기록을 수정) */
-function eqWeekPhotoForm(eid,mon){
-  const e=E.find(x=>x.id===eid);if(!e)return;const prev=eqWeekPhoto(eid,mon);const slots=eqSlots();
+function eqWeekPhotoForm(eid,mon,tr){
+  tr=tr||myTrack();
+  const e=E.find(x=>x.id===eid);if(!e)return;const prev=eqWeekPhoto(eid,mon,tr);const slots=eqSlots();
+  if(tr!==myTrack()){ // 관리자가 운전원 사진을 볼 때: 보기만
+    const ph=((prev&&prev.photos)||[]);
+    return openModal(`운전원 사진 (보기) · ${eqName(e)}`,`<div class="small muted" style="margin-bottom:8px">${weekLabel(mon)} · ${h(prev&&prev.by||'')} ${prev?fmtDT(prev.updated||prev.created):''}</div><div class="photos">${ph.map(p=>`<div class="ph"><a href="${h(p.src)}" target="_blank" rel="noopener"><img src="${h(p.src)}"></a><div class="small muted">${h(p.slot||'')}</div></div>`).join('')||'<div class="empty">사진이 없습니다</div>'}</div>`)}
   const st={};for(const p of (prev&&prev.photos)||[])if(p.slot)st[p.slot]=p.src;
   let target=null;
   openModal(`주간 사진 · ${eqName(e)}`,`<div class="card"><b>${weekLabel(mon)}</b> <span class="muted small">(${md(mon)}~${md(addDays(mon,5))})</span>
-     <div class="small muted" style="margin-top:4px">장비당 <b>한 주에 한 번</b>, 항목마다 사진 1장. 먼저 <b>점검사진</b>(전담관리자와 장비가 함께 나온 사진)을 올려주세요.${prev?` · 마지막 저장 ${h(prev.by||'')} ${fmtDT(prev.updated||prev.created)}`:''}</div>
+     <div class="small muted" style="margin-top:4px">장비당 <b>한 주에 한 번</b>, 항목마다 사진 1장. 먼저 <b>점검사진</b>(점검자와 장비가 함께 나온 사진)을 올려주세요.${prev?` · 마지막 저장 ${h(prev.by||'')} ${fmtDT(prev.updated||prev.created)}`:''}</div>
      <div class="small" style="margin-top:6px" id="wpProg"></div></div>
    <div id="wpSlots"></div>
    <input type="file" accept="image/*" capture="environment" hidden id="wpCam"><input type="file" accept="image/*" hidden id="wpGalIn">
@@ -205,7 +219,7 @@ function eqWeekPhotoForm(eid,mon){
     $('#wpCam',b).onchange=take;$('#wpGalIn',b).onchange=take;
     const del=$('#wpDel',b);if(del)del.onclick=async()=>{if(!confirm('이 주의 사진을 모두 삭제할까요?'))return;try{await remove('eqchecks',prev.id);closeModal();R[cur]()}catch(x){toast(x.message)}};
     $('#wpSave',b).onclick=async()=>{const photos=slots.filter(s=>st[s.t]).map(s=>({slot:s.t,cap:s.t,src:st[s.t]}));if(!photos.length)return toast('사진을 1장 이상 올려주세요');
-      await save('eqchecks',{id:weekPhotoId(eid,mon),kind:'weekPhoto',week:mon,equipId:e.id,type:e.type||'',plate:e.plate||'',company:e.company||'',manager:e.manager||'',
+      await save('eqchecks',{id:weekPhotoId(eid,mon,tr),kind:'weekPhoto',track:tr,week:mon,equipId:e.id,type:e.type||'',plate:e.plate||'',company:e.company||'',manager:e.manager||'',
         photos,by:S.inspector||'',created:prev?prev.created:nowLocal(),updated:nowLocal()});
       closeModal();toast(`${weekLabel(mon)} 사진 ${photos.length}/${slots.length} 저장됨`);R[cur]()};
   });

@@ -384,3 +384,6 @@ body:has(input:focus,textarea:focus,select:focus) .gb-fab{display:none} /* 입�
 .gq-exp{text-align:center;margin-top:10px;font-size:15px}
 /* 장비 카드: 주간 점검표 · 주간 사진을 한 줄에 */
 .eq-acts{display:flex;gap:8px;margin-top:8px}.eq-acts>.btn{flex:1 1 0;min-width:0;padding-left:8px;padding-right:8px;white-space:nowrap}
+/* 관리자 목록: 운전원 점검 요약 줄 */
+.eq-drv{display:flex;align-items:center;gap:6px;margin-top:8px;padding:8px 10px;border-radius:10px;background:var(--chip)}
+#gearBtn[hidden]{display:none} /* 운영자만: .gear의 display가 hidden을 덮지 않게 */
