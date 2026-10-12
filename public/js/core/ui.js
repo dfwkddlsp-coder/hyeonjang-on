@@ -92,6 +92,7 @@ function withGalleryConsent(go){
   $('#gcNo',ov).onclick=()=>ov.remove();
   $('#gcOk',ov).onclick=()=>{S.galleryConsent={at:nowLocal()};saveSettings();ov.remove();go()};
 }
-/* 두 번 탭 방지: 큰 버튼(저장·등록 등)을 0.7초 안에 다시 누르면 무시 → 같은 기록이 두 번 저장되지 않게 */
-{let lastBtn=null,lastAt=0;document.addEventListener('click',e=>{if(!e.isTrusted)return;const b=e.target.closest&&e.target.closest('.btn:not(.sm)');if(!b)return;
+/* 두 번 탭 방지: 큰 버튼(저장·등록 등)을 0.7초 안에 다시 누르면 무시 → 같은 기록이 두 번 저장되지 않게.
+   입력 칸·라벨은 제외: 라벨(.btn) 안의 파일 칸은 라벨을 누르면 브라우저가 안쪽 칸을 한 번 더 눌러서, 막으면 파일 창이 안 열림 */
+{let lastBtn=null,lastAt=0;document.addEventListener('click',e=>{if(!e.isTrusted||!e.target.closest||e.target.closest('input,select,textarea,label'))return;const b=e.target.closest('.btn:not(.sm)');if(!b)return;
   const t=Date.now();if(b===lastBtn&&t-lastAt<700){e.stopImmediatePropagation();e.preventDefault();return}lastBtn=b;lastAt=t},true)}
