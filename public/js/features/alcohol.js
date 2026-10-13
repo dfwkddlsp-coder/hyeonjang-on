@@ -115,8 +115,8 @@ function showAlcohol(id){
    <div class="row" style="margin-top:14px">
    ${isAlcBad(a)&&!a.void?`<button class="btn bad" id="nt"><i class="i i-pen"></i> ${a.notice?'통지서 다시 작성':'측정결과 통지서 작성'}</button>${a.notice?'<button class="btn" id="np"><i class="i i-print"></i> 통지서 출력</button>':''}<button class="btn line" id="ms"><i class="i i-share"></i> 알림 문구</button>`:''}
    ${a.judge!=='정상'&&!ch&&!a.void?'<button class="btn line" id="rt">재측정 입력</button>':''}
-   <button class="btn line" id="fm">사후조치 메모</button>${canEditAlc(a)&&!a.void?'<button class="btn line" id="aphE"><i class="i i-camera"></i> 사진</button>':''}${canEditAlc(a)?'<button class="btn line" id="adel" style="color:var(--bad)">삭제</button>':''}
-   ${!a.void&&isAdmin()?'<button class="btn line" id="vd">무효 처리</button>':''}</div>`,b=>{
+   <button class="btn line" id="fm">사후조치 메모</button>${canEditAlc(a)&&!a.void?'<button class="btn line" id="aphE"><i class="i i-camera"></i> 사진</button>':''}${canDel(a)?'<button class="btn line" id="adel" style="color:var(--bad)">삭제</button>':''}
+   ${!a.void&&can('void')?'<button class="btn line" id="vd">무효 처리</button>':''}</div>`,b=>{
     const rt=$('#rt',b);if(rt)rt.onclick=()=>{closeModal();go('alcohol');alcForm({name:a.name,company:a.company,job:a.job,workerId:a.workerId,equip:a.equip,plate:a.plate},a)};
     const nt=$('#nt',b);if(nt)nt.onclick=()=>alcNotice(a.id);
     const np=$('#np',b);if(np)np.onclick=()=>printPages([docAlcohol(a)]);

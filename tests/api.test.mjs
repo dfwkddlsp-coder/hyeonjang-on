@@ -150,7 +150,7 @@ await test('driver sees and checks only their own equipment', async () => {
   assert.equal((await D('docs', { docs: [doc('eqchecks', 'wk-' + tag, { equipId: eqMine })] })).s, 403, 'driver writes only the driver check');
   assert.equal((await A('docs', { docs: [doc('eqchecks', 'wk-m' + tag, { equipId: eqMine })] })).s, 200); del('eqchecks', 'wk-m' + tag);
   assert.equal((await syncAll(D)).j.docs.some((d) => d.id === 'wk-m' + tag && !d.deleted), false, 'manager check is not sent to the driver');
-  assert.equal((await A('docs', { docs: [doc('eqchecks', 'wkd-a' + tag, { equipId: eqMine })] })).s, 403, 'staff cannot write the driver check');
+  assert.equal((await M('docs', { docs: [doc('eqchecks', 'wkd-a' + tag, { equipId: eqMine })] })).s, 403, 'manager cannot write the driver check (by default)');
   assert.equal((await D('docs', { docs: [doc('violations', 'dv' + tag)] })).s, 403);
 });
 await test('임시 출입 QR: staff opens it, many join until closed, guests touch only their own equipment', async () => {
@@ -244,6 +244,45 @@ await test('가입 신청: anyone applies, only the operator approves; the chose
   await X('join/request', { name: '거절', phone: ph2, company: '가', password: 'join-pass-9' });
   assert.equal((await A('join/requests/' + ph2, { action: 'reject' })).s, 200);
   assert.equal((await client()('login', { loginId: ph2, password: 'join-pass-9' })).s, 401, 'rejected cannot log in');
+});
+
+await test('설정 → 권한: the operator changes role permissions and the server follows', async () => {
+  const shared = (await syncAll(A)).j.docs.find((d) => d.store === 'settings' && d.id === 'shared' && !d.deleted);
+  const base = shared ? shared.data : { id: 'shared' };
+  const setPerms = async (who, perms) => who('docs', { docs: [{ store: 'settings', id: 'shared', data: { ...base, perms } }] });
+  try {
+    assert.equal((await U('perms')).s, 403, 'user cannot open permission settings');
+    const t = (await A('perms')).j.table;
+    assert.equal(t['vuln.view'].manager, true); assert.equal(t['vuln.view'].user, false);
+    // 사용자에게 취약근로자 열기, 관리자에게서 삼진아웃 등록 빼기
+    const p1 = { ...t, 'vuln.view': { ...t['vuln.view'], user: true }, 'strike.add': { ...t['strike.add'], manager: false } };
+    assert.equal((await setPerms(A, p1)).s, 200);
+    const vid = 'vp' + tag;
+    assert.equal((await A('docs', { docs: [doc('vuln', vid, { name: 'x' })] })).s, 200); del('vuln', vid);
+    assert.ok((await syncAll(U)).j.docs.some((d) => d.id === vid), 'user now sees 취약근로자');
+    assert.ok((await U('sync?since=0')).j.perms.includes('vuln.view'), 'sync sends the new permission list');
+    assert.equal((await M('docs', { docs: [doc('violations', 'vp2' + tag, { name: 'x', level: 1 })] })).s, 403, 'manager lost 적발 등록');
+    // 권한 설정 권한 없는 관리자는 표를 못 바꿈
+    assert.equal((await setPerms(M, { ...p1, 'del.any': { ...p1['del.any'], manager: true } })).s, 403);
+    // 관리자에게 사용자 관리를 줘도 운영자 계정은 못 건드림
+    const p2 = { ...p1, 'set.users': { ...p1['set.users'], manager: true } };
+    assert.equal((await setPerms(A, p2)).s, 200);
+    assert.equal((await M('users')).s, 200, 'manager with 사용자 관리 lists users');
+    const adminId = (await A('status')).j.user.id;
+    assert.equal((await M(`users/${adminId}`, { active: false })).s, 403, 'cannot touch the operator account');
+    assert.equal((await M('users', { loginId: 'pa' + tag, name: 'x', password: 'init-pass-9', role: 'admin' })).s, 403, 'cannot create an operator');
+    // 사람별 예외: 이 사용자만 취약근로자 끄기, 이 관리자만 권한 설정 켜기
+    const uid = (await U('status')).j.user.id, mid = (await M('status')).j.user.id;
+    const p3 = { ...p2, _users: { [uid]: { 'vuln.view': false }, [mid]: { 'set.perms': true } } };
+    assert.equal((await setPerms(A, p3)).s, 200);
+    assert.ok(!(await U('sync?since=0')).j.perms.includes('vuln.view'), 'per-person off beats the role');
+    assert.ok((await M('sync?since=0')).j.perms.includes('set.perms'), 'per-person on');
+    assert.equal((await M('perms')).s, 200, 'manager with personal 권한 설정 opens the table');
+    assert.equal((await setPerms(M, { ...p3, _users: { ...p3._users, [mid]: { 'set.perms': true, 'del.any': true } } })).s, 403, 'cannot raise own permissions');
+    assert.equal((await setPerms(M, { ...p3, _users: { [mid]: { 'set.perms': true } } })).s, 200, 'can change other people');
+    assert.ok((await U('sync?since=0')).j.perms.includes('vuln.view'), 'override removed');
+  } finally { await setPerms(A, (base.perms) || {}); }
+  assert.equal((await M('users')).s, 403, 'restored');
 });
 
 await test('PDF upload: manager and operator only, real PDFs only, staff files hidden from users', async () => {

@@ -80,7 +80,7 @@ const eqName=e=>`${e.type||'장비'}${e.plate?`(${e.plate})`:''}`;
 const isMine=e=>!!S.inspector&&norm(e.manager)===norm(S.inspector);
 /* 점검은 둘로 따로: 관리자 점검(mgr — 운영자·관리자·사용자)과 운전원 점검(drv — 장비운전원·임시 운전원).
    기록이 따로라 한쪽이 체크한 것이 다른 쪽 점검표에 뜨지 않음. tr을 안 주면 내 쪽 */
-const myTrack=()=>isDriver()?'drv':'mgr';
+const myTrack=()=>can('eq.drv')&&!can('eq.mgr')?'drv':'mgr'; // 운전원 점검만 할 수 있으면 운전원 쪽
 const weekRecId=(eid,mon,tr=myTrack())=>`${tr==='drv'?'wkd':'wk'}-${eid}-${mon}`;
 const weekPhotoId=(eid,mon,tr=myTrack())=>`${tr==='drv'?'wpd':'wp'}-${eid}-${mon}`;
 const eqWeekRec=(eid,mon,tr)=>EC.find(c=>c.id===weekRecId(eid,mon,tr)&&!c.void);
@@ -118,7 +118,7 @@ function eqPrintChoose(list,mon,title){
 function eqCheckForm(eid,ds){eqWeekForm(eid,weekMon(ds||today()))}
 
 /* 장비 삭제: 추가한 사람·관리자·운영자 (잘못 추가한 장비). 그 장비의 점검 기록도 함께 지워짐 — 서버도 같은 규칙 */
-const canDelEq=e=>!!e&&(isStaff()||(!!ME&&!!e.byId&&e.byId===ME.id));
+const canDelEq=e=>!!e&&(can('equip.del')||canDel(e));
 async function eqDelete(e,after){if(!e)return;
   const n=EC.filter(c=>c.equipId===e.id).length;
   if(!confirm(`「${eqName(e)}」을(를) 삭제할까요?${n?`
@@ -137,8 +137,8 @@ R.eqcheck=()=>{
     .sort((a,b)=>(isMine(b)-isMine(a))||(+a.no||999)-(+b.no||999));
   const done=inUse.filter(e=>eqDayMark(e.id,t)).length,mine=inUse.filter(isMine),mineTodo=mine.filter(e=>!eqDayMark(e.id,t));
   const phDone=inUse.filter(e=>{const p=eqWeekPhoto(e.id,mon);return p&&(p.photos||[]).length>=eqSlots(e).length}).length;
-  const future=mon>weekMon(t),drv=isDriver();
-  V$().innerHTML=`<div class="row" style="justify-content:space-between"><h1>장비 점검</h1>${isDriver()&&!isGuest()?'':'<button class="btn sm" id="eqAdd"><i class="i i-plus"></i> 장비 추가</button>'}</div>
+  const future=mon>weekMon(t),drv=!can('equip.view'); // 모든 장비를 못 보면(운전원) 필터·검색 없이 본인 장비만
+  V$().innerHTML=`<div class="row" style="justify-content:space-between"><h1>장비 점검</h1>${!can('equip.add')?'':'<button class="btn sm" id="eqAdd"><i class="i i-plus"></i> 장비 추가</button>'}</div>
   <div class="row" style="margin-bottom:10px"><button class="btn sm line" id="wPrev">◀</button><div class="grow" style="text-align:center"><b>${weekLabel(mon)}</b><div class="small muted">${md(days[0])} ~ ${md(days[5])}</div></div><button class="btn sm line" id="wNext">▶</button>${mon!==weekMon(t)?'<button class="btn sm ghost" id="wNow">이번 주</button>':''}</div>
   <div class="grid g4" style="margin-bottom:10px"><div class="stat"><div class="t">오늘 점검</div><div class="n">${done}<span class="small muted">/${inUse.length}대</span></div></div>
    ${drv?'':`<div class="stat"><div class="t">내 담당 미점검</div><div class="n" style="color:${mineTodo.length?'var(--bad)':'inherit'}">${mineTodo.length}<span class="small muted">/${mine.length}대</span></div></div>`}
@@ -177,7 +177,7 @@ function eqWeekForm(eid,mon,fresh,tr){
   /* 예전 방식 하루 기록이 있으면 빈칸에 채워 넣음 */
   if(!drvT)days.forEach((d,i)=>{const c=eqLegacyDay(eid,d);if(c)c.items.forEach(x=>{if(st.marks[x.t]&&!st.marks[x.t][i])st.marks[x.t][i]=x.v;if(x.note&&!st.notes[x.t])st.notes[x.t]=x.note})});
   const SYM=MARK_SYM,NEXT={'':'O',O:'X',X:'N',N:'E',E:''};
-  openModal(`${drvT?'운전원 점검':'주간 점검표'}${ro?' (보기)':''} · ${eqName(e)}`,`<div class="card"><dl class="kv"><dt>소속협력사</dt><dd>${h(e.company||'-')}</dd><dt>장비</dt><dd>${h(eqName(e))}</dd><dt>전담관리자</dt><dd>${h(e.manager||'미지정')}</dd><dt>점검표 양식</dt><dd>${isDriver()||ro?h(eqFormName(e)):`<select class="inp" id="wkF" style="padding:4px 6px;width:auto">${eqForms().map(f=>`<option value="${h(f.k)}" ${eqFormOf(e)===f?'selected':''}>${h(f.name)}</option>`).join('')}<option value="base" ${eqFormOf(e)?'':'selected'}>기본 (굴착기 등)</option></select>`}</dd></dl>
+  openModal(`${drvT?'운전원 점검':'주간 점검표'}${ro?' (보기)':''} · ${eqName(e)}`,`<div class="card"><dl class="kv"><dt>소속협력사</dt><dd>${h(e.company||'-')}</dd><dt>장비</dt><dd>${h(eqName(e))}</dd><dt>전담관리자</dt><dd>${h(e.manager||'미지정')}</dd><dt>점검표 양식</dt><dd>${!can('equip.add')||ro?h(eqFormName(e)):`<select class="inp" id="wkF" style="padding:4px 6px;width:auto">${eqForms().map(f=>`<option value="${h(f.k)}" ${eqFormOf(e)===f?'selected':''}>${h(f.name)}</option>`).join('')}<option value="base" ${eqFormOf(e)?'':'selected'}>기본 (굴착기 등)</option></select>`}</dd></dl>
      <div style="margin-top:8px"><b>${weekLabel(mon)}</b> <span class="muted small">(${md(days[0])}~${md(days[5])})</span> <span id="wkStamp"></span></div></div>
    ${items.some(it=>it.d)?'':'<!--'}<details class="card small"><summary><b>점검 방법 보기</b> (${h(eqFormName(e))})</summary>${items.map((it,i)=>`<div style="margin-top:8px"><b>${i+1}. ${h(it.t)}</b><div class="muted">${h(it.d)}</div></div>`).join('')}</details>${items.some(it=>it.d)?'':'-->'}
    <div class="row" style="margin-bottom:8px"><span class="grow small muted">칸을 누르면 ○적합 ×부적합 -해당없음 △기타 순으로 바뀜</span>${ro?'':'<button class="btn sm ghost" id="wkAll">오늘까지 모두 ○</button>'}</div>
@@ -186,7 +186,7 @@ function eqWeekForm(eid,mon,fresh,tr){
    <div id="wkNotes"></div>
    <div class="card"><label class="f">비고</label><textarea class="inp" id="wkR" placeholder="특이사항">${h(prev&&prev.remark||'')}</textarea>
      <div class="grid g2"><div><label class="f">점검자 (${drvT?'운전원':'전담관리자'})</label><input class="inp" id="wkBy" ${ro?'readonly':''} value="${h(prev&&prev.inspector||(ro?'':S.inspector)||'')}"></div></div><div id="wkSig" style="margin-top:10px"></div></div>
-   ${ro?'':`<div class="grid g2"><button class="btn xl" id="wkSave">저장</button>${prev&&ownRec(prev)?'<button class="btn xl line" id="wkDel">이 주 점검표 삭제</button>':''}</div>`}`,b=>{
+   ${ro?'':`<div class="grid g2"><button class="btn xl" id="wkSave">저장</button>${prev&&canDel(prev)?'<button class="btn xl line" id="wkDel">이 주 점검표 삭제</button>':''}</div>`}`,b=>{
     const paint=()=>{
       $$('.wkc',b).forEach(x=>{const v=st.marks[items[+x.dataset.r].t][+x.dataset.c];x.textContent=SYM[v];x.className='wkc'+(v?' v'+v:'')});
       const bad=items.filter(it=>st.marks[it.t].some(v=>v==='X'||v==='E'));
@@ -230,7 +230,7 @@ function eqWeekPhotoForm(eid,mon,tr){
      <div class="small" style="margin-top:6px" id="wpProg"></div></div>
    <div id="wpSlots"></div>
    <input type="file" accept="image/*" capture="environment" hidden id="wpCam"><input type="file" accept="image/*" hidden id="wpGalIn">
-   <div class="grid g2"><button class="btn xl" id="wpSave">${prev?'수정 저장':'저장'}</button>${prev&&ownRec(prev)?'<button class="btn xl line" id="wpDel">이 주 사진 삭제</button>':''}</div>`,b=>{
+   <div class="grid g2"><button class="btn xl" id="wpSave">${prev?'수정 저장':'저장'}</button>${prev&&canDel(prev)?'<button class="btn xl line" id="wpDel">이 주 사진 삭제</button>':''}</div>`,b=>{
     const draw=()=>{
       $('#wpProg',b).innerHTML=`등록 <b>${slots.filter(s=>st[s.t]).length}</b> / ${slots.length}`;
       $('#wpSlots',b).innerHTML=slots.map((s,i)=>`<div class="card wpslot${st[s.t]?' done':''}"><div class="row" style="gap:10px;align-items:flex-start">

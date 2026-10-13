@@ -24,7 +24,7 @@ function gbFab(){let b=$('#guideFab');
 let GB_HIST=[]; // 이번에 나눈 AI 대화 (최근 몇 개만 서버로 보냄)
 function openGuide(){
   const G=gbSet(),who=(ME&&ME.name)||S.inspector||'';
-  const faqs=(G.faqs||[]).filter(f=>f.q&&f.a&&(!isDriver()||f.drv));
+  const faqs=(G.faqs||[]).filter(f=>f.q&&f.a&&(viewOk('home')||f.drv));
   const ai=SERVER&&G.aiOn!==false;
   openModal(G.name,`<div class="gb-chat" id="gbLog">
     <div class="gb-bot">${gbChar('av')}<div class="gb-b">${nl(String(G.greet||'').replace(/\{이름\}/g,who||'현장'))}</div></div>
@@ -70,7 +70,7 @@ function feedbackForm(){
 }
 
 /* ---------- 운영자: 홈의 새 의견 알림 ---------- */
-async function fbBadge(){if(!SERVER||!isAdmin()||!navigator.onLine)return;
+async function fbBadge(){if(!SERVER||!can('feedback.view')||!navigator.onLine)return;
   try{const r=await api('feedback?count=1');if(cur!=='home'||!r.new)return;
     const v=V$();if($('#fbNew',v))return;
     v.insertAdjacentHTML('afterbegin',`<button type="button" class="gb-new" id="fbNew"><i class="i i-note"></i> 새 의견 <b>${r.new}</b><span class="muted small">— 눌러서 확인</span></button>`);
@@ -78,10 +78,10 @@ async function fbBadge(){if(!SERVER||!isAdmin()||!navigator.onLine)return;
 {const f=R.home;R.home=(...a)=>{f(...a);fbBadge()}}
 
 /* ---------- 운영자: 설정 → 안내·의견 (받은 의견 + 안내 봇 설정) ---------- */
-{const f=R.settings;R.settings=(...a)=>{f(...a);if(!SERVER||!isAdmin())return;
+{const f=R.settings;R.settings=(...a)=>{f(...a);if(!SERVER||!(can('feedback.view')||can('set.guide')))return;
   V$().insertAdjacentHTML('beforeend',`<section class="st" data-st="guide">
-   <div class="card"><div class="row"><b class="grow">받은 의견</b><button class="btn sm line" id="fbAll">확인한 것도 보기</button></div><div class="list" id="fbBox" style="margin-top:6px"><div class="empty">불러오는 중…</div></div></div>
-   <div class="card"><b>안내 봇</b> <span class="small muted">— 오른쪽 아래 캐릭터를 누르면 나오는 안내. 바꾸면 모든 사용자에게 적용</span>
+   ${can('feedback.view')?`<div class="card"><div class="row"><b class="grow">받은 의견</b><button class="btn sm line" id="fbAll">확인한 것도 보기</button></div><div class="list" id="fbBox" style="margin-top:6px"><div class="empty">불러오는 중…</div></div></div>`:''}
+   ${can('set.guide')?`<div class="card"><b>안내 봇</b> <span class="small muted">— 오른쪽 아래 캐릭터를 누르면 나오는 안내. 바꾸면 모든 사용자에게 적용</span>
     <div class="grid g2"><div><label class="f">이름</label><input class="inp" id="gbN"></div><div><label class="f">AI 답변</label><label class="row" style="gap:8px;min-height:48px"><input type="checkbox" id="gbAi" style="width:22px;height:22px"> 버튼에 없는 질문은 AI가 답하기</label></div></div>
     <label class="f">현장 전체 하루 AI 질문 수 <span class="small muted">(0~500 · 무료 사용량 안에 머물도록 최대 500, 한국시간 오전 9시에 다시 채워짐)</span></label><input class="inp" id="gbD" type="number" inputmode="numeric" min="0" max="500" style="max-width:160px">
     <label class="f">인사말 <span class="small muted">({이름} = 로그인한 사람 이름)</span></label><textarea class="inp" id="gbG" rows="3"></textarea>
@@ -89,8 +89,8 @@ async function fbBadge(){if(!SERVER||!isAdmin()||!navigator.onLine)return;
     <button class="btn sm line" id="gbAdd" style="margin-top:8px"><i class="i i-plus"></i> 질문 추가</button>
     <label class="f">AI 참고 안내문 <span class="small muted">— 현장 규칙·연락처 등 AI가 답할 때 참고할 내용 (근로자 개인정보는 넣지 마세요)</span></label><textarea class="inp" id="gbT" style="min-height:140px" placeholder="예) 현장 출입 시간은 06:30~18:00 입니다. 음주 재측정은 15분 뒤에 합니다."></textarea>
     <div class="row" style="margin-top:12px"><button class="btn" id="gbSave">안내 봇 저장</button><button class="btn line" id="gbTry">미리 보기</button><button class="btn sm ghost" id="gbReset">기본값으로</button></div></div>
-  </section>`);
-  bindGuideSettings();loadFeedback(false)}}
+  `:''}</section>`);
+  if(can('set.guide'))bindGuideSettings();loadFeedback(false)}}
 
 let FB_ALL=false;
 async function loadFeedback(all){FB_ALL=all;const box=$('#fbBox');if(!box)return;

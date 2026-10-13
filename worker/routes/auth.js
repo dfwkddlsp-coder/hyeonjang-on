@@ -5,6 +5,9 @@ import {
   CLEAR_COOKIE, cookieToken, currentUser, publicUser, renewSession, requireUser, startSession,
 } from '../lib/session.js';
 import { extractBlobs } from '../lib/storage.js';
+import { permsOf } from '../lib/perms.js';
+/** 화면이 쓸 사용자 정보 + 내 권한 목록 */
+const withPerms = async (env, u) => (u ? { ...publicUser(u), perms: [...(await permsOf(env, u))] } : null);
 
 const MAX_FAILS = 5, LOCK_MS = 10 * 60 * 1000;
 const userById = (env, id) => env.DB.prepare('SELECT * FROM users WHERE id=?').bind(id).first();
@@ -13,7 +16,7 @@ async function status({ req, env }) {
   const n = await env.DB.prepare('SELECT COUNT(*) AS n FROM users').first();
   const u = await currentUser(req, env);
   const cookie = await renewSession(env, req, u);
-  return json({ setupNeeded: !n.n, user: publicUser(u), time: now() }, 200, cookie ? { 'set-cookie': cookie } : {});
+  return json({ setupNeeded: !n.n, user: await withPerms(env, u), time: now() }, 200, cookie ? { 'set-cookie': cookie } : {});
 }
 
 // first run only: create the operator account
@@ -27,7 +30,7 @@ async function setup({ req, env }) {
   const salt = newSalt(), id = uid(), t = now();
   await env.DB.prepare('INSERT INTO users (id,login_id,name,org,title,role,pw_hash,pw_salt,must_change,active,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,0,1,?,?)')
     .bind(id, loginId, name, String(b.org || ''), String(b.title || ''), 'admin', await hashPw(b.password, salt), salt, t, t).run();
-  return json({ user: publicUser(await userById(env, id)) }, 200, { 'set-cookie': await startSession(env, id, req) });
+  return json({ user: await withPerms(env, await userById(env, id)) }, 200, { 'set-cookie': await startSession(env, id, req) });
 }
 
 async function login({ req, env }) {
@@ -44,7 +47,7 @@ async function login({ req, env }) {
     fail(401, '아이디 또는 비밀번호가 맞지 않습니다');
   }
   await env.DB.prepare('DELETE FROM login_fail WHERE login_id=?').bind(loginId).run();
-  return json({ user: publicUser(u) }, 200, { 'set-cookie': await startSession(env, u.id, req) });
+  return json({ user: await withPerms(env, u) }, 200, { 'set-cookie': await startSession(env, u.id, req) });
 }
 
 async function logout({ req, env }) {
@@ -61,7 +64,7 @@ async function changePassword({ req, env }) {
   if (b.next === b.current) fail(400, '새 비밀번호가 이전과 같습니다');
   const salt = newSalt();
   await env.DB.prepare('UPDATE users SET pw_hash=?, pw_salt=?, must_change=0, updated_at=? WHERE id=?').bind(await hashPw(b.next, salt), salt, now(), u.id).run();
-  return json({ user: publicUser(await userById(env, u.id)) });
+  return json({ user: await withPerms(env, await userById(env, u.id)) });
 }
 
 // own name / org / title / signature
@@ -77,7 +80,7 @@ async function updateMe({ req, env }) {
   stmts.push(env.DB.prepare('UPDATE users SET name=?, org=?, title=?, sig_blob=?, updated_at=? WHERE id=?')
     .bind(String(b.name ?? u.name).trim() || u.name, String(b.org ?? u.org), String(b.title ?? u.title), sig, now(), u.id));
   await env.DB.batch(stmts);
-  return json({ user: publicUser(await userById(env, u.id)) });
+  return json({ user: await withPerms(env, await userById(env, u.id)) });
 }
 
 export default [

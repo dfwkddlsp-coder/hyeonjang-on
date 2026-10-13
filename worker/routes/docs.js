@@ -1,7 +1,7 @@
 // Record sync: every record type is a JSON document in `docs`; deletes are soft so devices can sync them.
 import { body, fail, json } from '../lib/http.js';
 import { requireUser } from '../lib/session.js';
-import { STORES, checkUpdate, checkWrite, isStaff, syncRowFilter, syncStoreFilter } from '../lib/policy.js';
+import { STORES, checkUpdate, checkWrite, permsOf, syncRowFilter, syncStoreFilter } from '../lib/policy.js';
 import { extractBlobs, stampBase } from '../lib/storage.js';
 import { notify } from '../lib/push.js';
 
@@ -22,6 +22,7 @@ async function sync({ req, env, url }) {
     docs: visible.map((d) => ({ store: d.store, id: d.id, deleted: !!d.deleted, updatedAt: d.updated_at, data: d.deleted ? null : JSON.parse(d.data) })),
     cursor: rows.length ? rows[rows.length - 1].updated_at : since, // advance past hidden rows too
     more: r.results.length > SYNC_PAGE,
+    perms: [...(await permsOf(env, u))],
   });
 }
 
@@ -34,8 +35,6 @@ async function write({ req, env, ctx }) {
   const remove = b.remove && Array.isArray(b.remove.ids) && b.remove.ids.length ? b.remove : null;
   if (!docs.length && !replace.length && !remove) return json({ saved: [] });
   if (docs.length > MAX_BATCH || (remove && remove.ids.length > MAX_BATCH)) fail(413, '한 번에 500건까지 보낼 수 있습니다');
-  await checkWrite(env, u, docs, { replace, remove, isImport: !!b.import });
-
   // Everything below is set-based: one lookup for all previous versions, one upsert per chunk, one insert per photo.
   const prevRows = docs.length ? (await env.DB.prepare(
     `SELECT d.store, d.id, d.data, d.deleted, d.created_by FROM docs d JOIN json_each(?) j
@@ -43,6 +42,13 @@ async function write({ req, env, ctx }) {
   ).bind(JSON.stringify(docs.map((d) => ({ s: d.store, i: d.id })))).all()).results : [];
   const prev = new Map(prevRows.map((r) => [r.store + '|' + r.id, r.deleted ? null : JSON.parse(r.data)]));
   const prevBy = new Map(prevRows.map((r) => [r.store + '|' + r.id, r.created_by]));
+  // Shared settings: a key the sender didn't include keeps its stored value (older app versions don't know newer keys like 'perms').
+  for (const d of docs) {
+    const old = d.store === 'settings' && prev.get('settings|' + d.id);
+    if (old) for (const k of Object.keys(old)) if (!(k in d.data)) d.data[k] = old[k];
+  }
+  await checkWrite(env, u, docs, { replace, remove, isImport: !!b.import, prev });
+  const P = await permsOf(env, u);
 
   const blobStmts = [], stmts = [];
   let ts = await stampBase(env);
@@ -57,7 +63,7 @@ async function write({ req, env, ctx }) {
   const saved = [], rows = [];
   for (const d of docs) {
     const old = prev.get(d.store + '|' + d.id) || null;
-    checkUpdate(u, d, old, prevBy.get(d.store + '|' + d.id));
+    checkUpdate(u, d, old, prevBy.get(d.store + '|' + d.id), P);
     const data = await extractBlobs(env, d.data, u.id, blobStmts);
     data._by = old && old._by ? old._by : u.name; // who first recorded it
     const t = ts++;
@@ -102,16 +108,17 @@ function pushMessages(u, docs, prev) {
   return out;
 }
 
-// POST /api/docs/delete {store,id} — 운영자는 전부, 그 밖에는 본인이 쓴 기록만. 장비는 관리자도 (그 장비의 점검 기록도 함께)
+// POST /api/docs/delete {store,id} — 권한 설정: 본인 글 삭제 / 남의 글 삭제 / 남이 추가한 장비 삭제 (장비를 지우면 그 점검 기록도 함께)
 async function remove({ req, env }) {
   const u = await requireUser(req, env);
   const b = await body(req);
   if (!STORES.has(b.store) || b.store === 'settings' || !b.id) fail(400, '잘못된 요청');
-  if (u.role !== 'admin') { // 본인이 쓴 기록은 본인이 지움. 장비는 관리자도 (잘못 추가한 장비 정리)
+  if (u.role !== 'admin') {
+    const P = await permsOf(env, u);
     const r = await env.DB.prepare('SELECT created_by FROM docs WHERE store=? AND id=? AND deleted=0').bind(b.store, b.id).first();
     if (!r) fail(404, '없는 기록입니다');
-    if (r.created_by !== u.id && !(b.store === 'equipment' && isStaff(u)))
-      fail(403, b.store === 'equipment' ? '장비는 추가한 사람과 관리자·운영자만 삭제할 수 있습니다' : '본인이 쓴 기록만 삭제할 수 있습니다');
+    const ok = r.created_by === u.id ? P.has('del.own') : P.has('del.any') || (b.store === 'equipment' && P.has('equip.del'));
+    if (!ok) fail(403, r.created_by === u.id ? '본인 글 삭제 권한이 없습니다' : b.store === 'equipment' ? '남이 추가한 장비를 삭제할 권한이 없습니다' : '본인이 쓴 기록만 삭제할 수 있습니다');
   }
   if (b.store === 'plans' && env.PHOTOS) { // 문서함 PDF도 함께 지움
     const r = await env.DB.prepare("SELECT data FROM docs WHERE store='plans' AND id=?").bind(b.id).first();

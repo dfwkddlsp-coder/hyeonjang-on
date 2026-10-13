@@ -32,25 +32,25 @@ function joinScreen(){return new Promise(async res=>{
 })}
 
 /* 초대 QR 카드: 운영자(사용자 관리 탭, 가입 신청 받기 켜기/끄기 + 신청 목록)와 관리자(내 정보 탭) */
-const inviteCard=adm=>`<div class="card"><b>현장ON 초대 QR</b> <span class="small muted">— 찍으면 현장ON이 열리고, 계정이 없으면 가입 신청 화면이 나옵니다</span>
+const inviteCard=()=>`<div class="card"><b>현장ON 초대 QR</b> <span class="small muted">— 찍으면 현장ON이 열리고, 계정이 없으면 가입 신청 화면이 나옵니다</span>
   <div class="gq-box" style="max-width:220px;margin-top:10px">${gqSvg(joinUrl())}</div>
   <div class="row" style="margin-top:10px;gap:8px"><button class="btn line grow" id="ivShare"><i class="i i-share"></i> 링크 보내기</button><button class="btn line grow" id="ivPrint"><i class="i i-print"></i> QR 인쇄</button></div>
-  ${adm?`<label class="row n-main" style="margin-top:10px"><span class="grow"><b>가입 신청 받기</b><div class="small muted">끄면 QR로 들어와도 신청할 수 없습니다 (로그인은 됨)</div></span>${swHtml('id="ivOpen"',S.joinOpen!==false)}</label>`:''}</div>
-  ${adm?'<div class="card"><b>가입 신청</b> <span class="small muted" id="jrN"></span><div class="list" id="jrBox" style="margin-top:6px"><div class="empty small">불러오는 중…</div></div></div>':''}`;
-function bindInvite(adm){
+  ${can("set.users")?`<label class="row n-main" style="margin-top:10px"><span class="grow"><b>가입 신청 받기</b><div class="small muted">끄면 QR로 들어와도 신청할 수 없습니다 (로그인은 됨)</div></span>${swHtml('id="ivOpen"',S.joinOpen!==false)}</label>`:''}</div>
+  ${can("join.approve")?'<div class="card"><b>가입 신청</b> <span class="small muted" id="jrN"></span><div class="list" id="jrBox" style="margin-top:6px"><div class="empty small">불러오는 중…</div></div></div>':''}`;
+function bindInvite(){
   const sh=$('#ivShare');if(!sh)return;
   sh.onclick=async()=>{const url=joinUrl(),text=`현장ON (${S.site||'현장'}) — 아래 주소를 열어 가입 신청하세요\n${url}`;
     try{if(navigator.share)await navigator.share({title:'현장ON 초대',text,url});else{await navigator.clipboard.writeText(url);toast('링크를 복사했습니다')}}catch(e){}};
   $('#ivPrint').onclick=()=>printPages([`<div class="doc" style="text-align:center"><h1 style="font-size:28pt;margin-top:20mm">현장ON 시작하기</h1><div class="site" style="font-size:14pt">[ ${h(S.site||'현장명')} ]</div>
     <div style="width:120mm;margin:12mm auto">${gqSvg(joinUrl())}</div><div style="font-size:15pt;line-height:1.8">휴대폰 카메라로 QR을 찍으세요<br>계정이 없으면 <b>가입 신청</b> → 운영자 승인 후 로그인<br><span style="font-size:11pt">${h(joinUrl())}</span></div></div>`]);
   const op=$('#ivOpen');if(op)op.onchange=async()=>{S.joinOpen=op.checked;await saveSettings();await queueShared();toast(op.checked?'가입 신청을 받습니다':'가입 신청을 막았습니다')};
-  if(adm)loadJoinReqs();
+  loadJoinReqs();
 }
 async function loadJoinReqs(){const box=$('#jrBox');if(!box)return;
   let r;try{r=await api('join/requests')}catch(x){box.innerHTML=`<div class="empty small">${h(navigator.onLine?x.message:'인터넷 연결이 필요합니다')}</div>`;return}
   $('#jrN').textContent=r.items.length?`${r.items.length}건 대기`:'';
   box.innerHTML=r.items.map(x=>`<div class="it" style="cursor:default;flex-wrap:wrap"><div class="m"><b>${h(x.name)}</b> <span class="muted small">${h(x.phone)}</span><div class="small muted">${h(x.company)}${x.job?' · '+h(x.job):''} · ${x.want==='driver'?'장비운전원':'사용자'}로 신청 · ${fmtDT(nowLocalOf(x.at))}</div></div>
-    <div class="row" style="gap:6px;width:100%;margin-top:6px"><select class="inp" data-jr-role="${h(x.phone)}" style="min-height:40px;padding:4px 8px;flex:1"><option value="user" ${x.want==='user'?'selected':''}>사용자</option><option value="driver" ${x.want==='driver'?'selected':''}>장비운전원</option><option value="manager">관리자</option></select>
+    <div class="row" style="gap:6px;width:100%;margin-top:6px"><select class="inp" data-jr-role="${h(x.phone)}" style="min-height:40px;padding:4px 8px;flex:1"><option value="user" ${x.want==='user'?'selected':''}>사용자</option><option value="driver" ${x.want==='driver'?'selected':''}>장비운전원</option>${isAdmin()?'<option value="manager">관리자</option>':''}</select>
     <button class="btn sm" data-jr-ok="${h(x.phone)}">승인</button><button class="btn sm line" data-jr-no="${h(x.phone)}">거절</button></div></div>`).join('')||'<div class="empty small">대기 중인 신청이 없습니다</div>';
   const act=async(id,action)=>{const role=($(`[data-jr-role="${id}"]`)||{}).value;
     if(action==='reject'&&!confirm('이 가입 신청을 거절할까요?'))return;
@@ -58,8 +58,7 @@ async function loadJoinReqs(){const box=$('#jrBox');if(!box)return;
   $$('[data-jr-ok]',box).forEach(b=>b.onclick=()=>act(b.dataset.jrOk,'approve'));
   $$('[data-jr-no]',box).forEach(b=>b.onclick=()=>act(b.dataset.jrNo,'reject'));
 }
-{const f=R.settings;R.settings=(...a)=>{f(...a);if(!SERVER||!isStaff())return;const adm=isAdmin();
-  const at=adm?$('section.st[data-st="users"]',V$()):null;
-  if(adm&&at)at.insertAdjacentHTML('beforebegin',`<section class="st" data-st="users">${inviteCard(true)}</section>`);
-  else if(!adm)V$().insertAdjacentHTML('beforeend',`<section class="st" data-st="me">${inviteCard(false)}</section>`);
-  bindInvite(adm)}}
+{const f=R.settings;R.settings=(...a)=>{f(...a);if(!SERVER||!(can("qr.invite")||can("set.users")||can("join.approve")))return;
+  const at=$('section.st[data-st="users"]',V$());const html=`<section class="st" data-st="users">${inviteCard()}</section>`;
+  if(at)at.insertAdjacentHTML('beforebegin',html);else V$().insertAdjacentHTML('beforeend',html);
+  bindInvite()}}

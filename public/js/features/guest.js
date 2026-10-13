@@ -63,5 +63,5 @@ function guestEnded(){return new Promise(res=>{
   $('#geLogin').onclick=async()=>{await kvSet('me',null);res()}})}
 
 /* ---------- 장비점검 화면: 관리자·운영자에게 'QR' 버튼 ---------- */
-{const f=R.eqcheck;R.eqcheck=(...a)=>{f(...a);if(!SERVER||!isStaff())return;const add=$('#eqAdd');if(!add||$('#gqBtn'))return;
+{const f=R.eqcheck;R.eqcheck=(...a)=>{f(...a);if(!SERVER||!can('qr.guest'))return;const add=$('#eqAdd');if(!add||$('#gqBtn'))return;
   add.insertAdjacentHTML('beforebegin','<button class="btn sm line" id="gqBtn" style="margin-left:auto;margin-right:6px">임시 출입 QR</button>');$('#gqBtn').onclick=guestQr}}

@@ -3,7 +3,7 @@
 /* ---------- 현장 운영안 (PDF) — 운영자가 올리고 모든 사용자가 열람 ---------- */
 /* 문서함(PDF) 카테고리 — 운영자가 설정 → 현장 기준에서 추가·이름·공개 범위 지정. 각 카테고리는 홈 타일 하나 */
 const docCats=()=>(Array.isArray(S.docCats)&&S.docCats.length?S.docCats:DEF.docCats);
-const catVisible=c=>!SERVER||c.scope!=='staff'||isAdmin()||(ME&&ME.role==='manager');
+const catVisible=c=>can('records.view')&&(c.scope!=='staff'||can('records.staff'));
 /* 문서 순서: 관리자·운영자가 정한 순서(ord). 순서가 없는 문서(새로 올린 것)는 맨 위에 최신순 */
 const plansSorted=k=>PL.filter(p=>k===undefined||(p.cat||'plans')===k).sort((a,b)=>(b.ord==null)-(a.ord==null)||(a.ord==null?String(b.at).localeCompare(String(a.at)):a.ord-b.ord));
 const fmtSize=n=>n>=1048576?(n/1048576).toFixed(1)+'MB':Math.max(1,Math.round(n/1024))+'KB';
@@ -17,7 +17,7 @@ const catType=c=>CAT_TYPES[c&&c.type]?c.type:'pdf';
 const catItems=c=>String(c.items||'').split('\n').map(x=>x.trim()).filter(Boolean);
 const recsOf=k=>RC.filter(r=>r.cat===k).sort((a,b)=>String(b.date||b.week||'').localeCompare(String(a.date||a.week||''))||String(b.at).localeCompare(String(a.at)));
 const CK_SYM={O:'○',X:'×',N:'-'};
-const canWriteCat=C=>!SERVER||(!isDriver()&&catVisible(C));
+const canWriteCat=C=>!SERVER||catVisible(C);
 /* 고치기·지우기: 쓴 사람과 운영자 (서버도 같은 규칙) */
 const canEditRec=r=>!SERVER||ownRec(r);
 
@@ -211,17 +211,17 @@ R.plans=(cat)=>{
   if(catType(C)!=='pdf')return R.recs(C);
   const pl=plansSorted(C.k);
   V$().innerHTML=`<h1>${h(C.name)}</h1>${C.scope==='staff'?'<div class="small muted" style="margin:-6px 0 10px">공개 범위: 운영자·관리자만</div>':''}
-  ${isStaff()&&SERVER?`<div class="card"><b>PDF 올리기</b> <span class="small muted">관리자·운영자 · 30MB까지</span>
+  ${can('file.pdf')&&SERVER?`<div class="card"><b>PDF 올리기</b> <span class="small muted">관리자·운영자 · 30MB까지</span>
     <label class="f">제목</label><input class="inp" id="plT" placeholder="예) 2026년 10월 현장 운영안">
     <label class="f">PDF 파일</label><input class="inp" id="plF" type="file" accept="application/pdf,.pdf">
     <button class="btn" id="plUp" style="margin-top:10px">올리기</button></div>`:''}
   ${!SERVER?'<div class="hint">문서함은 서버에 로그인해서 사용할 때만 볼 수 있습니다.</div>':''}
-  ${isStaff()&&SERVER&&pl.length>1?`<div class="row" style="margin-bottom:8px"><span class="grow small muted" id="plSortHint">${R.plans.sorting?'▲ ▼로 옮기고 완료를 누르세요':''}</span><button class="btn sm ${R.plans.sorting?'':'line'}" id="plSort">${R.plans.sorting?'완료':'순서 바꾸기'}</button></div>`:''}
+  ${can('file.pdf')&&SERVER&&pl.length>1?`<div class="row" style="margin-bottom:8px"><span class="grow small muted" id="plSortHint">${R.plans.sorting?'▲ ▼로 옮기고 완료를 누르세요':''}</span><button class="btn sm ${R.plans.sorting?'':'line'}" id="plSort">${R.plans.sorting?'완료':'순서 바꾸기'}</button></div>`:''}
   <div class="card list" id="plList"></div>`;
-  const order=pl.slice(),sorting=R.plans.sorting&&isStaff()&&SERVER;
+  const order=pl.slice(),sorting=R.plans.sorting&&can('file.pdf')&&SERVER;
   const drawList=()=>{$('#plList').innerHTML=order.map((p,i)=>`<div class="it"><span class="dot d0"><i class="i i-plans"></i></span><div class="m"><b>${h(p.title)}</b><div class="small muted ell">${fmtDT(p.at)} · ${h(p.by||'')} · ${fmtSize(p.size||0)}</div></div>
     ${sorting?`<button class="btn sm line" data-pu="${i}" ${i?'':'disabled'} aria-label="위로">▲</button><button class="btn sm line" data-pd="${i}" ${i<order.length-1?'':'disabled'} aria-label="아래로">▼</button>`
-    :`<a class="btn sm" href="${planUrl(p)}" target="_blank" rel="noopener">열기</a>${ownRec(p)?`<button class="btn sm line" data-pdel="${h(p.id)}">삭제</button>`:''}`}</div>`).join('')||'<div class="empty">아직 올린 문서가 없습니다</div>';
+    :`<a class="btn sm" href="${planUrl(p)}" target="_blank" rel="noopener">열기</a>${canDel(p)?`<button class="btn sm line" data-pdel="${h(p.id)}">삭제</button>`:''}`}</div>`).join('')||'<div class="empty">아직 올린 문서가 없습니다</div>';
     $$('[data-pu]').forEach(b=>b.onclick=()=>{const i=+b.dataset.pu;[order[i-1],order[i]]=[order[i],order[i-1]];drawList()});
     $$('[data-pd]').forEach(b=>b.onclick=()=>{const i=+b.dataset.pd;[order[i+1],order[i]]=[order[i],order[i+1]];drawList()});
     $$('[data-pdel]').forEach(b=>b.onclick=async()=>{const p=PL.find(x=>x.id===b.dataset.pdel);if(!p||!confirm(`「${p.title}」을(를) 삭제할까요?\nPDF 파일도 서버에서 지워집니다.`))return;try{await remove('plans',p.id);toast('삭제했습니다');R.plans()}catch(x){toast(x.message)}})};

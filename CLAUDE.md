@@ -19,7 +19,11 @@ R2 `hyeonjang-on-photos`). Architecture and commands: see README.md.
 10. Tapping the 현장ON logo goes home.
 Also: re-uploading a register Excel must never break links or wipe data — unchanged rows stay untouched,
 "맞추기" marks missing equipment 반출 / workers removed / 취약근로자 퇴사, never hard deletes.
-Every permission is enforced in `worker/lib/policy.js`, not only hidden in the UI.
+Rules 1–6 are the **default** permissions. The operator can change them per role in the app (설정 → 권한, stored as
+`perms` in the shared settings doc; list and defaults in `worker/lib/perms.js`). Fixed in code: the operator always has
+every permission, only the operator creates/edits operator accounts, nobody changes their own role.
+Every permission is enforced on the server (`worker/lib/perms.js` + `worker/lib/policy.js`), not only hidden in the UI.
+New features get their own permission key in `PERMS` (client checks use `can(key)`).
 
 ## Working agreements
 - Anything the operator can change in the app (layout, categories, forms, checklist items, users) belongs in

@@ -86,7 +86,7 @@ R.vuln=()=>{
   const list=(tag==='미상담'?noC:base.filter(p=>!tag||T.get(p.id).includes(tag))).filter(p=>!q||norm([p.name,p.company,p.job,...(p.items||[]).map(i=>i.exam+i.finding+i.follow1)].join(' ')).includes(norm(q)))
     .sort((a,b)=>(a.company||'').localeCompare(b.company||'')||a.name.localeCompare(b.name));
   V$().innerHTML=`<h1>취약근로자 <span class="badge">${base.length}명</span></h1>
-  <div class="card"><div class="row">${isStaff()?'<label class="btn"><i class="i i-import"></i> 엑셀 불러오기<input type="file" accept=".xls,.xlsx" multiple hidden id="uf"></label>':''}<button class="btn ghost" id="ut">양식 다운로드</button><button class="btn ghost" id="ua"><i class="i i-plus"></i> 직접 추가</button><button class="btn line" id="ux">엑셀 저장</button></div>
+  <div class="card"><div class="row">${can('file.excel')?'<label class="btn"><i class="i i-import"></i> 엑셀 불러오기<input type="file" accept=".xls,.xlsx" multiple hidden id="uf"></label>':''}<button class="btn ghost" id="ut">양식 다운로드</button><button class="btn ghost" id="ua"><i class="i i-plus"></i> 직접 추가</button><button class="btn line" id="ux">엑셀 저장</button></div>
   <div class="small muted" style="margin-top:8px">"유소견자 사후관리 명단" 엑셀을 그대로 올리면 됩니다. 업체별 시트가 여러 개여도 모두 읽고, 성명 없는 아랫줄은 같은 사람의 검진 항목으로 묶습니다.</div></div>
   <input class="inp big" id="uq" type="search" placeholder="성명 · 업체 · 공종 · 소견" value="${h(q)}" style="margin-bottom:10px">
   <div class="chips scroll" style="margin-bottom:12px"><button class="chip ${!tag?'on':''}" data-t="">전체 ${base.length}</button><button class="chip ${tag==='미상담'?'on':''}" data-t="미상담">사후상담 미실시 ${noC.length}</button>${tags.map(t=>`<button class="chip ${t===tag?'on':''}" data-t="${t}">${t} ${base.filter(p=>T.get(p.id).includes(t)).length}</button>`).join('')}<button class="chip ${ret?'on':''}" id="uret">퇴사자 포함</button></div>
@@ -117,7 +117,7 @@ function editVuln(id){
   openModal(id?'취약근로자 수정':'취약근로자 추가',`<div class="grid g2">${[['name','성명 *'],['company','업체명 *'],['job','공종'],['age','연령']].map(([k,l])=>`<div><label class="f">${l}</label><input class="inp" data-k="${k}" value="${h(p[k]||'')}" ${k==='company'?'list="companyList"':''}${k==='age'?' inputmode="numeric"':''}></div>`).join('')}</div>${companyDatalist()}
    <label class="f">메모</label><textarea class="inp" data-k="note">${h(p.note||'')}</textarea>
    <h2>검진 항목</h2><div id="irows">${its.map(row).join('')}</div><button class="btn ghost sm" id="iadd"><i class="i i-plus"></i> 항목 추가</button>
-   <div class="row" style="margin-top:14px"><button class="btn" id="us" style="flex:1">저장</button>${id&&ownRec(p)?'<button class="btn bad" id="ud">삭제</button>':''}</div>`,b=>{
+   <div class="row" style="margin-top:14px"><button class="btn" id="us" style="flex:1">저장</button>${id&&canDel(p)?'<button class="btn bad" id="ud">삭제</button>':''}</div>`,b=>{
     $('#iadd',b).onclick=()=>$('#irows',b).insertAdjacentHTML('beforeend',row({},$$('[data-row]',b).length));
     $('#us',b).onclick=async()=>{const o={...p,id:p.id||uid(),consults:p.consults||[],bp:p.bp||[]};$$('[data-k]',b).forEach(i=>o[i.dataset.k]=i.value.trim());
       if(!o.name||!o.company)return toast('성명과 업체명은 필수');o.age=String(o.age).replace(/\D/g,'');

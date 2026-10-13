@@ -3,7 +3,7 @@
 // QR(초대)은 docs 'guestinv'에 두되 동기화하지 않음. id = 토큰의 SHA-256 (토큰 자체는 저장 안 함).
 import { body, fail, json, now, uid } from '../lib/http.js';
 import { requireUser, startSession, publicUser } from '../lib/session.js';
-import { isStaff } from '../lib/policy.js';
+import { can } from '../lib/policy.js';
 import { hashPw, newSalt, sha256 } from '../lib/crypto.js';
 import { stampBase } from '../lib/storage.js';
 import { notify } from '../lib/push.js';
@@ -26,7 +26,7 @@ async function putInvite(env, id, data, userId) {
 // POST /api/guest/invite {minutes} → {token, id, exp} — 관리자·운영자
 async function createInvite({ req, env }) {
   const u = await requireUser(req, env);
-  if (!isStaff(u)) fail(403, '임시 출입 QR은 관리자·운영자만 만들 수 있습니다');
+  if (!(await can(env, u, 'qr.guest'))) fail(403, '임시 출입 QR은 관리자·운영자만 만들 수 있습니다');
   const b = await body(req);
   const minutes = Math.min(180, Math.max(5, Math.round(+b.minutes || 30)));
   const token = uid() + uid(); // 64자 무작위
@@ -41,7 +41,7 @@ async function inviteStatus({ req, env, params: [id] }) {
   const u = await requireUser(req, env);
   const inv = await getInvite(env, id);
   if (!inv) fail(404, '없는 QR입니다');
-  if (!isStaff(u)) fail(403, '권한이 없습니다');
+  if (!(await can(env, u, 'qr.guest'))) fail(403, '권한이 없습니다');
   return json({ exp: inv.exp, closed: !!inv.closed, joined: await joinedList(env, id) });
 }
 /** 이 QR로 들어온 사람 (LIKE의 _ 는 한 글자 와일드카드라 이스케이프) */
@@ -51,7 +51,7 @@ const joinedList = async (env, id) => (await env.DB.prepare("SELECT name, org, c
 // POST /api/guest/invite/<id>/close — QR 닫기 (더는 못 들어옴, 이미 들어온 사람은 자정까지)
 async function closeInvite({ req, env, params: [id] }) {
   const u = await requireUser(req, env);
-  if (!isStaff(u)) fail(403, '권한이 없습니다');
+  if (!(await can(env, u, 'qr.guest'))) fail(403, '권한이 없습니다');
   const inv = await getInvite(env, id);
   if (!inv) fail(404, '없는 QR입니다');
   inv.closed = true;

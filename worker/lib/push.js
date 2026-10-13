@@ -3,6 +3,7 @@
 // 받을 사람: 운영자·관리자 중 알림을 켠 사람 (settings → 알림). 본인이 한 일은 본인에게 보내지 않음.
 import { now } from './http.js';
 import { sha256 } from './crypto.js';
+import { loadPermTable, permsOf } from './perms.js';
 
 const te = new TextEncoder();
 const b64u = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -15,9 +16,9 @@ export const PUSH_EVENTS = {
   eqcheck: { label: '장비점검 저장', from: ['staff', 'user', 'driver', 'guest'] },
   violation: { label: '삼진아웃 적발', from: ['staff', 'user'] },
   alcohol: { label: '음주 적발', from: ['staff', 'user'] },
-  feedback: { label: '새 의견', from: ['staff', 'user', 'driver', 'guest'], adminOnly: true },
+  feedback: { label: '새 의견', from: ['staff', 'user', 'driver', 'guest'], need: 'feedback.view' },
   guestjoin: { label: '임시 출입 입장', from: [] },
-  joinreq: { label: '가입 신청', from: [], adminOnly: true },
+  joinreq: { label: '가입 신청', from: [], need: 'join.approve' },
 };
 export const sourceOf = (u) => (u.role === 'admin' || u.role === 'manager' ? 'staff' : u.role);
 /** 저장한 적 없으면: 모두 켬, 다만 운영자·관리자가 한 일은 끔 */
@@ -100,13 +101,17 @@ export const subId = (endpoint) => sha256(endpoint);
 export async function notify(env, origin, event, actor, msg) {
   const ev = PUSH_EVENTS[event];
   if (!ev) return;
-  const staff = (await env.DB.prepare("SELECT id, role FROM users WHERE active=1 AND role IN ('admin','manager')").all()).results;
+  // 받을 사람: 폰 알림 권한이 있는 사람 (+ 새 의견은 받은 의견 보기, 가입 신청은 승인 권한)
+  const staff = [], table = await loadPermTable(env);
+  for (const u of (await env.DB.prepare('SELECT id, role FROM users WHERE active=1').all()).results) {
+    const P = await permsOf(env, u, table);
+    if (P.has('push') && (!ev.need || P.has(ev.need))) staff.push(u);
+  }
   const prefRows = new Map((await env.DB.prepare("SELECT id, data FROM docs WHERE store='pushpref'").all()).results.map((r) => [r.id, parse(r.data)]));
   const src = actor ? sourceOf(actor) : null;
   const prefOf = new Map();
   const to = staff.filter((u) => {
     if (actor && u.id === actor.id) return false;
-    if (ev.adminOnly && u.role !== 'admin') return false;
     const all = cleanPrefs(prefRows.get(u.id)); prefOf.set(u.id, all);
     const p = all.events[event];
     return p.on && (!src || !ev.from.length || p.from[src]);

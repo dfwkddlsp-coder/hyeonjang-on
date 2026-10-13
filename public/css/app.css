@@ -422,3 +422,14 @@ body:has(input:focus,textarea:focus,select:focus) .gb-fab{display:none} /* 입�
 .set-wrap.wide.nav-open{grid-template-columns:200px minmax(0,1fr);gap:16px}
 .set-wrap.wide.nav-open .set-nav{visibility:visible;position:sticky;top:64px;align-self:start}
 body:has(.set-dim.on) .gb-fab{display:none} /* 설정 메뉴가 열려 있으면 캐릭터 버튼 숨김 */
+/* 설정 → 권한: 이름 + 역할 4칸 */
+.pm-row{display:grid;grid-template-columns:1fr repeat(4,50px);align-items:center;gap:4px;padding:8px 0;border-top:1px solid var(--line)}
+.pm-row.pm-h{border-top:0;padding:6px 0 2px;font-size:12px;color:var(--sub);text-align:center}
+.pm-l{min-width:0;font-size:14px;line-height:1.35}
+.pm-c{display:flex;justify-content:center}
+.pm-u{margin-top:12px;border:1px solid var(--line);border-radius:12px;padding:8px 12px}
+.pm-u>summary{cursor:pointer;padding:4px 0}
+.pm-g{font-weight:700;font-size:13px;margin:12px 0 2px;color:var(--sub)}
+.pm-urow{display:flex;align-items:center;gap:8px;padding:4px 0}
+.pm-urow .pm-l{flex:1;min-width:0}
+.pm-urow select{width:auto;max-width:150px;min-height:38px;padding:4px 8px;font-size:14px}

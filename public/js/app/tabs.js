@@ -2,18 +2,19 @@
 'use strict';
 /* ---------- 하위 탭 (관리대장 / 설정) ---------- */
 /* ---------- 설정: 왼쪽 ☰ 카테고리 목록 → 고르면 그 카테고리의 세부 설정 ----------
-   k = 카테고리 (섹션 data-st, 현장 기준 묶음의 카드는 data-sc), show = 누구에게 보이나 (2단계에서 권한 설정으로 바뀜) */
+   k = 카테고리 (섹션 data-st, 현장 기준 묶음의 카드는 data-sc), show = 누구에게 보이나 (설정 → 권한) */
 const SET_CATS=[
   {k:'me',t:'내 정보',ic:'workers',show:()=>true},
-  {k:'noti',t:'알림',ic:'alert',show:()=>SERVER&&isStaff()},
-  {k:'site',t:'현장·기준',ic:'settings',show:()=>isAdmin()},
-  {k:'forms',t:'카테고리·양식',ic:'sheet',show:()=>isAdmin()},
-  {k:'eqform',t:'장비 양식',ic:'equip',show:()=>isAdmin()},
-  {k:'excel',t:'엑셀 칸 이름',ic:'import',show:()=>isAdmin()},
-  {k:'users',t:'사용자·초대',ic:'workers',show:()=>SERVER&&isAdmin()},
-  {k:'guide',t:'안내 봇·의견',ic:'note',show:()=>SERVER&&isAdmin()},
-  {k:'records',t:'기록·보고',ic:'records',view:'records',show:()=>isAdmin()},
-  {k:'data',t:'데이터·백업',ic:'save',show:()=>isAdmin()},
+  {k:'noti',t:'알림',ic:'alert',show:()=>SERVER&&can('push')},
+  {k:'site',t:'현장·기준',ic:'settings',show:()=>can('set.site')},
+  {k:'forms',t:'카테고리·양식',ic:'sheet',show:()=>can('set.forms')},
+  {k:'eqform',t:'장비 양식',ic:'equip',show:()=>can('set.eqform')},
+  {k:'excel',t:'엑셀 칸 이름',ic:'import',show:()=>can('set.excel')},
+  {k:'users',t:'사용자·초대',ic:'workers',show:()=>SERVER&&(can('set.users')||can('qr.invite')||can('join.approve'))},
+  {k:'guide',t:'안내 봇·의견',ic:'note',show:()=>SERVER&&(can('set.guide')||can('feedback.view'))},
+  {k:'perms',t:'권한',ic:'check',show:()=>SERVER&&can('set.perms')},
+  {k:'records',t:'기록·보고',ic:'records',view:'records',show:()=>can('set.records')},
+  {k:'data',t:'데이터·백업',ic:'save',show:()=>can('set.data')},
 ];
 const setCats=()=>SET_CATS.filter(c=>c.show());
 /* 넓은 화면은 목록을 왼쪽에 띄워 두고 ☰로 접기 (기기에 기억), 폰은 ☰를 누를 때만 펼침 */
@@ -40,7 +41,9 @@ function segBar(items,active){
   if(h1)h1.insertAdjacentHTML('afterend',html);else V$().insertAdjacentHTML('afterbegin',html);
   $$('[data-seg]',V$()).forEach(b=>b.onclick=()=>{const [v,t]=b.dataset.seg.split(':');go(v,t)});
 }
-for(const k of ['workers','equip','eqcheck','vuln']){const f=R[k];R[k]=(...a)=>{f(...a);if(!isDriver())segBar(REG_TABS.filter(t=>t[0]!=='vuln'||vulnVisible()),k)}}
+for(const k of ['workers','equip','eqcheck','vuln']){const f=R[k];R[k]=(...a)=>{f(...a);const tabs=REG_TABS.filter(t=>viewOk(t[0]));if(tabs.length>1)segBar(tabs,k)}}
+/* 홈: 볼 권한이 없는 화면의 타일은 빼기 */
+{const f=R.home;R.home=(...a)=>{f(...a);$$('[data-go]',V$()).forEach(t=>{if(!viewOk(t.dataset.go))t.remove()})}}
 {const f=R.records;R.records=(...a)=>{f(...a);if(setCats().some(c=>c.k==='records'))setChrome('records')}}
 {const f=R.settings;R.settings=(tab)=>{
   const keys=setCats().map(c=>c.k);if(typeof tab==='string')R.settings.tab=tab;

@@ -1,14 +1,14 @@
 // 폰 알림: 기기 구독, 알림 설정(종류·누가 했을 때), 시험 알림. 운영자·관리자만.
 import { body, fail, json, now } from '../lib/http.js';
 import { requireUser } from '../lib/session.js';
-import { isStaff } from '../lib/policy.js';
+import { can, permsOf } from '../lib/policy.js';
 import { stampBase } from '../lib/storage.js';
 import { PUSH_EVENTS, cleanPrefs, sendPush, subId, vapidKeys } from '../lib/push.js';
 
 const parse = (s) => { try { return JSON.parse(s); } catch { return null; } };
 async function staffOnly(req, env) {
   const u = await requireUser(req, env);
-  if (!isStaff(u)) fail(403, '알림은 운영자·관리자만 받을 수 있습니다');
+  if (!(await can(env, u, 'push'))) fail(403, '폰 알림을 받을 권한이 없습니다');
   return u;
 }
 async function putDoc(env, store, id, data, userId) {
@@ -47,7 +47,8 @@ async function getPrefs({ req, env }) {
   const u = await staffOnly(req, env);
   const r = await env.DB.prepare("SELECT data FROM docs WHERE store='pushpref' AND id=?").bind(u.id).first();
   const devices = (await env.DB.prepare("SELECT data FROM docs WHERE store='pushsub' AND json_extract(data,'$.userId')=?").bind(u.id).all()).results.length;
-  const events = Object.fromEntries(Object.entries(PUSH_EVENTS).filter(([, e]) => !e.adminOnly || u.role === 'admin'));
+  const P = await permsOf(env, u);
+  const events = Object.fromEntries(Object.entries(PUSH_EVENTS).filter(([, e]) => !e.need || P.has(e.need)));
   return json({ prefs: cleanPrefs(r && parse(r.data)), events, devices });
 }
 

@@ -1,6 +1,7 @@
 // Operator tools: storage usage, moving old D1 photos to R2, server backups.
 import { fail, json } from '../lib/http.js';
-import { requireAdmin } from '../lib/session.js';
+import { requirePerm } from '../lib/perms.js';
+const requireAdmin = (req, env) => requirePerm(req, env, 'set.data', '데이터·백업 권한이 없습니다');
 import { runBackup } from '../lib/storage.js';
 
 const MIGRATE_BATCH = 15;

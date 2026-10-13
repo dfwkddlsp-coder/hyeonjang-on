@@ -8,10 +8,14 @@ const isDriver=()=>SERVER&&!!ME&&(ME.role==='driver'||ME.role==='guest');
 /* 본인 글인가: 운영자는 전부, 그 밖에는 쓴 사람만 (예전 기록은 서버가 남긴 작성자 이름으로). 서버도 같은 규칙 */
 const ownRec=o=>!!o&&(isAdmin()||(!!ME&&(o.byId?o.byId===ME.id:!!o._by&&o._by===ME.name)));
 const isGuest=()=>SERVER&&!!ME&&ME.role==='guest';
+/* 세부 권한 (설정 → 권한에서 운영자가 정함, 서버가 알려 준 내 권한 목록). 운영자·기기 저장 모드는 전부 */
+const can=p=>!SERVER||(!!ME&&(ME.role==='admin'||(ME.perms||[]).includes(p)));
+/* 글 지우기: 내 글이면 '본인 글 삭제', 남의 글이면 '남의 글 삭제' 권한 */
+const canDel=o=>!!o&&(!SERVER||(ownRec(o)&&!isAdmin()?can('del.own'):can('del.any')||isAdmin()));
 /* 관리자·운영자: 취약근로자 열람, 파일(대장 엑셀·PDF) 등록 */
 const isStaff=()=>!SERVER||(!!ME&&(ME.role==='admin'||ME.role==='manager'));
 const roleBadge=r=>r==='guest'?'<span class="badge bwarn">임시 운전원</span>':r==='admin'?'<span class="badge">운영자</span>':r==='manager'?'<span class="badge">관리자</span>':r==='driver'?'<span class="badge bgray">장비운전원</span>':'<span class="badge bgray">사용자</span>';
-const SHARED_KEYS=['site','guide','colAlias','joinOpen','periodMonths','vtypes','levels','alcMode','alc','alcMsg','vulnAge','bp','eqItems','eqCheckItems','vulnScope','homeLayout','docCats','forms','eqForms','eqExclude'];
+const SHARED_KEYS=['site','guide','colAlias','joinOpen','periodMonths','vtypes','levels','alcMode','alc','alcMsg','vulnAge','bp','eqItems','eqCheckItems','vulnScope','homeLayout','docCats','forms','eqForms','eqExclude','perms'];
 async function api(path,body){
   const r=await fetch('/api/'+path,{method:body!==undefined?'POST':'GET',credentials:'same-origin',headers:body!==undefined?{'content-type':'application/json'}:{},body:body!==undefined?JSON.stringify(body):undefined});
   let j=null;try{j=await r.json()}catch(e){}
@@ -23,7 +27,7 @@ const kvSet=(k,v)=>DB.put('kv',{k,v});
 function applyMe(u){ME=u;Object.assign(S,{inspector:u.name,inspectorOrg:u.org||'',myRole:u.title||'',mySig:u.sig||''})}
 function applyShared(d){for(const k of SHARED_KEYS)if(d[k]!==undefined)S[k]=k==='alc'?Object.assign({},DEF.alc,d[k]):d[k];$('#siteName').textContent=S.site||'';purgeVulnIfHidden();if(typeof renderNav==='function'&&$('#nav').childElementCount)renderNav()}
 /* 열람 권한이 없으면 이 기기에 받아둔 취약근로자 정보도 지움 */
-const vulnVisible=()=>isStaff();
+const vulnVisible=()=>can('vuln.view');
 function purgeVulnIfHidden(){if(vulnVisible()||!VU.length)return;VU=[];DB.putMany('vuln',[],true).catch(()=>{})}
 function sharedDoc(){const o={id:'shared'};for(const k of SHARED_KEYS)o[k]=S[k];return o}
 async function queueShared(){await DB.put('outbox',{k:'settings|shared',store:'settings',id:'shared',data:sharedDoc(),ts:Date.now()});Sync.soon()}
@@ -59,7 +63,8 @@ const Sync={busy:false,again:false,t:null,state:'',
   /* 처음 한 쪽은 마지막 동기화 1분 전부터 다시 받음: 동시에 저장된 기록은 늦게 확정돼도 더 앞선 시각을 달고
      들어올 수 있어서, 겹쳐 받지 않으면 다른 기기에 영영 안 보일 수 있음 (같은 내용은 applyDoc에서 건너뜀) */
   async pull(){const last=(await kvGet('lastSync'))||0;let since=last?Math.max(0,last-60000):0,changed=false,more=true;
-    while(more){const r=await api('sync?since='+since);for(const d of r.docs)if(await applyDoc(d))changed=true;since=r.cursor;more=r.more}
+    while(more){const r=await api('sync?since='+since);for(const d of r.docs)if(await applyDoc(d))changed=true;since=r.cursor;more=r.more;
+      if(r.perms&&ME&&JSON.stringify(r.perms)!==JSON.stringify(ME.perms)){ME.perms=r.perms;await kvSet('me',ME);changed=true;if(typeof renderNav==='function')renderNav()}} // 권한이 바뀌면 화면에 바로
     await kvSet('lastSync',Math.max(since,last));return changed}
 };
 async function badge(){const el=$('#netBadge');if(!SERVER){el.textContent=navigator.onLine?'온라인':'오프라인 · 기기 저장';return}

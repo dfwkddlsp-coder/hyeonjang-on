@@ -4,7 +4,7 @@ R.workers=()=>{
   const q=R.workers.q||'',co=R.workers.co||'';const comps=[...new Set(W.map(w=>w.company).filter(Boolean))].sort();
   const list=W.filter(w=>(!co||w.company===co)&&(!q||norm([w.name,w.company,w.job,w.helmet,w.phone,w.birth].join(' ')).includes(norm(q)))).sort((a,b)=>(a.company||'').localeCompare(b.company||'')||a.name.localeCompare(b.name));
   V$().innerHTML=`<h1>근로자 관리대장 <span class="badge">${W.length}명</span></h1>
-  <div class="card"><div class="row">${isStaff()?'<label class="btn"><i class="i i-import"></i> 엑셀 불러오기<input type="file" accept=".xls,.xlsx,.csv" multiple hidden id="wf"></label>':''}<button class="btn ghost" id="wt">양식 다운로드</button><button class="btn ghost" id="wa"><i class="i i-plus"></i> 직접 추가</button><button class="btn line" id="wx">엑셀 저장</button></div>
+  <div class="card"><div class="row">${can('file.excel')?'<label class="btn"><i class="i i-import"></i> 엑셀 불러오기<input type="file" accept=".xls,.xlsx,.csv" multiple hidden id="wf"></label>':''}<button class="btn ghost" id="wt">양식 다운로드</button><button class="btn ghost" id="wa"><i class="i i-plus"></i> 직접 추가</button><button class="btn line" id="wx">엑셀 저장</button></div>
   <div class="small muted" style="margin-top:8px">업체별 작성 양식을 여러 개 한 번에 올려도 됩니다. 같은 성명+생년월일은 자동 병합.</div></div>
   <div class="row" style="margin-bottom:10px"><input class="inp grow" id="wq" type="search" placeholder="성명 · 업체 · 직종" value="${h(q)}"><select class="inp" id="wc" style="width:auto;max-width:220px"><option value="">전체 업체</option>${comps.map(c=>`<option ${c===co?'selected':''}>${h(c)}</option>`).join('')}</select></div>
   <div class="card list">${list.length?list.slice(0,400).map(w=>{const k=pkey(w.name,w.company);const n=strikesOf(k).length;const ban=isBanned(k);return `<div class="it" data-wid="${w.id}"><span class="dot ${ban?'d3':n?'d'+Math.min(n,3):'d0'}">${ban?'퇴출':n?n+'회':'—'}</span><div class="m"><b>${h(w.name)}</b> <span class="muted">${h(w.company||'')}</span>${vulnOf(w.name,w.company)?' <span class="badge bbad"><i class="i i-heart"></i> 취약</span>':''}<div class="small muted ell">${h(w.job||'')}${w.phone?' · '+h(w.phone):''}</div></div></div>`}).join('')+(list.length>400?`<div class="empty">${list.length-400}명 더 있음 — 검색으로 좁히세요</div>`:''):'<div class="empty">근로자 없음. 양식을 내려받아 작성 후 불러오세요.</div>'}</div>`;
@@ -53,7 +53,7 @@ async function importDialog(kind,files){
       <details style="margin-top:8px"><summary class="small">다른 항목 연결하기 · 앞 3줄 미리 보기</summary>
         <div class="imp-map">${Object.keys(FIELDS).filter(k=>!shown.includes(k)).map(k=>`<label>${h(LB[k]||k)}</label><select class="inp" data-fk="${k}">${opts(m[k])}</select>`).join('')}</div>
         <div class="wkwrap" style="margin-top:8px"><table class="t"><tr>${shown.map(k=>`<th>${h(LB[k]||k)}</th>`).join('')}</tr>${prev.map(o=>`<tr>${shown.map(k=>`<td>${h(o[k]||'')}</td>`).join('')}</tr>`).join('')||'<tr><td>읽은 줄이 없습니다</td></tr>'}</table></div></details></div>`};
-  const draw=()=>{$('#mBody').innerHTML=`<div class="small muted" style="margin-bottom:10px">앱이 머리글 글자를 보고 칸을 찾았습니다. 틀리거나 빠진 칸(*는 같은 ${K.noun==='사람'?'사람을':'장비를'} 알아보는 데 쓰는 칸)은 직접 골라 주세요. ${isAdmin()?'직접 고른 칸 제목은 기억해서 다음부터 자동으로 찾습니다.':'(운영자가 고르면 다음부터 자동으로 찾습니다)'}</div>
+  const draw=()=>{$('#mBody').innerHTML=`<div class="small muted" style="margin-bottom:10px">앱이 머리글 글자를 보고 칸을 찾았습니다. 틀리거나 빠진 칸(*는 같은 ${K.noun==='사람'?'사람을':'장비를'} 알아보는 데 쓰는 칸)은 직접 골라 주세요. ${can('set.excel')?'직접 고른 칸 제목은 기억해서 다음부터 자동으로 찾습니다.':'(운영자가 고르면 다음부터 자동으로 찾습니다)'}</div>
     ${units.map(card).join('')}<div id="imBtns"></div>`;
     $$('[data-imu]').forEach(el=>{const res=units[+el.dataset.imu].res;
       $$('[data-fk]',el).forEach(s=>s.onchange=()=>{const map={...res.map},k=s.dataset.fk;if(s.value==='')delete map[k];else{map[k]=+s.value;const t=(res.head[+s.value]||'').split(' / ').join('');if(t)learn[k]=t}applyMap(res,map);draw()})});
@@ -65,7 +65,7 @@ function bindColAlias(){const box=$('#caBox');if(!box)return;const all=S.colAlia
   for(const kind of ['workers','equipment','vuln'])for(const [k,list] of Object.entries(all[kind]||{}))for(const t of list)rows.push({kind,k,t});
   box.innerHTML=rows.map((r,i)=>`<div class="row" style="padding:6px 0;border-top:1px solid var(--line);gap:8px;flex-wrap:nowrap"><span class="badge bgray">${IMP_KIND[r.kind].what}</span><span class="grow">"${h(r.t)}" → <b>${h(IMP_LABEL[r.kind][r.k]||r.k)}</b></span><button class="btn sm line" data-cad="${i}" aria-label="지우기"><i class="i i-x"></i></button></div>`).join('')||'<div class="small muted">아직 없습니다. 엑셀을 올릴 때 확인 화면에서 칸을 직접 고르면 여기에 쌓입니다.</div>';
   $$('[data-cad]',box).forEach(b=>b.onclick=async()=>{const r=rows[+b.dataset.cad];const c=JSON.parse(JSON.stringify(all));c[r.kind][r.k]=c[r.kind][r.k].filter(x=>x!==r.t);S.colAlias=c;await saveSettings();if(SERVER)await queueShared();toast('지웠습니다');bindColAlias()})}
-async function learnColumns(kind,learn){if(!isAdmin()||!Object.keys(learn).length)return;
+async function learnColumns(kind,learn){if(!can('set.excel')||!Object.keys(learn).length)return;
   const all=JSON.parse(JSON.stringify(S.colAlias||{})),A=all[kind]=all[kind]||{};
   for(const [k,t] of Object.entries(learn)){for(const f in A)A[f]=A[f].filter(x=>norm(x)!==norm(t));(A[k]=A[k]||[]).push(t)}
   S.colAlias=all;await saveSettings();if(SERVER)await queueShared()}
@@ -83,7 +83,7 @@ function importButtons(kind,files,host,pre,onRun){
 function editWorker(id){
   const w=id?W.find(x=>x.id===id):{};
   openModal(id?'근로자 수정':'근로자 추가',Object.entries(WORKER_LABEL).map(([k,l])=>`<label class="f">${l}${k==='name'||k==='company'?' *':''}</label>${k==='company'||k==='job'?comboHtml('ew_'+k,k,w[k],l+' 직접 입력',`data-k="${k}"`):`<input class="inp" data-k="${k}" value="${h(w[k]||'')}">`}`).join('')+companyDatalist()+
-   `${id?`<label class="row" style="margin-top:12px"><input type="checkbox" id="wb" ${w.banned?'checked':''} style="width:22px;height:22px"> 퇴출 상태</label>`:''}<div class="row" style="margin-top:14px"><button class="btn" id="ws" style="flex:1">저장</button>${id&&ownRec(w)?'<button class="btn bad" id="wd">삭제</button>':''}</div>`,b=>{
+   `${id?`<label class="row" style="margin-top:12px"><input type="checkbox" id="wb" ${w.banned?'checked':''} style="width:22px;height:22px"> 퇴출 상태</label>`:''}<div class="row" style="margin-top:14px"><button class="btn" id="ws" style="flex:1">저장</button>${id&&canDel(w)?'<button class="btn bad" id="wd">삭제</button>':''}</div>`,b=>{
     bindCombos(b);
     $('#ws',b).onclick=async()=>{const o={...w,id:w.id||uid()};$$('[data-k]',b).forEach(i=>o[i.dataset.k]=i.value.trim());if(!o.name||!o.company)return toast('성명과 소속업체는 필수');if(id)o.banned=$('#wb').checked;if(!id)o.created=nowLocal();await save('workers',o);closeModal();R[cur]()};
     const wd=$('#wd',b);if(wd)wd.onclick=async()=>{if(!confirm(`${w.name} 근로자를 대장에서 삭제할까요? (적발·측정 기록은 유지)`))return;await remove('workers',id);closeModal();R[cur]()};
@@ -113,7 +113,7 @@ R.equip=()=>{
   const list=E.filter(e=>(!cat||eqCat(e.type)===cat)&&(!q||norm(Object.values(e).join(' ')).includes(norm(q)))&&
     (!f||(f==='exp'?['bad','warn'].includes(expState(e.inspect))||['bad','warn'].includes(expState(e.insurance)):f==='in'?!e.outDate:!!e.outDate))).sort((a,b)=>(+a.no||999)-(+b.no||999));
   V$().innerHTML=`<h1>장비 관리대장 <span class="badge">${E.length}대</span></h1>
-  <div class="card"><div class="row">${isStaff()?'<label class="btn"><i class="i i-import"></i> 엑셀 불러오기<input type="file" accept=".xls,.xlsx" multiple hidden id="ef"></label>':''}<button class="btn ghost" id="et">양식 다운로드</button><button class="btn ghost" id="ea"><i class="i i-plus"></i> 직접 추가</button><button class="btn line" id="ex">엑셀 저장</button></div>
+  <div class="card"><div class="row">${can('file.excel')?'<label class="btn"><i class="i i-import"></i> 엑셀 불러오기<input type="file" accept=".xls,.xlsx" multiple hidden id="ef"></label>':''}<button class="btn ghost" id="et">양식 다운로드</button><button class="btn ghost" id="ea"><i class="i i-plus"></i> 직접 추가</button><button class="btn line" id="ex">엑셀 저장</button></div>
   <div class="small muted" style="margin-top:8px">"장비 전담 관리자 지정서" 양식 그대로 올리면 됩니다. 같은 차량번호+운전원은 최신 내용으로 갱신.</div></div>
   <input class="inp big" id="eq" type="search" placeholder="차량번호 · 장비명 · 운전원 · 업체 · 전담관리자" value="${h(q)}" style="margin-bottom:10px">
   <div class="chips scroll" style="margin-bottom:8px"><button class="chip ${!cat?'on':''}" data-c="">전체</button>${cats.map(c=>`<button class="chip ${c===cat?'on':''}" data-c="${h(c)}">${h(c)} ${E.filter(e=>eqCat(e.type)===c).length}</button>`).join('')}</div>

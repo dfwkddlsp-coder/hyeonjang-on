@@ -14,10 +14,10 @@ async function pushOn(){
   await api('push/subscribe',{...sub.toJSON(),device:devName()})}
 async function pushOff(){const sub=await pushSub();if(!sub)return;try{await api('push/unsubscribe',{endpoint:sub.endpoint})}catch(e){}await sub.unsubscribe()}
 /* 앱을 열 때: 알림을 켜 둔 기기면 서버에 다시 알려 둠 (만료·다른 기기 정리 대비) */
-async function pushResync(){try{if(!SERVER||!isStaff()||!pushOk()||Notification.permission!=='granted')return;const sub=await pushSub();if(sub)await api('push/subscribe',{...sub.toJSON(),device:devName()})}catch(e){}}
+async function pushResync(){try{if(!SERVER||!can('push')||!pushOk()||Notification.permission!=='granted')return;const sub=await pushSub();if(sub)await api('push/subscribe',{...sub.toJSON(),device:devName()})}catch(e){}}
 
 /* 설정 → 알림 */
-{const f=R.settings;R.settings=(...a)=>{f(...a);if(!SERVER||!isStaff())return;
+{const f=R.settings;R.settings=(...a)=>{f(...a);if(!SERVER||!can('push'))return;
   V$().insertAdjacentHTML('beforeend',`<section class="st" data-st="noti">
    <div class="card"><b>이 기기에서 알림 받기</b><div id="nDev" style="margin-top:8px"><div class="small muted">확인 중…</div></div></div>
    <div class="card"><b>알림 방식</b> <span class="small muted">— 나에게만 적용</span><div id="nMode" style="margin-top:6px"></div></div>

@@ -31,12 +31,11 @@ R.records=()=>{
 
 /* --- 설정 --- */
 R.settings=()=>{
-  const adm=isAdmin();
   V$().innerHTML=`<h1>설정</h1>
   <section class="st" data-st="me">
   ${SERVER?`<div class="card"><div class="row"><div class="grow"><b>${h(ME.name)}</b> <span class="muted small">${h(isGuest()?ME.title:ME.loginId)}</span> ${roleBadge(ME.role)}${isGuest()?'<div class="small muted">오늘 자정까지 쓸 수 있는 임시 출입입니다</div>':''}</div>${isGuest()?'':'<button class="btn sm line" id="pwBtn">비밀번호 변경</button>'}<button class="btn sm line" id="outBtn">${isGuest()?'나가기':'로그아웃'}</button></div></div>`:''}
   </section><section class="st" data-st="users">
-  ${SERVER&&adm?`<div class="card"><div class="row"><b class="grow">사용자 관리</b><button class="btn sm line" id="uBulk"><i class="i i-plus"></i> 여러 명 등록</button><button class="btn sm" id="uAdd"><i class="i i-plus"></i> 사용자 등록</button></div><div class="small muted" style="margin-top:4px">등록한 사람만 로그인할 수 있습니다. 첫 로그인 때 비밀번호를 직접 바꾸게 됩니다.</div><div class="list" id="usersBox" style="margin-top:6px"><div class="empty">불러오는 중…</div></div></div>`:''}
+  ${SERVER&&can('set.users')?`<div class="card"><div class="row"><b class="grow">사용자 관리</b><button class="btn sm line" id="uBulk"><i class="i i-plus"></i> 여러 명 등록</button><button class="btn sm" id="uAdd"><i class="i i-plus"></i> 사용자 등록</button></div><div class="small muted" style="margin-top:4px">등록한 사람만 로그인할 수 있습니다. 첫 로그인 때 비밀번호를 직접 바꾸게 됩니다.</div><div class="list" id="usersBox" style="margin-top:6px"><div class="empty">불러오는 중…</div></div></div>`:''}
   </section><section class="st" data-st="me">
   <div class="card" id="myCard"><b>내 정보</b> <span class="small muted">— 등록하면 점검자·측정인·상담자 이름과 서명이 자동으로 들어갑니다</span>
    <div class="grid g2"><div><label class="f">소속</label><input class="inp" id="sO" value="${h(S.inspectorOrg)}" placeholder="예) OO건설 안전팀"></div><div><label class="f">성명</label><input class="inp" id="sI" value="${h(S.inspector)}" placeholder="이름"></div>
@@ -45,12 +44,11 @@ R.settings=()=>{
    <button class="btn" id="mySave" style="width:100%;margin-top:12px">내 정보 저장</button></div>
   <div class="card"><label class="row" style="gap:10px"><input type="checkbox" id="hapOn" ${hapticOn()?'checked':''} style="width:22px;height:22px"><span class="grow"><b>진동</b> <span class="small muted">— 버튼을 누르거나 하단 메뉴를 넘길 때 살짝 진동 (이 기기에만 적용)</span></span></label></div>
   </section><section class="st" data-st="site forms eqform excel">
-  ${adm?'':'<div class="hint" style="margin-bottom:12px">현장명·삼진아웃·음주 기준은 운영자가 관리합니다.</div><div hidden>'}
   <div class="card" data-sc="site"><label class="f">현장명</label><input class="inp" id="sS" value="${h(S.site)}" placeholder="현장명을 직접 입력하세요"></div>
-  ${adm?'<div class="card" data-sc="forms"><b>카테고리</b> <span class="small muted">— 카테고리마다 홈 타일이 생깁니다. 유형: PDF 문서함 · 사진대지 · 점검표 · 작성 양식</span><div id="dcBox" style="margin-top:6px"></div></div>':''}
-  ${adm?'<div class="card" data-sc="forms"><b>양식 문구</b> <span class="small muted">— 인쇄되는 확인서·통지서의 제목과 문구. 비우면 기본 문구</span><div id="fmBox" style="margin-top:6px"></div></div>':''}
-  ${adm?'<div class="card" data-sc="excel"><b>엑셀 칸 이름</b> <span class="small muted">— 근로자·장비 엑셀 확인 화면에서 직접 골라 기억한 칸 제목. 다음부터 자동으로 찾습니다</span><div id="caBox" style="margin-top:6px"></div></div>':''}
-  ${adm?'<div class="card" data-sc="forms"><b>홈 화면 배치</b> <span class="small muted">— 바꾸는 즉시 저장되고 모든 사용자 홈에 같게 적용됩니다</span><div id="hlBox" style="margin-top:6px"></div></div>':''}
+  ${can('set.forms')?'<div class="card" data-sc="forms"><b>카테고리</b> <span class="small muted">— 카테고리마다 홈 타일이 생깁니다. 유형: PDF 문서함 · 사진대지 · 점검표 · 작성 양식</span><div id="dcBox" style="margin-top:6px"></div></div>':''}
+  ${can('set.forms')?'<div class="card" data-sc="forms"><b>양식 문구</b> <span class="small muted">— 인쇄되는 확인서·통지서의 제목과 문구. 비우면 기본 문구</span><div id="fmBox" style="margin-top:6px"></div></div>':''}
+  ${can('set.excel')?'<div class="card" data-sc="excel"><b>엑셀 칸 이름</b> <span class="small muted">— 근로자·장비 엑셀 확인 화면에서 직접 골라 기억한 칸 제목. 다음부터 자동으로 찾습니다</span><div id="caBox" style="margin-top:6px"></div></div>':''}
+  ${can('set.forms')?'<div class="card" data-sc="forms"><b>홈 화면 배치</b> <span class="small muted">— 바꾸는 즉시 저장되고 모든 사용자 홈에 같게 적용됩니다</span><div id="hlBox" style="margin-top:6px"></div></div>':''}
   <div class="card" data-sc="site"><b>삼진아웃 기준</b>
    <label class="f">누적 기간</label><select class="inp" id="sP">${[[0,'공사 기간 전체 누적'],[3,'최근 3개월'],[6,'최근 6개월'],[12,'최근 12개월']].map(([v,t])=>`<option value="${v}" ${S.periodMonths==v?'selected':''}>${t}</option>`).join('')}</select>
    ${S.levels.map((l,i)=>`<div style="border-left:6px solid var(--l${i+1});padding-left:10px;margin-top:12px"><div class="grid g2"><div><label class="f">${i+1}차 명칭</label><input class="inp" data-ln="${i}" value="${h(l.name)}"></div><div><label class="f">스티커 색</label><input class="inp" data-ls="${i}" value="${h(l.sticker)}"></div></div><label class="f">조치사항 (줄바꿈 구분)</label><textarea class="inp" data-la="${i}">${h(l.act)}</textarea></div>`).join('')}
@@ -61,7 +59,7 @@ R.settings=()=>{
    <div class="grid g2"><div><label class="f">[지침] 재측정 기준 (% 이상)</label><input class="inp" id="sR" inputmode="decimal" value="${S.alc.retest.toFixed(3)}"></div><div><label class="f">[지침] 작업금지·귀가 기준 (% 이상)</label><input class="inp" id="sT" inputmode="decimal" value="${S.alc.stop.toFixed(3)}"></div></div>
    <div class="small muted" style="margin-top:6px">[지침] 재측정에서 다시 재측정 기준 이상이면 음주상태로 판정(작업금지). 측정거부는 출입통제·작업배제.</div>
    <label class="f">적발 알림 문구 — {업체} {일시} {성명} {직종} {수치} {조치} {기준} 자동 치환</label><textarea class="inp" id="sMsg" style="min-height:220px">${h(S.alcMsg)}</textarea></div>
-  ${adm?'<div class="card" data-sc="eqform"><b>장비 종류별 점검표 양식</b> <span class="small muted">— 장비명에 키워드가 들어 있으면 그 양식을 씁니다. 어디에도 안 맞으면 아래 기본 양식</span><div id="efBox"></div></div>':''}
+  ${can('set.eqform')?'<div class="card" data-sc="eqform"><b>장비 종류별 점검표 양식</b> <span class="small muted">— 장비명에 키워드가 들어 있으면 그 양식을 씁니다. 어디에도 안 맞으면 아래 기본 양식</span><div id="efBox"></div></div>':''}
   <div class="card" data-sc="eqform"><b>기본 주간 점검표 항목 (굴착기 등)</b> <span class="small muted">— 한 줄에 하나</span>
    <textarea class="inp" id="sEqC" style="min-height:240px;font-size:14px">${h(S.eqCheckItems||DEF.eqCheckItems)}</textarea>
    <div class="small muted" style="margin-top:6px">기본값: 「장비 전담 관리자 점검표」 일일점검표 13개 항목.</div>
@@ -71,7 +69,6 @@ R.settings=()=>{
   <div class="card" data-sc="site"><b>취약근로자 기준</b>
    <div class="grid g2"><div><label class="f">고령 분류 연령 (세 이상)</label><input class="inp" id="sVa" inputmode="numeric" value="${S.vulnAge}"></div><div></div>
    <div><label class="f">혈압 주의 (수축기/이완기 이상)</label><input class="inp" id="sBw" value="${S.bp.warn.join('/')}"></div><div><label class="f">혈압 위험 (수축기/이완기 이상)</label><input class="inp" id="sBs" value="${S.bp.stop.join('/')}"></div></div></div>
-  ${adm?'':'</div>'}
   </section><section class="st" data-st="me">
   <div class="card"><b>갤러리 사진 사용</b><div class="row" style="margin-top:8px"><span class="grow small">${S.galleryConsent?`동의함 (${fmtDT(S.galleryConsent.at)})`:'동의 안 함 — 갤러리에서 선택할 때 동의를 묻습니다'}</span>${S.galleryConsent?'<button class="btn sm line" id="gcOff">동의 철회</button>':''}</div></div>
   <div class="card"><b>잠금</b><label class="f">PIN (숫자 4~6자리, 비우면 잠금 없음)</label><input class="inp" id="sN" inputmode="numeric" maxlength="6" value="${h(S.pin)}">
@@ -80,8 +77,8 @@ R.settings=()=>{
   <button class="btn xl" id="sSave">저장</button>
   </section><section class="st" data-st="data">
   <div class="card"><b>데이터</b><div style="height:6px"></div><div class="small muted">근로자 ${W.length} · 장비 ${E.length} · 삼진아웃 ${V.length} · 음주측정 ${A.length} · 취약근로자 ${VU.length}</div>
-  ${SERVER&&adm?'<div class="hint small" id="stoBox" style="margin-top:10px">저장소 상태 확인 중…</div><div class="hint small" id="bkBox" style="margin-top:10px">백업 목록 확인 중…</div>':''}
-  ${adm?'<div class="row" style="margin-top:10px"><button class="btn line" id="dW">근로자 대장 비우기</button><button class="btn line" id="dE">장비 대장 비우기</button></div>':''}${SERVER?'<button class="btn sm line" id="syncNow" style="margin-top:10px">지금 동기화</button>':''}</div>
+  ${SERVER&&can('set.data')?'<div class="hint small" id="stoBox" style="margin-top:10px">저장소 상태 확인 중…</div><div class="hint small" id="bkBox" style="margin-top:10px">백업 목록 확인 중…</div>':''}
+  ${can('set.data')&&can('file.excel')?'<div class="row" style="margin-top:10px"><button class="btn line" id="dW">근로자 대장 비우기</button><button class="btn line" id="dE">장비 대장 비우기</button></div>':''}${SERVER?'<button class="btn sm line" id="syncNow" style="margin-top:10px">지금 동기화</button>':''}</div>
   <div class="card small muted">앱 설치: 크롬/사파리 메뉴 → "홈 화면에 추가". 인터넷 없이도 동작합니다.<br>버전 ${APP_VER} · 인터넷에 연결되어 있으면 새 버전을 자동으로 받습니다.</div>
   </section>`;
   /* 내 서명: 저장된 서명이 있으면 보여주고, 다시 그리면 교체 */
@@ -98,7 +95,8 @@ R.settings=()=>{
   const gco=$('#gcOff');if(gco)gco.onclick=async()=>{S.galleryConsent=null;await saveSettings();toast('갤러리 사용 동의 철회됨');R.settings()};
   $('#sSave').onclick=async()=>{
     const pin0=$('#sN').value.trim();if(pin0&&!/^\d{4,6}$/.test(pin0))return toast('PIN은 숫자 4~6자리');S.pin=pin0;
-    if(!adm||R.settings.tab==='me'){if(await saveMine()){await saveSettings();toast('저장됨')}return}
+    /* 현장·장비 기준을 바꿀 권한이 없으면 내 정보만 저장 */
+    if(!(can('set.site')||can('set.eqform'))||R.settings.tab==='me'){if(await saveMine()){await saveSettings();toast('저장됨')}return}
     const r=parseFloat($('#sR').value),t=parseFloat($('#sT').value),dt=parseFloat($('#sDt').value),dy=parseFloat($('#sDy').value),oc=parseInt($('#sOc').value);if(!(r>0&&t>r&&dt>0&&dy>dt&&oc>=1))return toast('음주 기준값을 확인하세요');
     const bpP=v=>{const m=String(v).match(/(\d{2,3})\s*\/\s*(\d{2,3})/);return m?[+m[1],+m[2]]:null};const bw=bpP($('#sBw').value),bs=bpP($('#sBs').value),va=parseInt($('#sVa').value);
     if(!bw||!bs||!(va>0))return toast('취약근로자 기준값을 확인하세요 (예: 140/90)');S.bp={warn:bw,stop:bs};S.vulnAge=va;S.eqItems=$('#sEq').value.split('\n').map(x=>x.trim()).filter(Boolean).join('\n')||DEF.eqItems;S.eqCheckItems=$('#sEqC').value.split('\n').map(x=>x.trim()).filter(Boolean).join('\n')||DEF.eqCheckItems;
@@ -129,6 +127,6 @@ R.settings=()=>{
   if($('#syncNow'))$('#syncNow').onclick=async()=>{await Sync.run();toast(Sync.state==='ok'?'동기화 완료':'서버에 연결할 수 없습니다');R.settings()};
   if($('#pwBtn'))$('#pwBtn').onclick=async()=>{const u=await authScreen('pw');await kvSet('me',u);applyMe(u);toast('비밀번호 변경됨')};
   if($('#outBtn'))$('#outBtn').onclick=()=>{if(confirm('로그아웃할까요?'))logout()};
-  if(adm){bindHomeLayout();bindDocCats();bindForms();bindEqForms();bindColAlias()}
-  if(SERVER&&adm){$('#uAdd').onclick=()=>editUser();$('#uBulk').onclick=()=>bulkUsers();if(R.settings.tab==='users')loadUsers()}
+  if(can('set.forms')){bindHomeLayout();bindDocCats();bindForms()}if(can('set.eqform'))bindEqForms();if(can('set.excel'))bindColAlias();
+  if(SERVER&&can('set.users')){$('#uAdd').onclick=()=>editUser();$('#uBulk').onclick=()=>bulkUsers();if(R.settings.tab==='users')loadUsers()}
 };

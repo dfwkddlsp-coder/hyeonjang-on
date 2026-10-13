@@ -1,7 +1,7 @@
 // 현장ON — 사용자 관리 (operator)
 'use strict';
 async function loadUsers(){const box=$('#usersBox');if(!box)return;
-  try{const r=await api('users');LAST_USERS=r.users;const row=u=>`<div class="it" data-u="${u.id}"><span class="dot d0">${h(u.name.slice(0,1))}</span><div class="m"><b>${h(u.name)}</b> <span class="muted small">${h(u.loginId)}</span> ${u.role!=='user'?roleBadge(u.role):''}${!u.active?' <span class="badge bgray">사용 정지</span>':''}${u.mustChange?' <span class="badge bwarn">첫 로그인 전</span>':''}<div class="small muted ell">${h([u.org,u.title].filter(Boolean).join(' · ')||'-')}</div></div></div>`;
+  try{const r=await api('users');LAST_USERS=r.users;const row=u=>`<div class="it" data-u="${u.id}"><span class="dot d0">${h(u.name.slice(0,1))}</span><div class="m"><b>${h(u.name)}</b> <span class="muted small">${h(u.loginId)}</span> ${u.role!=='user'?roleBadge(u.role):''}${S.perms&&S.perms._users&&S.perms._users[u.id]&&u.role!=='admin'?' <span class="badge">개별 권한</span>':''}${!u.active?' <span class="badge bgray">사용 정지</span>':''}${u.mustChange?' <span class="badge bwarn">첫 로그인 전</span>':''}<div class="small muted ell">${h([u.org,u.title].filter(Boolean).join(' · ')||'-')}</div></div></div>`;
     /* 분류: 운영자·관리자 / 사용자 / 장비운전원 / 사용 정지 — 접기·펼치기는 기기에 기억 */
     const G=[['staff','운영자 · 관리자',u=>u.active&&(u.role==='admin'||u.role==='manager')],['user','사용자',u=>u.active&&u.role==='user'],['driver','장비운전원',u=>u.active&&u.role==='driver'],['guest','임시 운전원 (QR)',u=>u.active&&u.role==='guest'],['off','사용 정지',u=>!u.active]];
     let fold={};try{fold=JSON.parse(localStorage.getItem('hjUserFold')||'{}')}catch(e){}
@@ -9,7 +9,7 @@ async function loadUsers(){const box=$('#usersBox');if(!box)return;
     box.innerHTML=G.map(([k,t,f])=>{const us=r.users.filter(f);if(!us.length)return '';const wait=us.filter(u=>u.mustChange).length;
       return `<details class="ugrp" data-g="${k}" ${isOpen(k)?'open':''}><summary>${t} <span class="muted small">${us.length}명${wait?` · 첫 로그인 전 ${wait}`:''}</span></summary>${us.map(row).join('')}</details>`}).join('')||'<div class="empty">없음</div>';
     $$('details.ugrp',box).forEach(d=>d.ontoggle=()=>{fold[d.dataset.g]=d.open;try{localStorage.setItem('hjUserFold',JSON.stringify(fold))}catch(e){}});
-    $$('[data-u]',box).forEach(el=>el.onclick=()=>{const u=r.users.find(x=>x.id===el.dataset.u);if(u.role==='guest')return toast('임시 운전원은 QR로만 들어오며 그날 자정에 끝납니다');editUser(u)})}
+    $$('[data-u]',box).forEach(el=>el.onclick=()=>{const u=r.users.find(x=>x.id===el.dataset.u);if(u.role==='guest')return toast('임시 운전원은 QR로만 들어오며 그날 자정에 끝납니다');if(u.role==='admin'&&!isAdmin())return toast('운영자 계정은 운영자만 바꿀 수 있습니다');editUser(u)})}
   catch(x){box.innerHTML=`<div class="empty">${h(x.status?x.message:'인터넷 연결이 필요합니다')}</div>`}}
 let LAST_USERS=[];
 /* 여러 명 한 번에 등록: 엑셀·조직도에서 복사해 붙여넣기, 또는 장비 대장의 운전원 불러오기 */
@@ -47,12 +47,14 @@ function editUser(u){const nu=!u;u=u||{};
    <div><label class="f">이름 *</label><input class="inp" id="euN" value="${h(u.name||'')}"></div>
    <div><label class="f">소속</label><input class="inp" id="euO" value="${h(u.org||'')}" list="companyList"></div>
    <div><label class="f">직책</label><input class="inp" id="euT" value="${h(u.title||'')}" placeholder="예) 관리감독자"></div>
-   <div><label class="f">권한</label><select class="inp" id="euR"><option value="user" ${u.role==='user'?'selected':''}>사용자 (등록·열람, 취약근로자 제외)</option><option value="manager" ${u.role==='manager'?'selected':''}>관리자 (등록·전체 열람, 삭제·설정 불가)</option><option value="driver" ${u.role==='driver'?'selected':''}>장비운전원 (본인 장비 점검만)</option><option value="admin" ${u.role==='admin'?'selected':''}>운영자 (삭제·대장·설정·사용자 관리)</option></select><div class="small muted" style="margin-top:4px">장비운전원은 장비 대장의 <b>운전원 연락처</b>가 아이디(휴대폰 번호)와 같은 장비만 보입니다.</div></div>
+   <div><label class="f">권한</label><select class="inp" id="euR" ${!nu&&ME&&u.id===ME.id&&!isAdmin()?'disabled':''}><option value="user" ${u.role==='user'?'selected':''}>사용자</option><option value="manager" ${u.role==='manager'?'selected':''}>관리자</option><option value="driver" ${u.role==='driver'?'selected':''}>장비운전원</option>${isAdmin()?`<option value="admin" ${u.role==='admin'?'selected':''}>운영자 (모든 권한)</option>`:''}</select><div class="small muted" style="margin-top:4px">장비운전원은 장비 대장의 <b>운전원 연락처</b>가 아이디(휴대폰 번호)와 같은 장비만 보입니다.</div></div>
    <div><label class="f">${nu?'초기 비밀번호 * (6자 이상)':'비밀번호 초기화 (입력할 때만)'}</label><input class="inp" id="euP" type="text" autocomplete="off" autocapitalize="off"></div></div>
    ${nu?'':`<label class="row" style="margin-top:12px"><input type="checkbox" id="euA" ${u.active?'checked':''} style="width:22px;height:22px"> 사용 가능 (해제하면 바로 로그아웃·로그인 불가)</label>`}
-   <div class="small muted" style="margin-top:8px">초기 비밀번호는 본인에게 직접 전달하세요. 첫 로그인 때 새 비밀번호로 바꾸게 됩니다.</div>
+   <div class="small muted" style="margin-top:8px">역할마다 할 수 있는 일은 설정 → 권한에서 정합니다. 초기 비밀번호는 본인에게 직접 전달하세요. 첫 로그인 때 새 비밀번호로 바꾸게 됩니다.</div>
+   ${!nu&&SERVER&&can('set.perms')&&u.role!=='admin'&&u.role!=='guest'?'<div id="euPm"></div>':''}
    ${companyDatalist()}<button class="btn xl" id="euS" style="margin-top:12px">${nu?'등록':'저장'}</button>`,b=>{
+    const pm=$('#euPm',b)?userPermsUI(u,$('#euPm',b),()=>$('#euR',b).value):null;
     $('#euS',b).onclick=async()=>{const body={name:$('#euN').value.trim(),org:$('#euO').value.trim(),title:$('#euT').value.trim(),role:$('#euR').value};const pw=$('#euP').value.trim();if(pw)body.password=pw;
-      try{if(nu){body.loginId=$('#euL').value.trim();await api('users',body)}else{body.active=$('#euA').checked;await api('users/'+u.id,body)}
+      try{if(nu){body.loginId=$('#euL').value.trim();await api('users',body)}else{body.active=$('#euA').checked;await api('users/'+u.id,body);if(pm)await pm.save()}
         closeModal();toast(nu?'사용자 등록됨':'저장됨');loadUsers()}catch(x){toast(x.status?x.message:'인터넷 연결이 필요합니다')}};
   })}

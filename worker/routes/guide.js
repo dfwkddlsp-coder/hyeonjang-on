@@ -1,7 +1,9 @@
 // 안내 봇(안전온)과 운영자에게 의견 보내기.
 // 의견(feedback)과 AI 사용 횟수(aiuse)는 docs 표에 두지만 동기화하지 않음 — 운영자만 이 API로 봄.
 import { body, fail, json, now, uid } from '../lib/http.js';
-import { requireAdmin, requireUser } from '../lib/session.js';
+import { requireUser } from '../lib/session.js';
+import { requirePerm } from '../lib/perms.js';
+const requireAdmin = (req, env) => requirePerm(req, env, 'feedback.view', '받은 의견을 볼 권한이 없습니다');
 import { extractBlobs, stampBase } from '../lib/storage.js';
 import { notify } from '../lib/push.js';
 
