@@ -3,7 +3,8 @@
 Field safety PWA for one construction site (제일건설 인천검단 AA25). The person you work with is the
 site's safety manager and the app's **operator (운영자)**; they speak Korean — answer in Korean.
 Live: https://hyeonjang-on.lj2.workers.dev (Cloudflare Worker `hyeonjang-on`, D1 `hyeonjang-on-db`,
-R2 `hyeonjang-on-photos`). Architecture and commands: see README.md.
+R2 `hyeonjang-on-photos`). Architecture and commands: see README.md. **Start with `docs/HANDOFF.md`** (where to change what, patterns,
+checklist, gotchas) and grep for what you need instead of reading whole files — the operator watches token use.
 
 ## The operator's rules (the spec — keep them true)
 1. 장비운전원 (driver): only 장비점검, only their own equipment (matched by 운전원 연락처 = login phone).

@@ -15,8 +15,9 @@ Field safety web app (PWA) for construction / manufacturing sites. Built for tab
 
 ## Roles
 - First visit to a fresh deployment creates the **operator (운영자)** account. The operator registers users in 설정 → 사용자 관리 (one by one or many at once; the user changes the initial password at first login).
-- **운영자** everything · **관리자** sees everything incl. 취약근로자, no delete/void/settings/users · **사용자** records; 취약근로자 and staff-only categories hidden · **장비운전원** only their own equipment's checks.
-- Every rule is enforced in the Worker (`worker/lib/policy.js`), not just hidden in the UI.
+- Defaults: **운영자** everything · **관리자** sees everything incl. 취약근로자, no delete/void/settings/users · **사용자** records; 취약근로자 and staff-only categories hidden · **장비운전원** only their own equipment's checks · **임시 운전원** (QR, until midnight) own equipment only.
+- The operator changes permissions per role (설정 → 권한) and per person (사용자 관리 → 이 사람만 다르게). The operator always keeps everything.
+- Every rule is enforced in the Worker (`worker/lib/perms.js` + `worker/lib/policy.js`), not just hidden in the UI.
 
 ## Data
 Records live in Cloudflare D1 as JSON documents (`docs` table, soft deletes so devices can sync them). Photos, signatures, PDFs and weekly backups live in R2. Each device keeps an IndexedDB copy for offline use — changes are queued and uploaded when back online, and other devices pull changes every 30 s and when reopened.
@@ -32,12 +33,16 @@ public/                 the app (static files served by the Worker's assets bind
                         · print (A4 pages, printed forms) · server (roles, API, sync, login)
   js/app/               nav (router, view registry R) · tabs · boot
   js/features/          one file per screen: home, strike, alcohol, registers, vuln, equipment,
-                        categories (PDF / 사진대지 / 점검표 / 작성 양식), settings, site-config, users
+                        categories (PDF / 사진대지 / 점검표 / 작성 양식), settings, site-config, users,
+                        guide (안내 봇), guest (임시 출입 QR), notify (폰 알림), join (초대·가입 신청), perms (권한)
   sw.js                 offline cache (FILES must match index.html — npm run check)
 worker/
   index.js              router over the [method, path | RegExp, handler] tables in routes/
-  lib/                  http · crypto · session · policy (all permissions) · storage (photos, backups)
+  lib/                  http · crypto · session · perms (permission list) · policy (who sees/writes what)
+                        · storage (photos, backups) · push (Web Push)
   routes/               auth · users · docs (sync / write / delete) · files (PDF, photos) · admin
+                        · guide · guest · join · push · perms
+docs/HANDOFF.md         where to change what, patterns, checklists, known gotchas
 migrations/             D1 schema changes (wrangler d1 execute --file)
 tests/                  check.mjs · api.test.mjs (permissions) · ui-smoke.js (paste into the browser console)
 ```
