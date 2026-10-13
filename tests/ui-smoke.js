@@ -16,7 +16,7 @@
 
   for (const v of ['home', 'strike', 'alcohol', 'workers', 'equip', 'eqcheck', 'vuln', 'records'])
     await tryIt(out.views, v, async () => { go(v); await sl(200); out.views[v + '_text'] = text(); });
-  for (const t of setTabs().map((x) => x[0]).filter((x) => x.startsWith('settings:')))
+  for (const t of setCats().filter((c) => !c.view).map((c) => 'settings:' + c.k))
     await tryIt(out.views, t, async () => { go('settings', t.split(':')[1]); await sl(250); });
   for (const c of docCats())
     await tryIt(out.views, 'cat:' + c.name, async () => { go('plans', c.k); await sl(200); });

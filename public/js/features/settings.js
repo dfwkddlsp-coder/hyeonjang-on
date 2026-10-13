@@ -44,31 +44,31 @@ R.settings=()=>{
    <label class="f">내 서명</label><div id="mySigBox"></div>
    <button class="btn" id="mySave" style="width:100%;margin-top:12px">내 정보 저장</button></div>
   <div class="card"><label class="row" style="gap:10px"><input type="checkbox" id="hapOn" ${hapticOn()?'checked':''} style="width:22px;height:22px"><span class="grow"><b>진동</b> <span class="small muted">— 버튼을 누르거나 하단 메뉴를 넘길 때 살짝 진동 (이 기기에만 적용)</span></span></label></div>
-  </section><section class="st" data-st="site">
+  </section><section class="st" data-st="site forms eqform excel">
   ${adm?'':'<div class="hint" style="margin-bottom:12px">현장명·삼진아웃·음주 기준은 운영자가 관리합니다.</div><div hidden>'}
-  <div class="card"><label class="f">현장명</label><input class="inp" id="sS" value="${h(S.site)}" placeholder="현장명을 직접 입력하세요"></div>
-  ${adm?'<div class="card"><b>카테고리</b> <span class="small muted">— 카테고리마다 홈 타일이 생깁니다. 유형: PDF 문서함 · 사진대지 · 점검표 · 작성 양식</span><div id="dcBox" style="margin-top:6px"></div></div>':''}
-  ${adm?'<div class="card"><b>양식 문구</b> <span class="small muted">— 인쇄되는 확인서·통지서의 제목과 문구. 비우면 기본 문구</span><div id="fmBox" style="margin-top:6px"></div></div>':''}
-  ${adm?'<div class="card"><b>엑셀 칸 이름</b> <span class="small muted">— 근로자·장비 엑셀 확인 화면에서 직접 골라 기억한 칸 제목. 다음부터 자동으로 찾습니다</span><div id="caBox" style="margin-top:6px"></div></div>':''}
-  ${adm?'<div class="card"><b>홈 화면 배치</b> <span class="small muted">— 바꾸는 즉시 저장되고 모든 사용자 홈에 같게 적용됩니다</span><div id="hlBox" style="margin-top:6px"></div></div>':''}
-  <div class="card"><b>삼진아웃 기준</b>
+  <div class="card" data-sc="site"><label class="f">현장명</label><input class="inp" id="sS" value="${h(S.site)}" placeholder="현장명을 직접 입력하세요"></div>
+  ${adm?'<div class="card" data-sc="forms"><b>카테고리</b> <span class="small muted">— 카테고리마다 홈 타일이 생깁니다. 유형: PDF 문서함 · 사진대지 · 점검표 · 작성 양식</span><div id="dcBox" style="margin-top:6px"></div></div>':''}
+  ${adm?'<div class="card" data-sc="forms"><b>양식 문구</b> <span class="small muted">— 인쇄되는 확인서·통지서의 제목과 문구. 비우면 기본 문구</span><div id="fmBox" style="margin-top:6px"></div></div>':''}
+  ${adm?'<div class="card" data-sc="excel"><b>엑셀 칸 이름</b> <span class="small muted">— 근로자·장비 엑셀 확인 화면에서 직접 골라 기억한 칸 제목. 다음부터 자동으로 찾습니다</span><div id="caBox" style="margin-top:6px"></div></div>':''}
+  ${adm?'<div class="card" data-sc="forms"><b>홈 화면 배치</b> <span class="small muted">— 바꾸는 즉시 저장되고 모든 사용자 홈에 같게 적용됩니다</span><div id="hlBox" style="margin-top:6px"></div></div>':''}
+  <div class="card" data-sc="site"><b>삼진아웃 기준</b>
    <label class="f">누적 기간</label><select class="inp" id="sP">${[[0,'공사 기간 전체 누적'],[3,'최근 3개월'],[6,'최근 6개월'],[12,'최근 12개월']].map(([v,t])=>`<option value="${v}" ${S.periodMonths==v?'selected':''}>${t}</option>`).join('')}</select>
    ${S.levels.map((l,i)=>`<div style="border-left:6px solid var(--l${i+1});padding-left:10px;margin-top:12px"><div class="grid g2"><div><label class="f">${i+1}차 명칭</label><input class="inp" data-ln="${i}" value="${h(l.name)}"></div><div><label class="f">스티커 색</label><input class="inp" data-ls="${i}" value="${h(l.sticker)}"></div></div><label class="f">조치사항 (줄바꿈 구분)</label><textarea class="inp" data-la="${i}">${h(l.act)}</textarea></div>`).join('')}
    <label class="f">위반 유형 (한 줄에 하나)</label><textarea class="inp" id="sV" style="min-height:180px">${h(S.vtypes.join('\n'))}</textarea></div>
-  <div class="card"><b>음주측정 판정 기준</b>
+  <div class="card" data-sc="site"><b>음주측정 판정 기준</b>
    <label class="f">적용 기준</label><select class="inp" id="sAm"><option value="site" ${S.alcMode==='site'?'selected':''}>현장 기준 (오전 중지 / 당일 중지·심의 / 2회 영구퇴출)</option><option value="policy" ${S.alcMode==='policy'?'selected':''}>회사 음주관리 지침 5.3 (재측정 / 작업금지)</option></select>
    <div class="grid g2"><div><label class="f">[현장] 적발 기준 (% 이상)</label><input class="inp" id="sDt" inputmode="decimal" value="${f3(S.alc.detect)}"></div><div><label class="f">[현장] 당일 작업중지 기준 (% 이상)</label><input class="inp" id="sDy" inputmode="decimal" value="${f3(S.alc.day)}"></div><div><label class="f">[현장] 영구퇴출 적발 횟수</label><input class="inp" id="sOc" inputmode="numeric" value="${S.alc.outCount}"></div></div>
    <div class="grid g2"><div><label class="f">[지침] 재측정 기준 (% 이상)</label><input class="inp" id="sR" inputmode="decimal" value="${S.alc.retest.toFixed(3)}"></div><div><label class="f">[지침] 작업금지·귀가 기준 (% 이상)</label><input class="inp" id="sT" inputmode="decimal" value="${S.alc.stop.toFixed(3)}"></div></div>
    <div class="small muted" style="margin-top:6px">[지침] 재측정에서 다시 재측정 기준 이상이면 음주상태로 판정(작업금지). 측정거부는 출입통제·작업배제.</div>
    <label class="f">적발 알림 문구 — {업체} {일시} {성명} {직종} {수치} {조치} {기준} 자동 치환</label><textarea class="inp" id="sMsg" style="min-height:220px">${h(S.alcMsg)}</textarea></div>
-  ${adm?'<div class="card"><b>장비 종류별 점검표 양식</b> <span class="small muted">— 장비명에 키워드가 들어 있으면 그 양식을 씁니다. 어디에도 안 맞으면 아래 기본 양식</span><div id="efBox"></div></div>':''}
-  <div class="card"><b>기본 주간 점검표 항목 (굴착기 등)</b> <span class="small muted">— 한 줄에 하나</span>
+  ${adm?'<div class="card" data-sc="eqform"><b>장비 종류별 점검표 양식</b> <span class="small muted">— 장비명에 키워드가 들어 있으면 그 양식을 씁니다. 어디에도 안 맞으면 아래 기본 양식</span><div id="efBox"></div></div>':''}
+  <div class="card" data-sc="eqform"><b>기본 주간 점검표 항목 (굴착기 등)</b> <span class="small muted">— 한 줄에 하나</span>
    <textarea class="inp" id="sEqC" style="min-height:240px;font-size:14px">${h(S.eqCheckItems||DEF.eqCheckItems)}</textarea>
    <div class="small muted" style="margin-top:6px">기본값: 「장비 전담 관리자 점검표」 일일점검표 13개 항목.</div>
    <label class="f" style="margin-top:14px">장비 주간 사진 항목 — "항목|설명" (맨 앞 '점검사진'은 자동)</label>
    <textarea class="inp" id="sEq" style="min-height:180px;font-size:14px">${h(S.eqItems||DEF.eqItems)}</textarea>
    <div class="small muted" style="margin-top:6px">기본값: 장비전담제 장비점검방법 10~16쪽.</div></div>
-  <div class="card"><b>취약근로자 기준</b>
+  <div class="card" data-sc="site"><b>취약근로자 기준</b>
    <div class="grid g2"><div><label class="f">고령 분류 연령 (세 이상)</label><input class="inp" id="sVa" inputmode="numeric" value="${S.vulnAge}"></div><div></div>
    <div><label class="f">혈압 주의 (수축기/이완기 이상)</label><input class="inp" id="sBw" value="${S.bp.warn.join('/')}"></div><div><label class="f">혈압 위험 (수축기/이완기 이상)</label><input class="inp" id="sBs" value="${S.bp.stop.join('/')}"></div></div></div>
   ${adm?'':'</div>'}
@@ -76,7 +76,7 @@ R.settings=()=>{
   <div class="card"><b>갤러리 사진 사용</b><div class="row" style="margin-top:8px"><span class="grow small">${S.galleryConsent?`동의함 (${fmtDT(S.galleryConsent.at)})`:'동의 안 함 — 갤러리에서 선택할 때 동의를 묻습니다'}</span>${S.galleryConsent?'<button class="btn sm line" id="gcOff">동의 철회</button>':''}</div></div>
   <div class="card"><b>잠금</b><label class="f">PIN (숫자 4~6자리, 비우면 잠금 없음)</label><input class="inp" id="sN" inputmode="numeric" maxlength="6" value="${h(S.pin)}">
    <div class="small muted" style="margin-top:6px">지침 10.3: 기록 열람은 현장소장 및 안전관리책임자로 제한.</div></div>
-  </section><section class="st" data-st="me site">
+  </section><section class="st" data-st="me site eqform">
   <button class="btn xl" id="sSave">저장</button>
   </section><section class="st" data-st="data">
   <div class="card"><b>데이터</b><div style="height:6px"></div><div class="small muted">근로자 ${W.length} · 장비 ${E.length} · 삼진아웃 ${V.length} · 음주측정 ${A.length} · 취약근로자 ${VU.length}</div>

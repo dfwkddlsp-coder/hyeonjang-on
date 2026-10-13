@@ -400,3 +400,25 @@ body:has(input:focus,textarea:focus,select:focus) .gb-fab{display:none} /* 입�
 .n-ev{border-top:1px solid var(--line);padding:10px 0}.n-ev:first-child{border-top:0}
 .n-main{min-height:40px;cursor:pointer}.n-from{margin:6px 0 0 12px;padding-left:10px;border-left:3px solid var(--line);display:grid;gap:6px}
 .n-from.off{opacity:.4;pointer-events:none}
+/* ---------- 설정: ☰ 카테고리 목록 ---------- */
+.set-head{display:flex;align-items:center;gap:10px;margin-bottom:12px}.set-head h1{margin:0}
+.set-burger{width:44px;height:44px;flex:none;border:1px solid var(--line);border-radius:12px;background:var(--card);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;cursor:pointer;padding:0}
+.set-burger span{display:block;width:20px;height:2px;border-radius:2px;background:var(--ink);transition:transform .2s,opacity .2s}
+.set-burger[aria-expanded="true"] span:nth-child(1){transform:translateY(7px) rotate(45deg)}
+.set-burger[aria-expanded="true"] span:nth-child(2){opacity:0}
+.set-burger[aria-expanded="true"] span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
+.set-nav{display:flex;flex-direction:column;gap:4px}
+.set-nav button{display:flex;align-items:center;gap:10px;width:100%;border:0;background:none;border-radius:12px;padding:12px;font-size:15px;color:var(--sub);text-align:left;cursor:pointer}
+.set-nav button .i{width:20px;height:20px;flex:none}
+.set-nav button.on{background:var(--chip);color:var(--ink);font-weight:700}
+.set-main{min-width:0}
+/* 폰·태블릿: 왼쪽에서 밀려 나오는 서랍 */
+.set-wrap:not(.wide) .set-nav{position:fixed;top:0;bottom:0;left:0;z-index:45;width:min(280px,82vw);background:var(--card);padding:calc(16px + env(safe-area-inset-top)) 10px 16px;box-shadow:4px 0 24px rgba(0,0,0,.18);transform:translateX(-105%);transition:transform .22s ease;overflow-y:auto}
+.set-wrap.nav-open:not(.wide) .set-nav{transform:none}
+.set-dim{position:fixed;inset:0;z-index:44;background:rgba(10,20,30,.35);display:none}.set-dim.on{display:block}
+/* 넓은 화면: 왼쪽에 붙여 두고 ☰로 접기 */
+.set-wrap.wide{display:grid;grid-template-columns:0 minmax(0,1fr);gap:0;transition:grid-template-columns .2s}
+.set-wrap.wide .set-nav{overflow:hidden;visibility:hidden}
+.set-wrap.wide.nav-open{grid-template-columns:200px minmax(0,1fr);gap:16px}
+.set-wrap.wide.nav-open .set-nav{visibility:visible;position:sticky;top:64px;align-self:start}
+body:has(.set-dim.on) .gb-fab{display:none} /* 설정 메뉴가 열려 있으면 캐릭터 버튼 숨김 */
