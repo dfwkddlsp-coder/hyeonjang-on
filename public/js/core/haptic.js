@@ -14,8 +14,8 @@ function iosHaptic(){
     iosSw.innerHTML='<input type="checkbox" switch tabindex="-1">';document.body.appendChild(iosSw)}
   iosSw.click()}
 function haptic(kind){if(!hapticOn())return;try{if(CAN_VIBRATE)navigator.vibrate(HAPTIC[kind]||HAPTIC.tap);else if(kind!=='tick'&&kind!=='snap')iosHaptic()}catch(e){}}
-/* 누르는 모든 것: 버튼·메뉴·탭·체크박스·목록 줄. 삭제(빨간 버튼)는 두 번, 주 버튼은 조금 길게 */
-const TAP_SEL='button,.btn,a[href],[data-v],[data-seg],input[type=checkbox],input[type=radio],select,.list .it,[role=button]';
+/* 누르는 모든 것: 버튼·메뉴·탭·체크박스·목록 줄. select는 빼야 함: 아이폰에서 iosHaptic의 가짜 클릭이 열리던 선택 목록을 바로 닫음. 삭제(빨간 버튼)는 두 번, 주 버튼은 조금 길게 */
+const TAP_SEL='button,.btn,a[href],[data-v],[data-seg],input[type=checkbox],input[type=radio],.list .it,[role=button]';
 document.addEventListener('click',e=>{
   if(!e.isTrusted)return; // iosHaptic의 가짜 클릭은 다시 울리지 않음
   const el=e.target.closest&&e.target.closest(TAP_SEL);if(!el||el.disabled)return;

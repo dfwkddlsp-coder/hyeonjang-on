@@ -13,12 +13,16 @@ async function loadUsers(){const box=$('#usersBox');if(!box)return;
   catch(x){box.innerHTML=`<div class="empty">${h(x.status?x.message:'인터넷 연결이 필요합니다')}</div>`}}
 let LAST_USERS=[];
 /* 여러 명 한 번에 등록: 엑셀·조직도에서 복사해 붙여넣기, 또는 장비 대장의 운전원 불러오기 */
-function bulkUsers(){
-  openModal('여러 명 등록',`<div class="small muted">한 줄에 한 명 — <b>이름, 휴대폰번호, 소속, 직책</b> (쉼표나 엑셀에서 복사한 칸 그대로). 아이디는 휴대폰 번호 숫자만으로 만들어집니다. 이미 있는 아이디는 건너뜁니다.</div>
+/* 초기 비밀번호는 코드(공개 저장소)에 두지 않고, 운영자 기기에서 마지막에 쓴 값을 기억해 다음에 채워 줌 */
+const INIT_PW_KEY='hjInitPw',initPw=()=>{try{return localStorage.getItem(INIT_PW_KEY)||''}catch(e){return ''}};
+/* fromEq: 장비 대장의 "운전원 계정 만들기"에서 열면 사용자 목록을 새로 받고 운전원을 바로 불러옴 */
+async function bulkUsers(fromEq){
+  if(fromEq){try{LAST_USERS=(await api('users')).users}catch(x){return toast('사용자 목록을 못 불러왔어요: '+x.message)}}
+  openModal(fromEq?'운전원 계정 만들기':'여러 명 등록',`<div class="small muted">한 줄에 한 명 — <b>이름, 휴대폰번호, 소속, 직책</b> (쉼표나 엑셀에서 복사한 칸 그대로). 아이디는 휴대폰 번호 숫자만으로 만들어집니다. 이미 있는 아이디는 건너뜁니다.</div>
     <textarea class="inp" id="buT" rows="9" style="margin-top:8px;font-size:15px" placeholder="홍길동, 010-1234-5678, OO건설, 관리감독자"></textarea>
     <button class="btn sm line" id="buEq" style="margin-top:8px"><i class="i i-equip"></i> 장비 대장 운전원 불러오기</button>
     <div class="grid g2" style="margin-top:10px"><div><label class="f">권한</label><select class="inp" id="buR"><option value="user">사용자</option><option value="manager">관리자</option><option value="driver">장비운전원</option></select></div>
-    <div><label class="f">초기 비밀번호 * (6자 이상, 모두 같게)</label><input class="inp" id="buP" type="text" autocomplete="off" autocapitalize="off"></div></div>
+    <div><label class="f">초기 비밀번호 * (6자 이상, 모두 같게)</label><input class="inp" id="buP" type="text" autocomplete="off" autocapitalize="off" value="${h(initPw())}"></div></div>
     <div class="small muted" style="margin-top:4px">모든 사람이 첫 로그인 때 비밀번호를 바꾸게 됩니다.</div>
     <div id="buMsg" class="small" style="margin-top:8px"></div>
     <button class="btn xl" id="buGo" style="margin-top:10px">등록</button>`,b=>{
@@ -30,6 +34,7 @@ function bulkUsers(){
       $('#buMsg',b).innerHTML=`아직 계정이 없는 운전원 <b>${lines.length}</b>명을 불러왔습니다.${skip.length?`<br>번호가 겹쳐 뺀 사람: ${h(skip.join(', '))} — 장비 대장 연락처를 고친 뒤 다시 불러오세요.`:''}`};
     $('#buGo',b).onclick=async()=>{const pw=$('#buP',b).value.trim(),role=$('#buR',b).value,msg=$('#buMsg',b),go=$('#buGo',b);
       if(pw.length<6)return toast('초기 비밀번호를 6자 이상 입력하세요');
+      try{localStorage.setItem(INIT_PW_KEY,pw)}catch(e){}
       const rows=$('#buT',b).value.split('\n').map(l=>l.split(/[,\t]/).map(x=>x.trim())).filter(c=>c[0]||c[1]);
       const bad=rows.filter(c=>!c[0]||!/^\d{10,11}$/.test(dg(c[1])));if(!rows.length)return toast('등록할 사람을 입력하세요');
       if(bad.length)return msg.innerHTML=`<span style="color:var(--bad)">이름이나 휴대폰 번호가 잘못된 줄: ${h(bad.map(c=>c.join(' ')).join(' / '))}</span>`;
@@ -40,6 +45,7 @@ function bulkUsers(){
       go.disabled=false;go.textContent='등록';
       msg.innerHTML=`등록 <b>${ok}</b>명${dup.length?` · 이미 있어 건너뜀 ${dup.length}명 (${h(dup.join(', '))})`:''}${err.length?`<br><span style="color:var(--bad)">실패: ${h(err.join(', '))}</span>`:''}`;
       if(ok){$('#buT',b).value='';loadUsers();toast(`${ok}명 등록했습니다`)}};
+    if(fromEq)$('#buEq',b).click();
   })}
 function editUser(u){const nu=!u;u=u||{};
   openModal(nu?'사용자 등록':'사용자 정보',`<div class="grid g2">

@@ -107,6 +107,23 @@ function showPersonHistory(k,name,company,w){
 
 /* --- 장비 --- */
 const eqCat=t=>(String(t||'기타').split(/[(\s]/)[0]||'기타');
+/* 연락처 맞추기: 반입중 장비의 운전원 연락처를 근로자 대장(성명 같은 사람, 동명이인은 업체로 구분)의 연락처로 맞춤.
+   운전원은 로그인 번호 = 운전원 연락처로 본인 장비를 찾으므로 번호가 틀리면 점검을 못 함. 바꿀 목록을 먼저 보여 주고 확인해야 저장 */
+function eqPhoneSync(){
+  const dg=s=>String(s||'').replace(/\D/g,''),nm=s=>String(s||'').replace(/\s/g,''),uniq=l=>[...new Set(l.map(w=>dg(w.phone)))];
+  const chg=[],amb=[],none=[];
+  E.filter(e=>!e.outDate&&nm(e.operator)).forEach(e=>{
+    let c=W.filter(w=>nm(w.name)===nm(e.operator)&&/^\d{10,11}$/.test(dg(w.phone)));
+    if(uniq(c).length>1){const co=nm(e.company),by=c.filter(w=>co&&nm(w.company)&&(nm(w.company).includes(co)||co.includes(nm(w.company))));if(by.length)c=by}
+    const ph=uniq(c);
+    if(!ph.length)none.push(e);else if(ph.length>1)amb.push(e);else if(dg(e.phone)!==ph[0])chg.push([e,c[0].phone])});
+  const row=e=>`<b>${h(e.operator)}</b> · ${h(e.type||'')} ${h(e.plate||'')}${e.company?' · '+h(e.company):''}`;
+  openModal('운전원 연락처 맞추기',`<p class="small muted">반입중 장비의 운전원 연락처를 <b>근로자 대장</b>의 연락처로 맞춥니다. 운전원은 이 번호로 로그인해야 본인 장비를 점검할 수 있어요.</p>
+   ${chg.length?`<h3>바꿀 번호 ${chg.length}건</h3><div>${chg.map(([e,p])=>`<div style="padding:8px 0;border-bottom:1px solid var(--line)">${row(e)}<br><span class="small"><s class="muted">${h(e.phone||'없음')}</s> → <b>${h(p)}</b></span></div>`).join('')}</div>`:'<p><b>바꿀 번호가 없어요.</b> 근로자 대장과 모두 같아요.</p>'}
+   ${amb.length?`<h3>확인 필요 ${amb.length}건 <span class="small muted">동명이인이라 고르지 않음 · 직접 수정</span></h3><div class="small">${amb.map(row).join('<br>')}</div>`:''}
+   ${none.length?`<h3>근로자 대장에 없음 ${none.length}건 <span class="small muted">그대로 둠</span></h3><div class="small">${none.map(row).join('<br>')}</div>`:''}
+   ${chg.length?`<div class="row" style="margin-top:14px"><button class="btn" id="phGo" style="flex:1">${chg.length}건 바꾸기</button></div>`:''}`,b=>{
+    const g=$('#phGo',b);if(g)g.onclick=async()=>{g.disabled=true;for(const [e,p] of chg)await save('equipment',{...e,phone:p,updated:nowLocal()});closeModal();toast(`운전원 연락처 ${chg.length}건을 근로자 대장 번호로 맞췄어요`);R.equip()}})}
 R.equip=()=>{
   /* f: '' 반입중(기본 — 반출일자가 적힌 장비는 숨김) · 'out' 반출만 · 'all' 전체 · 'exp' 반입중 중 서류 만료·임박 */
   const q=R.equip.q||'',cat=R.equip.cat||'',f=R.equip.f||'';
@@ -116,7 +133,7 @@ R.equip=()=>{
   const list=base.filter(e=>(!cat||eqCat(e.type)===cat)&&(!q||norm(Object.values(e).join(' ')).includes(norm(q)))).sort((a,b)=>(+a.no||999)-(+b.no||999));
   const outTag=e=>e.outDate?`<span class="badge">반출 ${h(e.outDate)}</span> `:'';
   V$().innerHTML=`<h1>장비 관리대장 <span class="badge">${inN}대</span>${outN&&f!=='out'&&f!=='all'?` <span class="small muted">반출 ${outN}대 숨김</span>`:''}</h1>
-  <div class="card"><div class="row">${can('file.excel')?'<label class="btn"><i class="i i-import"></i> 엑셀 불러오기<input type="file" accept=".xls,.xlsx" multiple hidden id="ef"></label>':''}<button class="btn ghost" id="et">양식 다운로드</button><button class="btn ghost" id="ea"><i class="i i-plus"></i> 직접 추가</button><button class="btn line" id="ex">엑셀 저장</button></div>
+  <div class="card"><div class="row">${can('file.excel')?'<label class="btn"><i class="i i-import"></i> 엑셀 불러오기<input type="file" accept=".xls,.xlsx" multiple hidden id="ef"></label>':''}<button class="btn ghost" id="et">양식 다운로드</button><button class="btn ghost" id="ea"><i class="i i-plus"></i> 직접 추가</button><button class="btn line" id="ex">엑셀 저장</button>${can('equip.add')&&can('equip.view')?'<button class="btn line" id="eph">연락처 맞추기</button>':''}${can('set.users')?'<button class="btn line" id="eacc">운전원 계정 만들기</button>':''}</div>
   <div class="small muted" style="margin-top:8px">"장비 전담 관리자 지정서" 양식 그대로 올리면 됩니다. 같은 차량번호+운전원은 최신 내용으로 갱신.</div></div>
   <input class="inp big" id="eq" type="search" placeholder="차량번호 · 장비명 · 운전원 · 업체 · 전담관리자" value="${h(q)}" style="margin-bottom:10px">
   <div class="chips scroll" style="margin-bottom:8px"><button class="chip ${!cat?'on':''}" data-c="">전체</button>${cats.map(c=>`<button class="chip ${c===cat?'on':''}" data-c="${h(c)}">${h(c)} ${base.filter(e=>eqCat(e.type)===c).length}</button>`).join('')}</div>
@@ -127,7 +144,7 @@ R.equip=()=>{
   $('#eq').oninput=e=>{R.equip.q=e.target.value;clearTimeout(R.equip.t);R.equip.t=setTimeout(()=>{R.equip();const i=$('#eq');i.focus();i.setSelectionRange(i.value.length,i.value.length)},250)};
   $$('[data-c]').forEach(b=>b.onclick=()=>{R.equip.cat=b.dataset.c;R.equip()});
   $$('[data-f]').forEach(b=>b.onclick=()=>{R.equip.f=b.dataset.f;R.equip.cat='';R.equip()});
-  $('#et').onclick=tplEquip;$('#ex').onclick=()=>exportEquip(list);$('#ea').onclick=()=>editEquip();
+  $('#et').onclick=tplEquip;$('#ex').onclick=()=>exportEquip([...E].sort((a,b)=>(+a.no||999)-(+b.no||999))) /* 엑셀 저장은 화면 필터와 무관하게 반출 포함 전체 */;$('#ea').onclick=()=>editEquip();const ep=$('#eph');if(ep)ep.onclick=eqPhoneSync;const ea=$('#eacc');if(ea)ea.onclick=()=>bulkUsers(true);
   if($('#ef'))$('#ef').onchange=e=>importDialog('equipment',[...e.target.files]);bindItems();
 };
 function showEquip(id){
