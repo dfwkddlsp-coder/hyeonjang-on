@@ -96,3 +96,34 @@ function withGalleryConsent(go){
    입력 칸·라벨은 제외: 라벨(.btn) 안의 파일 칸은 라벨을 누르면 브라우저가 안쪽 칸을 한 번 더 눌러서, 막으면 파일 창이 안 열림 */
 {let lastBtn=null,lastAt=0;document.addEventListener('click',e=>{if(!e.isTrusted||!e.target.closest||e.target.closest('input,select,textarea,label'))return;const b=e.target.closest('.btn:not(.sm)');if(!b)return;
   const t=Date.now();if(b===lastBtn&&t-lastAt<700){e.stopImmediatePropagation();e.preventDefault();return}lastBtn=b;lastAt=t},true)}
+/* 파일 끌어다 놓기(PC): 탐색기에서 파일을 화면에 끌어다 놓으면, 놓은 자리에서 가장 가까운 "형식이 맞는" 파일 버튼에 넣고
+   그 버튼을 눌러 고른 것과 똑같이 처리함(엑셀 불러오기·PDF·사진 등). 파일 버튼이 보이는 화면에서만 동작하므로 권한도 그대로 따름.
+   카메라 전용 칸(capture)은 제외. 맞는 칸이 여러 개라 고를 수 없으면 버튼 위에 놓아 달라고 안내함 */
+{
+  const hasFiles=e=>[...(e.dataTransfer&&e.dataTransfer.types||[])].includes('Files');
+  const root=()=>$('#modal').classList.contains('hidden')?$('#view'):$('#mBody');
+  const fileOk=(inp,f)=>{const acc=(inp.accept||'').split(',').map(s=>s.trim().toLowerCase()).filter(Boolean);if(!acc.length)return true;
+    const name=(f.name||'').toLowerCase(),type=(f.type||'').toLowerCase();
+    return acc.some(a=>a.startsWith('.')?name.endsWith(a):a.endsWith('/*')?type.startsWith(a.slice(0,-1)):type===a)};
+  const inputs=el=>[...el.querySelectorAll('input[type=file]:not([capture]):not([disabled])')];
+  /* 놓은 자리에서 위로 올라가며, 맞는 파일 칸이 딱 하나 들어 있는 가장 가까운 상자를 찾음 */
+  const pick=(target,files)=>{const top=root();if(!top)return {};let el=target instanceof Element&&top.contains(target)?target:top;
+    for(;el;el=el===top?null:el.parentElement){const c=inputs(el).filter(i=>files.some(f=>fileOk(i,f)));if(c.length===1)return {inp:c[0],box:el};if(c.length>1)return {many:true}}
+    return {}};
+  const mark=box=>{$$('.drop-on').forEach(x=>x!==box&&x.classList.remove('drop-on'));if(box)box.classList.add('drop-on')};
+  /* 끄는 중에는 파일 이름을 알 수 없어서(브라우저 보안) 형식 대신 "파일 칸이 하나뿐인 상자"로 표시만 함 */
+  document.addEventListener('dragover',e=>{if(!hasFiles(e))return;e.preventDefault();
+    const top=root();let el=e.target instanceof Element&&top&&top.contains(e.target)?e.target:top,box=null;
+    for(;el;el=el===top?null:el.parentElement){const n=inputs(el).length;if(n===1){const i=inputs(el)[0];box=i.closest('label')||el;break}if(n>1)break}
+    e.dataTransfer.dropEffect=box?'copy':'none';mark(box)});
+  document.addEventListener('dragleave',e=>{if(!e.relatedTarget)mark(null)});
+  document.addEventListener('drop',e=>{if(!hasFiles(e))return;e.preventDefault();mark(null);
+    const files=[...e.dataTransfer.files];if(!files.length)return;
+    const r=pick(e.target,files);
+    if(r.many){toast('넣을 버튼 위에 끌어다 놓아 주세요');return}
+    if(!r.inp){toast(inputs(root()||document.body).length?'이 형식의 파일은 여기에 넣을 수 없어요':'이 화면에는 파일을 넣을 곳이 없어요');return}
+    const ok=files.filter(f=>fileOk(r.inp,f)),use=r.inp.multiple?ok:ok.slice(0,1);
+    const dt=new DataTransfer();use.forEach(f=>dt.items.add(f));r.inp.files=dt.files;
+    r.inp.dispatchEvent(new Event('change',{bubbles:true}));
+    if(use.length<files.length)toast(`${files.length-use.length}개 파일은 형식이 맞지 않거나 한 개만 넣을 수 있어 빠졌어요`)});
+}

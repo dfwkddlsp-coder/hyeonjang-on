@@ -108,22 +108,25 @@ function showPersonHistory(k,name,company,w){
 /* --- 장비 --- */
 const eqCat=t=>(String(t||'기타').split(/[(\s]/)[0]||'기타');
 R.equip=()=>{
+  /* f: '' 반입중(기본 — 반출일자가 적힌 장비는 숨김) · 'out' 반출만 · 'all' 전체 · 'exp' 반입중 중 서류 만료·임박 */
   const q=R.equip.q||'',cat=R.equip.cat||'',f=R.equip.f||'';
-  const cats=[...new Set(E.map(e=>eqCat(e.type)))].sort();
-  const list=E.filter(e=>(!cat||eqCat(e.type)===cat)&&(!q||norm(Object.values(e).join(' ')).includes(norm(q)))&&
-    (!f||(f==='exp'?['bad','warn'].includes(expState(e.inspect))||['bad','warn'].includes(expState(e.insurance)):f==='in'?!e.outDate:!!e.outDate))).sort((a,b)=>(+a.no||999)-(+b.no||999));
-  V$().innerHTML=`<h1>장비 관리대장 <span class="badge">${E.length}대</span></h1>
+  const inN=E.filter(e=>!e.outDate).length,outN=E.length-inN;
+  const byF=e=>f==='all'||(f==='out'?!!e.outDate:!e.outDate&&(f!=='exp'||['bad','warn'].includes(expState(e.inspect))||['bad','warn'].includes(expState(e.insurance))));
+  const base=E.filter(byF),cats=[...new Set(base.map(e=>eqCat(e.type)))].sort();
+  const list=base.filter(e=>(!cat||eqCat(e.type)===cat)&&(!q||norm(Object.values(e).join(' ')).includes(norm(q)))).sort((a,b)=>(+a.no||999)-(+b.no||999));
+  const outTag=e=>e.outDate?`<span class="badge">반출 ${h(e.outDate)}</span> `:'';
+  V$().innerHTML=`<h1>장비 관리대장 <span class="badge">${inN}대</span>${outN&&f!=='out'&&f!=='all'?` <span class="small muted">반출 ${outN}대 숨김</span>`:''}</h1>
   <div class="card"><div class="row">${can('file.excel')?'<label class="btn"><i class="i i-import"></i> 엑셀 불러오기<input type="file" accept=".xls,.xlsx" multiple hidden id="ef"></label>':''}<button class="btn ghost" id="et">양식 다운로드</button><button class="btn ghost" id="ea"><i class="i i-plus"></i> 직접 추가</button><button class="btn line" id="ex">엑셀 저장</button></div>
   <div class="small muted" style="margin-top:8px">"장비 전담 관리자 지정서" 양식 그대로 올리면 됩니다. 같은 차량번호+운전원은 최신 내용으로 갱신.</div></div>
   <input class="inp big" id="eq" type="search" placeholder="차량번호 · 장비명 · 운전원 · 업체 · 전담관리자" value="${h(q)}" style="margin-bottom:10px">
-  <div class="chips scroll" style="margin-bottom:8px"><button class="chip ${!cat?'on':''}" data-c="">전체</button>${cats.map(c=>`<button class="chip ${c===cat?'on':''}" data-c="${h(c)}">${h(c)} ${E.filter(e=>eqCat(e.type)===c).length}</button>`).join('')}</div>
-  <div class="chips scroll" style="margin-bottom:12px">${[['','전체'],['in','반입중'],['out','반출'],['exp','<i class="i i-alert"></i> 서류 만료·임박']].map(([v,t])=>`<button class="chip ${f===v?'on':''}" data-f="${v}">${t}</button>`).join('')}</div>
-  <div class="card list ph-only">${list.length?list.map(eqItem).join(''):'<div class="empty">장비 없음</div>'}</div>
+  <div class="chips scroll" style="margin-bottom:8px"><button class="chip ${!cat?'on':''}" data-c="">전체</button>${cats.map(c=>`<button class="chip ${c===cat?'on':''}" data-c="${h(c)}">${h(c)} ${base.filter(e=>eqCat(e.type)===c).length}</button>`).join('')}</div>
+  <div class="chips scroll" style="margin-bottom:12px">${[['',`반입중 ${inN}`],['out',`반출 ${outN}`],['all',`전체 ${E.length}`],['exp','<i class="i i-alert"></i> 서류 만료·임박']].map(([v,t])=>`<button class="chip ${f===v?'on':''}" data-f="${v}">${t}</button>`).join('')}</div>
+  <div class="card list ph-only">${list.length?list.map(e=>e.outDate?eqItem(e).replace('<b>',()=>outTag(e)+'<b>'):eqItem(e)).join(''):'<div class="empty">장비 없음</div>'}</div>
   <div class="tbl-wrap pc-only"><table class="t"><tr><th>번호</th><th>장비명</th><th>차량번호</th><th>소속업체</th><th>운전원</th><th>연락처</th><th>반입</th><th>검사기간</th><th>보험</th><th>전담관리자</th><th>작업지휘자</th><th>신호수</th></tr>
   ${list.length?list.map(e=>`<tr class="click" data-eid="${e.id}"><td>${h(e.no)}</td><td><b>${h(e.type)}</b></td><td>${h(e.plate)}</td><td>${h(e.company)}</td><td>${h(e.operator)}</td><td>${h(e.phone)}</td><td>${h(e.inDate)}${e.outDate?'<br><span class="muted small">반출 '+h(e.outDate)+'</span>':''}</td><td>${expCell(e.inspect)}</td><td>${expCell(e.insurance)}</td><td>${h(e.manager)}</td><td>${h(e.commander)}</td><td>${h(e.signal)}</td></tr>`).join(''):'<tr><td colspan="12" class="empty">장비 없음</td></tr>'}</table></div>`;
   $('#eq').oninput=e=>{R.equip.q=e.target.value;clearTimeout(R.equip.t);R.equip.t=setTimeout(()=>{R.equip();const i=$('#eq');i.focus();i.setSelectionRange(i.value.length,i.value.length)},250)};
   $$('[data-c]').forEach(b=>b.onclick=()=>{R.equip.cat=b.dataset.c;R.equip()});
-  $$('[data-f]').forEach(b=>b.onclick=()=>{R.equip.f=b.dataset.f;R.equip()});
+  $$('[data-f]').forEach(b=>b.onclick=()=>{R.equip.f=b.dataset.f;R.equip.cat='';R.equip()});
   $('#et').onclick=tplEquip;$('#ex').onclick=()=>exportEquip(list);$('#ea').onclick=()=>editEquip();
   if($('#ef'))$('#ef').onchange=e=>importDialog('equipment',[...e.target.files]);bindItems();
 };

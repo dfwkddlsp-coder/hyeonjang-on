@@ -433,3 +433,5 @@ body:has(.set-dim.on) .gb-fab{display:none} /* 설정 메뉴가 열려 있으면
 .pm-urow{display:flex;align-items:center;gap:8px;padding:4px 0}
 .pm-urow .pm-l{flex:1;min-width:0}
 .pm-urow select{width:auto;max-width:150px;min-height:38px;padding:4px 8px;font-size:14px}
+/* 파일 끌어다 놓기: 놓으면 들어갈 버튼·칸 표시 */
+.drop-on{outline:3px dashed #2f80ed;outline-offset:3px;border-radius:10px}
