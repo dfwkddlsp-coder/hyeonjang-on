@@ -107,23 +107,40 @@ function showPersonHistory(k,name,company,w){
 
 /* --- 장비 --- */
 const eqCat=t=>(String(t||'기타').split(/[(\s]/)[0]||'기타');
-/* 연락처 맞추기: 반입중 장비의 운전원 연락처를 근로자 대장(성명 같은 사람, 동명이인은 업체로 구분)의 연락처로 맞춤.
-   운전원은 로그인 번호 = 운전원 연락처로 본인 장비를 찾으므로 번호가 틀리면 점검을 못 함. 바꿀 목록을 먼저 보여 주고 확인해야 저장 */
-function eqPhoneSync(){
-  const dg=s=>String(s||'').replace(/\D/g,''),nm=s=>String(s||'').replace(/\s/g,''),uniq=l=>[...new Set(l.map(w=>dg(w.phone)))];
-  const chg=[],amb=[],none=[];
-  E.filter(e=>!e.outDate&&nm(e.operator)).forEach(e=>{
-    let c=W.filter(w=>nm(w.name)===nm(e.operator)&&/^\d{10,11}$/.test(dg(w.phone)));
-    if(uniq(c).length>1){const co=nm(e.company),by=c.filter(w=>co&&nm(w.company)&&(nm(w.company).includes(co)||co.includes(nm(w.company))));if(by.length)c=by}
+/* 운전원 연락처 점검: 반입중 장비의 운전원 연락처를 근로자 대장(성명 같은 사람, 동명이인은 업체로 구분)과 비교.
+   운전원은 로그인 번호 = 운전원 연락처로 본인 장비를 찾으므로 번호가 틀리면 점검을 못 함.
+   chg 근로자 대장과 다름(고칠 수 있음) · dup 같은 번호에 다른 이름(잘못된 데이터) · bad 번호 없음·형식 이상 · amb 동명이인 · none 근로자 대장에 없음 */
+const eqDg=s=>String(s||'').replace(/\D/g,''),eqNm=s=>String(s||'').replace(/\s/g,'');
+function eqPhoneCheck(){
+  const uniq=l=>[...new Set(l.map(w=>eqDg(w.phone)))],chg=[],amb=[],none=[],fix=new Map();
+  const act=E.filter(e=>!e.outDate&&eqNm(e.operator));
+  act.forEach(e=>{
+    let c=W.filter(w=>eqNm(w.name)===eqNm(e.operator)&&/^\d{10,11}$/.test(eqDg(w.phone)));
+    if(uniq(c).length>1){const co=eqNm(e.company),by=c.filter(w=>co&&eqNm(w.company)&&(eqNm(w.company).includes(co)||co.includes(eqNm(w.company))));if(by.length)c=by}
     const ph=uniq(c);
-    if(!ph.length)none.push(e);else if(ph.length>1)amb.push(e);else if(dg(e.phone)!==ph[0])chg.push([e,c[0].phone])});
+    if(!ph.length)none.push(e);else if(ph.length>1)amb.push(e);else if(eqDg(e.phone)!==ph[0]){chg.push([e,c[0].phone]);fix.set(e.id,ph[0])}});
+  const phOf=e=>fix.get(e.id)||eqDg(e.phone),by={};
+  act.forEach(e=>{const p=phOf(e);if(p)(by[p]=by[p]||[]).push(e)});
+  const dup=Object.entries(by).filter(([,es])=>new Set(es.map(e=>eqNm(e.operator))).size>1);
+  const bad=act.filter(e=>!/^01\d{8,9}$/.test(phOf(e)));
+  return {chg,amb,none,dup,bad,n:chg.length+dup.length+bad.length};
+}
+/* then: "운전원 계정 만들기"에서 부르면 고친 다음 계정 만들기로 이어감(문제가 없으면 바로) */
+function eqPhoneSync(then){
+  const {chg,amb,none,dup,bad,n}=eqPhoneCheck();
+  if(then&&!n)return then();
   const row=e=>`<b>${h(e.operator)}</b> · ${h(e.type||'')} ${h(e.plate||'')}${e.company?' · '+h(e.company):''}`;
-  openModal('운전원 연락처 맞추기',`<p class="small muted">반입중 장비의 운전원 연락처를 <b>근로자 대장</b>의 연락처로 맞춥니다. 운전원은 이 번호로 로그인해야 본인 장비를 점검할 수 있어요.</p>
-   ${chg.length?`<h3>바꿀 번호 ${chg.length}건</h3><div>${chg.map(([e,p])=>`<div style="padding:8px 0;border-bottom:1px solid var(--line)">${row(e)}<br><span class="small"><s class="muted">${h(e.phone||'없음')}</s> → <b>${h(p)}</b></span></div>`).join('')}</div>`:'<p><b>바꿀 번호가 없어요.</b> 근로자 대장과 모두 같아요.</p>'}
+  const red=t=>`<h3 style="color:var(--bad)">${t}</h3>`;
+  const go=[chg.length?`${chg.length}건 바꾸기`:'',then?'계정 만들기':''].filter(Boolean).join(' → ');
+  openModal(then?'운전원 계정 만들기 · 연락처 먼저 확인':'운전원 연락처 맞추기',`<p class="small muted">반입중 장비의 운전원 연락처를 <b>근로자 대장</b>과 비교합니다. 운전원은 이 번호로 로그인해야 본인 장비를 점검할 수 있어요.</p>
+   ${chg.length?`<h3>근로자 대장 번호로 바꿀 것 ${chg.length}건</h3><div>${chg.map(([e,p])=>`<div style="padding:8px 0;border-bottom:1px solid var(--line)">${row(e)}<br><span class="small"><s class="muted">${h(e.phone||'없음')}</s> → <b>${h(p)}</b></span></div>`).join('')}</div>`:'<p><b>근로자 대장과 다른 번호는 없어요.</b></p>'}
+   ${dup.length?`${red(`잘못됨: 같은 번호에 다른 이름 ${dup.length}건`)}<div class="small">${dup.map(([p,es])=>`${h(p)} — ${es.map(row).join(' / ')}`).join('<br>')}</div><p class="small muted">한 번호가 여러 운전원에게 적혀 있어요. 장비를 눌러 직접 고쳐 주세요. 고치기 전에는 이 번호로 계정을 만들지 않아요.</p>`:''}
+   ${bad.length?`${red(`잘못됨: 번호 없음·형식 이상 ${bad.length}건`)}<div class="small">${bad.map(e=>`${row(e)} · ${h(e.phone||'번호 없음')}`).join('<br>')}</div><p class="small muted">이 운전원은 계정을 만들 수 없어요. 장비를 눌러 번호를 고쳐 주세요.</p>`:''}
    ${amb.length?`<h3>확인 필요 ${amb.length}건 <span class="small muted">동명이인이라 고르지 않음 · 직접 수정</span></h3><div class="small">${amb.map(row).join('<br>')}</div>`:''}
    ${none.length?`<h3>근로자 대장에 없음 ${none.length}건 <span class="small muted">그대로 둠</span></h3><div class="small">${none.map(row).join('<br>')}</div>`:''}
-   ${chg.length?`<div class="row" style="margin-top:14px"><button class="btn" id="phGo" style="flex:1">${chg.length}건 바꾸기</button></div>`:''}`,b=>{
-    const g=$('#phGo',b);if(g)g.onclick=async()=>{g.disabled=true;for(const [e,p] of chg)await save('equipment',{...e,phone:p,updated:nowLocal()});closeModal();toast(`운전원 연락처 ${chg.length}건을 근로자 대장 번호로 맞췄어요`);R.equip()}})}
+   ${go?`<div class="row" style="margin-top:14px"><button class="btn" id="phGo" style="flex:1">${go}</button></div>`:''}`,b=>{
+    const g=$('#phGo',b);if(g)g.onclick=async()=>{g.disabled=true;for(const [e,p] of chg)await save('equipment',{...e,phone:p,updated:nowLocal()});closeModal();
+      if(chg.length)toast(`운전원 연락처 ${chg.length}건을 근로자 대장 번호로 맞췄어요`);R.equip();if(then)then()}})}
 R.equip=()=>{
   /* f: '' 반입중(기본 — 반출일자가 적힌 장비는 숨김) · 'out' 반출만 · 'all' 전체 · 'exp' 반입중 중 서류 만료·임박 */
   const q=R.equip.q||'',cat=R.equip.cat||'',f=R.equip.f||'';
@@ -131,8 +148,10 @@ R.equip=()=>{
   const byF=e=>f==='all'||(f==='out'?!!e.outDate:!e.outDate&&(f!=='exp'||['bad','warn'].includes(expState(e.inspect))||['bad','warn'].includes(expState(e.insurance))));
   const base=E.filter(byF),cats=[...new Set(base.map(e=>eqCat(e.type)))].sort();
   const list=base.filter(e=>(!cat||eqCat(e.type)===cat)&&(!q||norm(Object.values(e).join(' ')).includes(norm(q)))).sort((a,b)=>(+a.no||999)-(+b.no||999));
+  const pc=can('equip.add')&&can('equip.view')?eqPhoneCheck():{n:0};
   const outTag=e=>e.outDate?`<span class="badge">반출 ${h(e.outDate)}</span> `:'';
   V$().innerHTML=`<h1>장비 관리대장 <span class="badge">${inN}대</span>${outN&&f!=='out'&&f!=='all'?` <span class="small muted">반출 ${outN}대 숨김</span>`:''}</h1>
+  ${pc.n?`<div class="card" style="border:1.5px solid var(--bad)"><b style="color:var(--bad)">운전원 연락처 확인 필요 ${pc.n}건</b><div class="small" style="margin:4px 0 8px">${[pc.chg.length&&`근로자 대장과 다름 ${pc.chg.length}`,pc.dup.length&&`같은 번호에 다른 이름 ${pc.dup.length}`,pc.bad.length&&`번호 없음·형식 이상 ${pc.bad.length}`].filter(Boolean).join(' · ')} — 번호가 틀리면 운전원이 점검을 못 해요.</div><button class="btn sm" id="ephW">확인하고 고치기</button></div>`:''}
   <div class="card"><div class="row">${can('file.excel')?'<label class="btn"><i class="i i-import"></i> 엑셀 불러오기<input type="file" accept=".xls,.xlsx" multiple hidden id="ef"></label>':''}<button class="btn ghost" id="et">양식 다운로드</button><button class="btn ghost" id="ea"><i class="i i-plus"></i> 직접 추가</button><button class="btn line" id="ex">엑셀 저장</button>${can('equip.add')&&can('equip.view')?'<button class="btn line" id="eph">연락처 맞추기</button>':''}${can('set.users')?'<button class="btn line" id="eacc">운전원 계정 만들기</button>':''}</div>
   <div class="small muted" style="margin-top:8px">"장비 전담 관리자 지정서" 양식 그대로 올리면 됩니다. 같은 차량번호+운전원은 최신 내용으로 갱신.</div></div>
   <input class="inp big" id="eq" type="search" placeholder="차량번호 · 장비명 · 운전원 · 업체 · 전담관리자" value="${h(q)}" style="margin-bottom:10px">
@@ -144,7 +163,7 @@ R.equip=()=>{
   $('#eq').oninput=e=>{R.equip.q=e.target.value;clearTimeout(R.equip.t);R.equip.t=setTimeout(()=>{R.equip();const i=$('#eq');i.focus();i.setSelectionRange(i.value.length,i.value.length)},250)};
   $$('[data-c]').forEach(b=>b.onclick=()=>{R.equip.cat=b.dataset.c;R.equip()});
   $$('[data-f]').forEach(b=>b.onclick=()=>{R.equip.f=b.dataset.f;R.equip.cat='';R.equip()});
-  $('#et').onclick=tplEquip;$('#ex').onclick=()=>exportEquip([...E].sort((a,b)=>(+a.no||999)-(+b.no||999))) /* 엑셀 저장은 화면 필터와 무관하게 반출 포함 전체 */;$('#ea').onclick=()=>editEquip();const ep=$('#eph');if(ep)ep.onclick=eqPhoneSync;const ea=$('#eacc');if(ea)ea.onclick=()=>bulkUsers(true);
+  $('#et').onclick=tplEquip;$('#ex').onclick=()=>exportEquip([...E].sort((a,b)=>(+a.no||999)-(+b.no||999))) /* 엑셀 저장은 화면 필터와 무관하게 반출 포함 전체 */;$('#ea').onclick=()=>editEquip();const ep=$('#eph');if(ep)ep.onclick=eqPhoneSync;const ea=$('#eacc');if(ea)ea.onclick=()=>eqPhoneSync(()=>bulkUsers(true));const ew=$('#ephW');if(ew)ew.onclick=()=>eqPhoneSync();
   if($('#ef'))$('#ef').onchange=e=>importDialog('equipment',[...e.target.files]);bindItems();
 };
 function showEquip(id){

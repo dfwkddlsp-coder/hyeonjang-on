@@ -1,7 +1,7 @@
 // 현장ON — app version, bottom nav, view router (go), view registry R
 'use strict';
 /* ---------- views ---------- */
-const APP_VER='2026.10.15-4';
+const APP_VER='2026.10.15-5';
 /* 하위 화면 → 하단 탭 묶음 */
 const NAVOF={plans:'home',workers:'reg',equip:'reg',eqcheck:'reg',vuln:'reg',records:'settings'};
 const REG_TABS=[['workers','근로자'],['equip','장비'],['eqcheck','장비점검'],['vuln','취약근로자']];
