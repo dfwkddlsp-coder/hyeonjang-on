@@ -85,7 +85,7 @@ async function importFiles(kind,files,sync,pre){ // pre: 확인 화면에서 이
       const k=isW?wKey(o):eqKey(o);const ex=idx.get(k);
       if(color&&fl){o.outDate=o.outDate||(ex&&ex.outDate)||today();fillN++}
       if(ex){seen.add(ex.id);for(const f2 in o)if(o[f2])ex[f2]=o[f2];
-        if(!isW&&(ex.outByImport||color)&&!o.outDate){delete ex.outDate;delete ex.outByImport} // 다시 들어온 장비 · 색 기준에서 안 칠한 줄
+        if(!isW&&(ex.outByImport||color||sync)&&!o.outDate){delete ex.outDate;delete ex.outByImport} // 다시 들어온 장비 · 색 기준에서 안 칠한 줄 · 맞추기(파일이 기준: 반출일자 빈 줄은 반입중)
         if(regSig(ex)!==before.get(ex.id)){ex.src=f.name;ex.updated=nowLocal();updated++;touched.add(ex.id)}else same++}
       else{const n={id:uid(),...o,src:f.name,created:nowLocal()};cur.push(n);idx.set(k,n);seen.add(n.id);added++;touched.add(n.id)}
     }
