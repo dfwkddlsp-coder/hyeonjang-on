@@ -72,7 +72,8 @@ async function learnColumns(kind,learn){if(!can('set.excel')||!Object.keys(learn
 function importButtons(kind,files,host,pre,onRun){
   const has=(kind==='workers'?W:kind==='vuln'?VU:E).length;
   if(pre===null){host.innerHTML='<div class="hint" style="color:var(--bad)">불러올 수 있는 줄이 없습니다. 위에서 칸을 골라 주세요.</div>';return}
-  host.innerHTML=`
+  const fillN=kind==='equipment'&&pre?[...pre.values()].flat().filter(Boolean).reduce((n,r)=>n+(r.rows||[]).filter(o=>o._fill).length,0):0;
+  host.innerHTML=`${fillN?`<div class="hint" style="margin-bottom:10px"><b>색 칠한 줄 ${fillN}개</b>는 반출로, 색 없는 줄은 반입중으로 넣습니다. 같은 장비가 두 줄이면 색 없는 줄이 적용됩니다.</div>`:''}
    <div class="grid g2"><button class="btn" id="im">추가·갱신 (바뀐 것만 반영)</button>${has?`<button class="btn line" id="ir">현재 대장으로 맞추기</button>`:''}</div>
    <div class="small muted" style="margin-top:8px">어느 쪽이든 내용이 같은 ${kind==='equipment'?'장비':'사람'}는 그대로 두고, 지난 ${kind==='equipment'?'점검':kind==='vuln'?'상담·혈압':'적발·음주'} 기록과의 연결도 유지됩니다.${has?`<br><b>맞추기</b>는 파일에 없는 ${kind==='equipment'?'장비를 반출 처리':kind==='vuln'?'사람을 퇴사 처리':'사람을 대장에서 제외'}합니다.`:''}</div><div id="ires" style="margin-top:12px"></div>`;const b=host;
     const run=async rep=>{if(rep&&!confirm(`파일에 없는 ${kind==='equipment'?'장비는 반출 처리':kind==='vuln'?'사람은 퇴사 처리':'사람은 대장에서 제외'}됩니다. 계속할까요?`))return;if(onRun)await onRun();$('#ires').textContent='처리 중...';

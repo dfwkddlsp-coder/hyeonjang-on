@@ -45,14 +45,20 @@ function parseWorkbook(wb,FIELDS,minScore){
   /* 확인 화면용: 열마다 머리글 글자(두 줄 머리글은 합침), 원본 행, 머리글 위치 */
   const hrows=best.rows.slice(best.hr,best.start),nc=Math.max(0,...hrows.map(r=>r.length));
   const head=Array.from({length:nc},(_,c)=>hrows.map(r=>String(r[c]??'').replace(/\s+/g,' ').trim()).filter(Boolean).join(' / '));
-  return applyMap({sheet:best.sn,raw:best.rows,start:best.start,headRow:best.hr+1,head},{...best.map});
+  return applyMap({sheet:best.sn,raw:best.rows,start:best.start,headRow:best.hr+1,head,fill:rowFills(wb.Sheets[best.sn],best.rows.length,best.start)},{...best.map});
 }
+/* 셀 색 채우기: 줄마다 색이 칠해진 칸이 있는지 (흰색은 안 칠한 것으로 봄). 장비 대장은 색 칠한 줄 = 반출로 씀 */
+const cellFilled=c=>{const s=c&&c.s;if(!s||!s.patternType||s.patternType==='none')return false;const fg=s.fgColor||{};
+  if(fg.rgb&&/^(FF)?FFFFFF$/i.test(fg.rgb))return false;if(fg.theme===0&&!fg.tint)return false;return true};
+function rowFills(ws,n,start){if(!ws||!ws['!ref'])return [];const rg=XLSX.utils.decode_range(ws['!ref']),f=[];
+  for(let r=start;r<n;r++)for(let c=rg.s.c;c<=rg.e.c;c++)if(cellFilled(ws[XLSX.utils.encode_cell({r,c})])){f[r]=true;break}
+  return f}
 /* 열 연결(map: 항목 → 열 번호)로 행을 다시 뽑음. 확인 화면에서 사람이 열을 바꾸면 이걸로 다시 계산 */
 function applyMap(res,map){const out=[];
   for(let r=res.start;r<res.raw.length;r++){const row=res.raw[r];const o={};
-    for(const f in map)o[f]=String(row[map[f]]??'').trim();out.push(o)}
+    for(const f in map)o[f]=String(row[map[f]]??'').trim();if(res.fill&&res.fill[r])o._fill=true;out.push(o)}
   return Object.assign(res,{map,rows:out,fields:Object.keys(map)})}
-const readFile=f=>new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>{try{res(XLSX.read(fr.result,{type:'array'}))}catch(e){rej(e)}};fr.onerror=()=>rej(fr.error);fr.readAsArrayBuffer(f)});
+const readFile=f=>new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>{try{res(XLSX.read(fr.result,{type:'array',cellStyles:true}))}catch(e){rej(e)}};fr.onerror=()=>rej(fr.error);fr.readAsArrayBuffer(f)});
 const eqKey=e=>(norm(e.plate)||norm(e.company)+'|'+norm(e.type))+'|'+norm(e.operator);
 const wKey=w=>norm(w.name)+'|'+(norm(w.birth)||norm(w.company));
 
@@ -68,17 +74,22 @@ async function importFiles(kind,files,sync,pre){ // pre: 확인 화면에서 이
     let res;if(pre&&pre.has(f)){res=pre.get(f);if(Array.isArray(res))res=res[0]||null}else try{res=parseWorkbook(await readFile(f),FIELDS,isW?2:3)}catch(e){msgs.push(`${f.name}: 읽기 실패`);continue}
     if(res===false){msgs.push(`${f.name}: 읽기 실패`);continue}
     if(!res){msgs.push(`${f.name}: 머리글(${isW?'성명/소속':'장비명/차량번호'}) 행을 찾지 못함`);continue}
-    for(const o of res.rows){
+    /* 장비: 색 칠한 줄이 하나라도 있으면 색 기준 — 칠한 줄은 반출, 안 칠한 줄은 반입중. 같은 장비가 두 줄이면 안 칠한 줄이 이김(나중에 처리) */
+    const color=!isW&&res.rows.some(o=>o._fill);let fillN=0;
+    const rows=color?[...res.rows.filter(o=>o._fill),...res.rows.filter(o=>!o._fill)]:res.rows;
+    for(const o0 of rows){const o={...o0},fl=!!o._fill;delete o._fill;
+      if(color&&!fl)o.outDate='';
       const valid=isW?!!o.name:!!(o.type||o.plate||o.operator);if(!valid){continue}
       if(isW&&/^(성명|이름)$/.test(o.name)){continue}
       if(isW){if(!o.inDate&&o.hireY&&o.hireM)o.inDate=`${o.hireY}-${pad(o.hireM)}-${pad(o.hireD||1)}`;if(o.eduY||o.eduN)o.eduBasic=o.eduY?'이수':'미이수';['hireY','hireM','hireD','eduY','eduN'].forEach(k=>delete o[k])}
       const k=isW?wKey(o):eqKey(o);const ex=idx.get(k);
+      if(color&&fl){o.outDate=o.outDate||(ex&&ex.outDate)||today();fillN++}
       if(ex){seen.add(ex.id);for(const f2 in o)if(o[f2])ex[f2]=o[f2];
-        if(!isW&&ex.outByImport&&!o.outDate){delete ex.outDate;delete ex.outByImport} // 다시 들어온 장비
+        if(!isW&&(ex.outByImport||color)&&!o.outDate){delete ex.outDate;delete ex.outByImport} // 다시 들어온 장비 · 색 기준에서 안 칠한 줄
         if(regSig(ex)!==before.get(ex.id)){ex.src=f.name;ex.updated=nowLocal();updated++;touched.add(ex.id)}else same++}
       else{const n={id:uid(),...o,src:f.name,created:nowLocal()};cur.push(n);idx.set(k,n);seen.add(n.id);added++;touched.add(n.id)}
     }
-    msgs.push(`${f.name} [${res.sheet}] 인식 완료`);
+    msgs.push(`${f.name} [${res.sheet}] 인식 완료`);if(color)msgs.push(`색 칠한 줄 ${fillN}개는 반출, 나머지는 반입중으로 넣음`);
   }
   let removed=[],out=0;
   if(sync&&seen.size){
