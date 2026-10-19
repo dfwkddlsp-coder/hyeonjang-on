@@ -8,7 +8,7 @@ R.workers=()=>{
   <div class="small muted" style="margin-top:8px">업체별 작성 양식을 여러 개 한 번에 올려도 됩니다. 같은 성명+생년월일은 자동 병합.</div></div>
   <div class="row" style="margin-bottom:10px"><input class="inp grow" id="wq" type="search" placeholder="성명 · 업체 · 직종" value="${h(q)}"><select class="inp" id="wc" style="width:auto;max-width:220px"><option value="">전체 업체</option>${comps.map(c=>`<option ${c===co?'selected':''}>${h(c)}</option>`).join('')}</select></div>
   <div class="card list">${list.length?list.slice(0,400).map(w=>{const k=pkey(w.name,w.company);const n=strikesOf(k).length;const ban=isBanned(k);return `<div class="it" data-wid="${w.id}"><span class="dot ${ban?'d3':n?'d'+Math.min(n,3):'d0'}">${ban?'퇴출':n?n+'회':'—'}</span><div class="m"><b>${h(w.name)}</b> <span class="muted">${h(w.company||'')}</span>${vulnOf(w.name,w.company)?' <span class="badge bbad"><i class="i i-heart"></i> 취약</span>':''}<div class="small muted ell">${h(w.job||'')}${w.phone?' · '+h(w.phone):''}</div></div></div>`}).join('')+(list.length>400?`<div class="empty">${list.length-400}명 더 있음 — 검색으로 좁히세요</div>`:''):'<div class="empty">근로자 없음. 양식을 내려받아 작성 후 불러오세요.</div>'}</div>`;
-  $('#wq').oninput=e=>{R.workers.q=e.target.value;clearTimeout(R.workers.t);R.workers.t=setTimeout(()=>{R.workers();const i=$('#wq');i.focus();i.setSelectionRange(i.value.length,i.value.length)},250)};
+  bindSearch('#wq',v=>R.workers.q=v,()=>R.workers());
   $('#wc').onchange=e=>{R.workers.co=e.target.value;R.workers()};
   $('#wt').onclick=tplWorkers;$('#wx').onclick=()=>exportWorkers(list);$('#wa').onclick=()=>editWorker();
   if($('#wf'))$('#wf').onchange=e=>importDialog('workers',[...e.target.files]);bindItems();
@@ -161,7 +161,7 @@ R.equip=()=>{
   <div class="card list ph-only">${list.length?list.map(e=>e.outDate?eqItem(e).replace('<b>',()=>outTag(e)+'<b>'):eqItem(e)).join(''):'<div class="empty">장비 없음</div>'}</div>
   <div class="tbl-wrap pc-only"><table class="t"><tr><th>번호</th><th>장비명</th><th>차량번호</th><th>소속업체</th><th>운전원</th><th>연락처</th><th>반입</th><th>검사기간</th><th>보험</th><th>전담관리자</th><th>작업지휘자</th><th>신호수</th></tr>
   ${list.length?list.map(e=>`<tr class="click" data-eid="${e.id}"><td>${h(e.no)}</td><td><b>${h(e.type)}</b></td><td>${h(e.plate)}</td><td>${h(e.company)}</td><td>${h(e.operator)}</td><td>${h(e.phone)}</td><td>${h(e.inDate)}${e.outDate?'<br><span class="muted small">반출 '+h(e.outDate)+'</span>':''}</td><td>${expCell(e.inspect)}</td><td>${expCell(e.insurance)}</td><td>${h(e.manager)}</td><td>${h(e.commander)}</td><td>${h(e.signal)}</td></tr>`).join(''):'<tr><td colspan="12" class="empty">장비 없음</td></tr>'}</table></div>`;
-  $('#eq').oninput=e=>{R.equip.q=e.target.value;clearTimeout(R.equip.t);R.equip.t=setTimeout(()=>{R.equip();const i=$('#eq');i.focus();i.setSelectionRange(i.value.length,i.value.length)},250)};
+  bindSearch('#eq',v=>R.equip.q=v,()=>R.equip());
   $$('[data-c]').forEach(b=>b.onclick=()=>{R.equip.cat=b.dataset.c;R.equip()});
   $$('[data-f]').forEach(b=>b.onclick=()=>{R.equip.f=b.dataset.f;R.equip.cat='';R.equip()});
   $('#et').onclick=tplEquip;$('#ex').onclick=()=>exportEquip([...E].sort((a,b)=>(+a.no||999)-(+b.no||999))) /* 엑셀 저장은 화면 필터와 무관하게 반출 포함 전체 */;$('#ea').onclick=()=>editEquip();const ep=$('#eph');if(ep)ep.onclick=eqPhoneSync;const ea=$('#eacc');if(ea)ea.onclick=()=>eqPhoneSync(()=>bulkUsers(true));const ew=$('#ephW');if(ew)ew.onclick=()=>eqPhoneSync();

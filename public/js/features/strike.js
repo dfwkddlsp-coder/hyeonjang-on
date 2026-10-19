@@ -10,7 +10,7 @@ R.strike=(arg)=>{
   <div class="row" style="margin-bottom:10px"><input class="inp grow" id="sq" type="search" placeholder="성명 · 업체 · 위반내용 검색" value="${h(q)}"><button class="btn line" id="sx">엑셀 저장</button></div>
   <div class="card list">${list.length?list.slice(0,300).map(vItem).join(''):'<div class="empty">적발 기록 없음</div>'}</div>`;
   $('#nv').onclick=()=>go('strike','new');
-  $('#sq').oninput=e=>{R.strike.q=e.target.value;clearTimeout(R.strike.t);R.strike.t=setTimeout(()=>{R.strike();const i=$('#sq');i.focus();i.setSelectionRange(i.value.length,i.value.length)},250)};
+  bindSearch('#sq',v=>R.strike.q=v,()=>R.strike());
   $('#sx').onclick=()=>exportViolations(list);bindItems();
 };
 function strikeForm(preset){

@@ -91,7 +91,7 @@ R.vuln=()=>{
   <input class="inp big" id="uq" type="search" placeholder="성명 · 업체 · 공종 · 소견" value="${h(q)}" style="margin-bottom:10px">
   <div class="chips scroll" style="margin-bottom:12px"><button class="chip ${!tag?'on':''}" data-t="">전체 ${base.length}</button><button class="chip ${tag==='미상담'?'on':''}" data-t="미상담">사후상담 미실시 ${noC.length}</button>${tags.map(t=>`<button class="chip ${t===tag?'on':''}" data-t="${t}">${t} ${base.filter(p=>T.get(p.id).includes(t)).length}</button>`).join('')}<button class="chip ${ret?'on':''}" id="uret">퇴사자 포함</button></div>
   <div class="card list">${list.length?list.map(p=>vulnItem(p,T.get(p.id))).join(''):'<div class="empty">해당 없음. 명단 엑셀을 불러오세요.</div>'}</div>`;
-  $('#uq').oninput=e=>{R.vuln.q=e.target.value;clearTimeout(R.vuln.t);R.vuln.t=setTimeout(()=>{R.vuln();const i=$('#uq');i.focus();i.setSelectionRange(i.value.length,i.value.length)},250)};
+  bindSearch('#uq',v=>R.vuln.q=v,()=>R.vuln());
   $$('[data-t]').forEach(b=>b.onclick=()=>{R.vuln.tag=b.dataset.t;R.vuln()});$('#uret').onclick=()=>{R.vuln.ret=!ret;R.vuln()};
   $('#ut').onclick=tplVuln;$('#ux').onclick=()=>exportVuln(list);$('#ua').onclick=()=>editVuln();
   if($('#uf'))$('#uf').onchange=e=>importDialog('vuln',[...e.target.files]);bindItems();

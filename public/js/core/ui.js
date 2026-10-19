@@ -6,6 +6,14 @@ const NAV={modal:false,stale:false,skip:false};
 /* 열린 창이 닫혀도 되는지 정함(저장 안 한 사진·점검 등). false를 돌려주면 X·바깥 누르기·뒤로가기로 안 닫힘. 새 창을 열면 지워짐 */
 let MODAL_GUARD=null;
 function openModal(title,html,onMount){MODAL_GUARD=null;if(!NAV.modal){if(!NAV.stale)history.pushState({hj:'m',v:cur},'');NAV.stale=false;NAV.modal=true}document.documentElement.classList.add('no-scroll');$('#mTitle').textContent=title;$('#mBody').innerHTML=html;$('#modal').classList.remove('hidden');onMount&&onMount($('#mBody'))}
+/* 화면을 다시 그리는 검색창: 한글 조합 중에 다시 그리면 입력칸이 새로 만들어져 조합이 끊기고 자모가 따로 쳐짐(ㅇㅣㅇㅗㅏㅇ).
+   그래서 조합 중에는 그리지 않고, 조합이 끝나 잠깐(300ms) 더 안 치면 그림. 조합이 계속 이어져도 1초 동안 안 치면 그림
+   (그때는 글자가 완성된 상태). 그린 뒤 새 입력칸에 커서를 이어 둠 */
+function bindSearch(sel,set,render){const i=$(sel);if(!i)return;let t,composing=false;
+  const go=ms=>{clearTimeout(t);t=setTimeout(()=>{if(!i.isConnected)return;render();const n=$(sel);if(n){n.focus();const L=n.value.length;try{n.setSelectionRange(L,L)}catch(e){}}},ms)};
+  i.addEventListener('compositionstart',()=>{composing=true;clearTimeout(t)});
+  i.addEventListener('compositionend',()=>{composing=false;set(i.value);go(300)});
+  i.addEventListener('input',e=>{set(i.value);go(e.isComposing||composing?1000:300)})}
 function closeModal(fromPop){if(MODAL_GUARD&&!$('#modal').classList.contains('hidden')&&!MODAL_GUARD()){if(fromPop===true)history.pushState({hj:'m',v:cur},'');return}MODAL_GUARD=null;if(fromPop===true){NAV.modal=false;NAV.stale=false}else if(NAV.modal){NAV.modal=false;NAV.stale=true}document.documentElement.classList.remove('no-scroll');$('#modal').classList.add('hidden');$('#mBody').innerHTML=''}
 $('#mClose').onclick=()=>closeModal();
 addEventListener('popstate',e=>{

@@ -158,7 +158,7 @@ R.eqcheck=()=>{
   const setD=v=>{R.eqcheck.d=v;R.eqcheck()};
   $('#wPrev').onclick=()=>setD(addDays(mon,-7));$('#wNext').onclick=()=>setD(addDays(mon,7));if($('#wNow'))$('#wNow').onclick=()=>setD(t);
   $$('[data-ef]').forEach(b=>b.onclick=()=>{R.eqcheck.f=b.dataset.ef;R.eqcheck()});
-  if($('#eqq'))$('#eqq').oninput=e=>{R.eqcheck.q=e.target.value;clearTimeout(R.eqcheck.t);R.eqcheck.t=setTimeout(()=>{R.eqcheck();const i=$('#eqq');i.focus();i.setSelectionRange(i.value.length,i.value.length)},250)};
+  if($('#eqq'))bindSearch('#eqq',v=>R.eqcheck.q=v,()=>R.eqcheck());
   $$('[data-wk]').forEach(b=>b.onclick=()=>eqWeekForm(b.dataset.wk,mon));
   if($('#eqAdd'))$('#eqAdd').onclick=eqQuickAdd;
   $$('[data-wp]').forEach(b=>b.onclick=()=>eqWeekPhotoForm(b.dataset.wp,mon));
