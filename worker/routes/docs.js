@@ -1,5 +1,6 @@
 // Record sync: every record type is a JSON document in `docs`; deletes are soft so devices can sync them.
-import { body, fail, json } from '../lib/http.js';
+import { HttpError, body, fail, json, now, uid } from '../lib/http.js';
+import { requirePerm } from '../lib/perms.js';
 import { requireUser } from '../lib/session.js';
 import { STORES, checkUpdate, checkWrite, permsOf, syncRowFilter, syncStoreFilter } from '../lib/policy.js';
 import { extractBlobs, stampBase } from '../lib/storage.js';
@@ -27,10 +28,38 @@ async function sync({ req, env, url }) {
 }
 
 // POST /api/docs {docs:[{store,id,data}], import?, remove?:{store,ids}, replaceStores? (legacy)}
-async function write({ req, env, ctx }) {
+/* 거절된 저장(권한·크기·형식)은 rejectlog에 남김(동기화 안 함) — 사용자가 알림을 놓쳐도 운영자가 설정 → 저장 거절 기록에서 원인을 봄 */
+const REJECT_KEEP = 300;
+async function logReject(env, r, e) {
+  const t = await stampBase(env);
+  const data = { at: now(), userId: r.u.id, name: r.u.name, role: r.u.role, status: e.status, msg: String(e.message || '').slice(0, 200), import: r.import, docs: r.docs };
+  await env.DB.batch([
+    env.DB.prepare("INSERT INTO docs (store,id,data,deleted,created_by,updated_by,created_at,updated_at) VALUES ('rejectlog',?1,?2,0,?3,?3,?4,?4)").bind(uid(), JSON.stringify(data), r.u.id, t),
+    env.DB.prepare("DELETE FROM docs WHERE store='rejectlog' AND id NOT IN (SELECT id FROM docs WHERE store='rejectlog' ORDER BY created_at DESC LIMIT ?1)").bind(REJECT_KEEP),
+  ]);
+}
+async function write(c) {
+  try { return await writeInner(c); } catch (e) {
+    if (e instanceof HttpError && [400, 403, 413].includes(e.status) && c.rej) {
+      const p = logReject(c.env, c.rej, e).catch(() => {});
+      if (c.ctx) c.ctx.waitUntil(p); else await p;
+    }
+    throw e;
+  }
+}
+// GET /api/rejects — 저장 거절 기록 (최근 100건)
+async function listRejects({ req, env }) {
+  await requirePerm(req, env, 'rejects.view', '저장 거절 기록을 볼 권한이 없습니다');
+  const r = await env.DB.prepare("SELECT data FROM docs WHERE store='rejectlog' AND deleted=0 ORDER BY created_at DESC LIMIT 100").all();
+  return json({ items: r.results.map((x) => JSON.parse(x.data)) });
+}
+async function writeInner(c) {
+  const { req, env, ctx } = c;
   const u = await requireUser(req, env);
   const b = await body(req);
   const docs = Array.isArray(b.docs) ? b.docs : [];
+  const photoN = (o) => (JSON.stringify(o || {}).match(/data:image\//g) || []).length;
+  c.rej = { u, import: !!b.import, docs: docs.slice(0, 10).map((d) => ({ store: d.store, id: String(d.id || '').slice(0, 80), label: String((d.data && (d.data.plate || d.data.type || d.data.name || d.data.title)) || '').slice(0, 40), photos: photoN(d.data) })) };
   const replace = Array.isArray(b.replaceStores) ? b.replaceStores : [];
   const remove = b.remove && Array.isArray(b.remove.ids) && b.remove.ids.length ? b.remove : null;
   if (!docs.length && !replace.length && !remove) return json({ saved: [] });
@@ -138,5 +167,6 @@ async function remove({ req, env }) {
 export default [
   ['GET', '/api/sync', sync],
   ['POST', '/api/docs', write],
+  ['GET', '/api/rejects', listRejects],
   ['POST', '/api/docs/delete', remove],
 ];

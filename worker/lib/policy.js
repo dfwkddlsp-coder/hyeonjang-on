@@ -16,7 +16,7 @@ export const STORES = new Set(['workers', 'equipment', 'violations', 'alcohol', 
 export const REGISTER_STORES = new Set(['workers', 'equipment', 'vuln']); // replaced wholesale by Excel uploads
 const SCOPED_STORES = new Set(['plans', 'records']); // carry scope 'all' | 'staff' (운영자·관리자만)
 /** 동기화하지 않는 저장소 (운영자는 각각의 API로 봄) */
-const PRIVATE = "'feedback','aiuse','guestinv','pushkey','pushsub','pushpref','joinreq'";
+const PRIVATE = "'feedback','aiuse','guestinv','pushkey','pushsub','pushpref','joinreq','rejectlog'";
 /** 저장소마다 보려면 필요한 권한 */
 const VIEW = { violations: 'strike.view', alcohol: 'alc.view', workers: 'workers.view', vuln: 'vuln.view', plans: 'records.view', records: 'records.view' };
 const DRV_ID = /^(wkd|wpd)-/; // 운전원 점검 기록 (나머지 wk-·wp-·옛 기록은 관리자 점검)

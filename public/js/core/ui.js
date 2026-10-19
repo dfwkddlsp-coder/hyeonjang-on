@@ -3,8 +3,10 @@
 /* ---------- UI primitives ---------- */
 /* 화면·창을 브라우저 기록에 남겨서 뒤로가기가 앱 안에서 동작하게 함 */
 const NAV={modal:false,stale:false,skip:false};
-function openModal(title,html,onMount){if(!NAV.modal){if(!NAV.stale)history.pushState({hj:'m',v:cur},'');NAV.stale=false;NAV.modal=true}document.documentElement.classList.add('no-scroll');$('#mTitle').textContent=title;$('#mBody').innerHTML=html;$('#modal').classList.remove('hidden');onMount&&onMount($('#mBody'))}
-function closeModal(fromPop){if(fromPop===true){NAV.modal=false;NAV.stale=false}else if(NAV.modal){NAV.modal=false;NAV.stale=true}document.documentElement.classList.remove('no-scroll');$('#modal').classList.add('hidden');$('#mBody').innerHTML=''}
+/* 열린 창이 닫혀도 되는지 정함(저장 안 한 사진·점검 등). false를 돌려주면 X·바깥 누르기·뒤로가기로 안 닫힘. 새 창을 열면 지워짐 */
+let MODAL_GUARD=null;
+function openModal(title,html,onMount){MODAL_GUARD=null;if(!NAV.modal){if(!NAV.stale)history.pushState({hj:'m',v:cur},'');NAV.stale=false;NAV.modal=true}document.documentElement.classList.add('no-scroll');$('#mTitle').textContent=title;$('#mBody').innerHTML=html;$('#modal').classList.remove('hidden');onMount&&onMount($('#mBody'))}
+function closeModal(fromPop){if(MODAL_GUARD&&!$('#modal').classList.contains('hidden')&&!MODAL_GUARD()){if(fromPop===true)history.pushState({hj:'m',v:cur},'');return}MODAL_GUARD=null;if(fromPop===true){NAV.modal=false;NAV.stale=false}else if(NAV.modal){NAV.modal=false;NAV.stale=true}document.documentElement.classList.remove('no-scroll');$('#modal').classList.add('hidden');$('#mBody').innerHTML=''}
 $('#mClose').onclick=()=>closeModal();
 addEventListener('popstate',e=>{
   if(!$('#modal').classList.contains('hidden')){closeModal(true);return}

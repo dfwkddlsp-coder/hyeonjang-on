@@ -42,6 +42,10 @@ keep changes small and behavior-preserving unless the operator asks for more.
   설정 → 권한 screen picks it up automatically. Check it on the server (`requirePerm` / `P.has`) and in the UI
   (`can`). Fixed in code: operator has everything; only the operator touches operator accounts; nobody raises
   their own permissions.
+- **Hard-to-redo records** (photos, signed checklists): save with `saveConfirm` (waits for the server when online,
+  throws on rejection so the form stays open) and set `MODAL_GUARD` so back/close asks before losing input.
+  Rejected outbox records are never dropped: they go to the device's '저장 실패' box (`kv rejected`, badge) and the
+  server logs them in private store `rejectlog` (설정 → 안내 봇·의견·오류, perm `rejects.view`).
 - **Settings saves** send the whole shared doc; the server keeps keys the sender didn't include
   (`routes/docs.js`) so older app versions can't wipe newer keys.
 

@@ -153,6 +153,16 @@ await test('driver sees and checks only their own equipment', async () => {
   assert.equal((await M('docs', { docs: [doc('eqchecks', 'wkd-a' + tag, { equipId: eqMine })] })).s, 403, 'manager cannot write the driver check (by default)');
   assert.equal((await D('docs', { docs: [doc('violations', 'dv' + tag)] })).s, 403);
 });
+await test('저장 거절 기록: rejected writes are logged, only the operator reads them, never synced', async () => {
+  const id = 'wk-rj' + tag;
+  assert.equal((await D('docs', { docs: [doc('eqchecks', id, { equipId: eqMine })] })).s, 403);
+  await new Promise((r) => setTimeout(r, 300)); // 기록은 응답 뒤에 남김(waitUntil)
+  const r = await A('rejects');
+  assert.equal(r.s, 200);
+  assert.ok(r.j.items.some((x) => x.status === 403 && x.docs.some((d) => d.id === id)), 'the rejected write is in the log');
+  assert.equal((await M('rejects')).s, 403, 'manager cannot read it by default');
+  assert.equal((await syncAll(A)).j.docs.some((d) => d.store === 'rejectlog'), false, 'never synced');
+});
 await test('임시 출입 QR: staff opens it, many join until closed, guests touch only their own equipment', async () => {
   assert.equal((await U('guest/invite', { minutes: 30 })).s, 403, 'plain user cannot open a QR');
   const inv = (await M('guest/invite', { minutes: 30 })).j;

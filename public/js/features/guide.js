@@ -130,3 +130,15 @@ function bindGuideSettings(){
   $('#gbTry').onclick=()=>{const keepS=S.guide;S.guide=collect();openGuide();S.guide=keepS};
   $('#gbReset').onclick=()=>{if(!confirm('안내 봇 설정을 기본값으로 되돌릴까요? (저장을 눌러야 적용)'))return;G=JSON.parse(JSON.stringify(DEF.guide));fill()};
 }
+/* 저장 거절 기록 (권한 'rejects.view', 기본 운영자만): 서버가 받아 주지 않은 저장 — 누가·언제·무엇을·왜.
+   그 사람 폰의 '저장 실패'에 내용이 보관되므로, 원인을 고친 뒤 다시 보내기를 안내하면 됨 */
+{const f=R.settings;R.settings=(...a)=>{f(...a);if(!SERVER||!can('rejects.view'))return;
+  const RN={admin:'운영자',manager:'관리자',user:'사용자',driver:'장비운전원',guest:'임시 운전원'};
+  V$().insertAdjacentHTML('beforeend',`<section class="st" data-st="guide"><div class="card"><b>저장 거절 기록</b>
+    <div class="small muted" style="margin-top:4px">서버가 받아 주지 않은 저장이에요(권한·사진 크기 등). 내용은 그 사람 폰의 <b>저장 실패</b>에 보관돼요. 원인을 고친 뒤 다시 보내기를 안내하세요.</div>
+    <div class="list" id="rjBox" style="margin-top:6px"><div class="empty">불러오는 중…</div></div></div></section>`);
+  api('rejects').then(r=>{const bx=$('#rjBox');if(!bx)return;
+    bx.innerHTML=r.items.length?r.items.map(x=>`<div class="it"><div class="m"><b>${h(x.name||'')}</b> <span class="small muted">${h(RN[x.role]||x.role||'')} · ${h(fmtDT(new Date(x.at+9*3600e3).toISOString().slice(0,16)))}</span>
+      <div class="small" style="color:var(--bad)">${h(x.msg)} (${x.status})</div>
+      <div class="small muted">${(x.docs||[]).map(d=>`${h(RJ_NAME[d.store]||d.store)} ${h(d.label||'')}${d.photos?` · 사진 ${d.photos}장`:''}`).join(' / ')}${x.import?' · 대장 업로드':''}</div></div></div>`).join(''):'<div class="empty">거절된 저장이 없어요</div>'})
+    .catch(x=>{const bx=$('#rjBox');if(bx)bx.innerHTML=`<div class="empty">불러오지 못했어요: ${h(x.message)}</div>`})}}

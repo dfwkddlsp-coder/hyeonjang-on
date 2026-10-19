@@ -53,11 +53,14 @@ const Sync={busy:false,again:false,t:null,state:'',
     return true},
   /* 서버가 거절한 기록(권한 없음 등)이 전송 대기열을 영영 막지 않게: 묶음이 거절되면 하나씩 다시 보내고,
      그래도 거절된 기록은 대기열에서 빼고 알린 뒤 서버 내용으로 다시 받음 */
-  async send(chunk){let r;
+  async send(chunk,strict){let r;
     try{r=await api('docs',{docs:chunk.map(o=>({store:o.store,id:o.id,data:o.data}))})}
     catch(e){if(![400,403,413].includes(e.status))throw e;
       if(chunk.length>1){for(const o of chunk)await this.send([o]);return}
-      const o=chunk[0];await DB.del('outbox',o.k);if(STORE[o.store]){await DB.del(o.store,o.id);memDel(o.store,o.id)}await kvSet('lastSync',0);toast('저장되지 않음: '+e.message);return}
+      const o=chunk[0];await DB.del('outbox',o.k);await keepRejected(o,e.message);if(STORE[o.store]){await DB.del(o.store,o.id);memDel(o.store,o.id)}await kvSet('lastSync',0);badge();
+      if(strict)throw e;alert(`저장되지 않은 기록이 있어요: ${e.message}
+
+내용은 지우지 않고 '저장 실패'에 보관했어요. 화면 위 '저장 실패'를 눌러 확인하세요.`);return}
     for(const o of chunk){const now=await DB.req(DB.st('outbox','readonly').get(o.k));if(now&&now.ts===o.ts)await DB.del('outbox',o.k)}
     for(const d of r.saved)await applyDoc(d)},
   /* 처음 한 쪽은 마지막 동기화 1분 전부터 다시 받음: 동시에 저장된 기록은 늦게 확정돼도 더 앞선 시각을 달고
@@ -67,7 +70,30 @@ const Sync={busy:false,again:false,t:null,state:'',
       if(r.perms&&ME&&JSON.stringify(r.perms)!==JSON.stringify(ME.perms)){ME.perms=r.perms;await kvSet('me',ME);changed=true;if(typeof renderNav==='function')renderNav()}} // 권한이 바뀌면 화면에 바로
     await kvSet('lastSync',Math.max(since,last));return changed}
 };
+/* 서버가 거절한 기록은 버리지 않고 보관(kv 'rejected', 이 기기에만): 사유를 보고 다시 보내거나 버림 */
+async function keepRejected(o,msg){const box=(await kvGet('rejected'))||[];const it={k:o.k,store:o.store,id:o.id,data:o.data,msg,at:nowLocal()};
+  const i=box.findIndex(x=>x.k===o.k);if(i>=0)box[i]=it;else box.push(it);await kvSet('rejected',box)}
+/* 사진·점검처럼 다시 만들기 어려운 기록: 인터넷이 되면 서버 저장까지 기다림 → true. 연결이 안 되면 기기에 두고 나중에 보냄 → false.
+   서버가 거절하면 예외 → 화면을 닫지 말고 사유를 보여 줄 것 (기록은 '저장 실패'에도 보관됨) */
+async function saveConfirm(store,obj){await save(store,obj);if(!SERVER||!navigator.onLine)return false;clearTimeout(Sync.t);
+  try{const o=await DB.req(DB.st('outbox','readonly').get(store+'|'+obj.id));if(!o)return true;await Sync.send([o],true);return true}
+  catch(e){if(e.status)throw e;return false}finally{Sync.soon()}}
+function saveRejectedAlert(x){alert(`저장되지 않았어요: ${x.message}
+
+입력한 내용은 이 화면에 그대로 있어요. 권한이나 장비 정보 문제일 수 있으니 관리자에게 알려 주세요.`)}
+const RJ_NAME={eqchecks:'장비점검',equipment:'장비',workers:'근로자',violations:'삼진아웃',alcohol:'음주측정',records:'기록',vuln:'취약근로자',plans:'문서'};
+async function showRejected(){const box=(await kvGet('rejected'))||[];
+  const ph=x=>(JSON.stringify(x.data||{}).match(/data:image\//g)||[]).length;
+  openModal('저장 실패',`<p class="small muted">서버가 받아 주지 않은 기록이에요. 사유를 확인하고, 권한·장비 정보가 고쳐지면 <b>다시 보내기</b>를 누르세요. 필요 없으면 버리세요. 이 기기에만 보관돼요.</p>
+    ${box.length?box.map((x,i)=>`<div class="card"><b>${h(RJ_NAME[x.store]||x.store)}</b> ${h((x.data&&(x.data.plate||x.data.type||x.data.name||x.data.title))||'')} <span class="small muted">${h(String(x.at||'').replace('T',' '))}${ph(x)?` · 사진 ${ph(x)}장`:''}</span>
+      <div class="small" style="color:var(--bad);margin:4px 0 8px">${h(x.msg)}</div><div class="row" style="gap:6px"><button class="btn sm" data-rs="${i}">다시 보내기</button><button class="btn sm line" data-rd="${i}">버리기</button></div></div>`).join(''):'<p>보관된 기록이 없어요.</p>'}`,b=>{
+    $$('[data-rs]',b).forEach(x=>x.onclick=async()=>{const it=box[+x.dataset.rs];box.splice(+x.dataset.rs,1);await kvSet('rejected',box);
+      if(STORE[it.store]){await DB.put(it.store,it.data);memPut(it.store,it.data)}await DB.put('outbox',{k:it.k,store:it.store,id:it.id,data:it.data,ts:Date.now()});
+      closeModal();toast('다시 보내는 중… 또 거절되면 다시 여기에 보관돼요');Sync.soon();badge()});
+    $$('[data-rd]',b).forEach(x=>x.onclick=async()=>{if(!confirm('이 기록을 버릴까요? 되돌릴 수 없어요.'))return;box.splice(+x.dataset.rd,1);await kvSet('rejected',box);badge();showRejected()})})}
 async function badge(){const el=$('#netBadge');if(!SERVER){el.textContent=navigator.onLine?'온라인':'오프라인 · 기기 저장';return}
+  const rj=((await kvGet('rejected'))||[]).length;el.onclick=rj?showRejected:null;el.style.cursor=rj?'pointer':'';el.style.color=rj?'var(--bad)':'var(--sub)';
+  if(rj){el.textContent=`저장 실패 ${rj}`;return}
   const n=(await DB.all('outbox')).length;el.textContent=!navigator.onLine||Sync.state==='off'?(n?`오프라인 · 전송 대기 ${n}`:'오프라인'):(n?`전송 대기 ${n}`:'동기화됨')}
 /* 운영자 대장 업로드: 바뀐 것만 200건씩 서버로. removeIds = 대장에서 뺄 기록 (근로자만) */
 async function pushImport(store,docs,removeIds=[]){

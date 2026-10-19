@@ -81,6 +81,7 @@ const isMine=e=>!!S.inspector&&norm(e.manager)===norm(S.inspector);
 /* 점검은 둘로 따로: 관리자 점검(mgr — 운영자·관리자·사용자)과 운전원 점검(drv — 장비운전원·임시 운전원).
    기록이 따로라 한쪽이 체크한 것이 다른 쪽 점검표에 뜨지 않음. tr을 안 주면 내 쪽 */
 const myTrack=()=>can('eq.drv')&&!can('eq.mgr')?'drv':'mgr'; // 운전원 점검만 할 수 있으면 운전원 쪽
+const eqCanCheck=()=>can('eq.mgr')||can('eq.drv'); // 둘 다 없으면 점검표·사진은 보기만 (저장해도 서버가 거절하므로 버튼을 안 보임)
 const weekRecId=(eid,mon,tr=myTrack())=>`${tr==='drv'?'wkd':'wk'}-${eid}-${mon}`;
 const weekPhotoId=(eid,mon,tr=myTrack())=>`${tr==='drv'?'wpd':'wp'}-${eid}-${mon}`;
 const eqWeekRec=(eid,mon,tr)=>EC.find(c=>c.id===weekRecId(eid,mon,tr)&&!c.void);
@@ -170,7 +171,7 @@ R.eqcheck=()=>{
 
 /* 주간 점검표: 항목 × 월~토 표에서 칸을 눌러 ○ → × → - → 빈칸 */
 function eqWeekForm(eid,mon,fresh,tr){
-  tr=tr||myTrack();const ro=tr!==myTrack(),drvT=tr==='drv'; // ro: 관리자가 운전원 점검을 볼 때 (고칠 수 없음)
+  tr=tr||myTrack();const ro=tr!==myTrack()||!eqCanCheck(),drvT=tr==='drv'; // ro: 관리자가 운전원 점검을 볼 때 (고칠 수 없음)
   const e=E.find(x=>x.id===eid);if(!e)return;const prev=eqWeekRec(eid,mon,tr);const items=prev&&!fresh?eqWeekItems(e,prev):eqItemsFor(e),days=weekDays(mon),t=today();
   const st={marks:{},notes:{...(prev&&prev.notes||{})}};
   for(const it of items)st.marks[it.t]=[...((prev&&prev.marks&&prev.marks[it.t])||['','','','','',''])];
@@ -194,9 +195,11 @@ function eqWeekForm(eid,mon,fresh,tr){
       const box=$('#wkNotes',b);const keep={};$$('[data-note]',box).forEach(i=>keep[i.dataset.note]=i.value);Object.assign(st.notes,keep);
       box.innerHTML=bad.length?`<div class="card"><b style="color:var(--bad)">비고 (부적합 조치사항 · 기타의견) — 필수</b>${bad.map(it=>`<label class="f">${items.indexOf(it)+1}. ${h(it.t)} (${st.marks[it.t].map((v,i)=>v==='X'||v==='E'?WD6[i]+' '+MARK_TXT[v]:'').filter(Boolean).join(', ')})</label><input class="inp" data-note="${h(it.t)}" value="${h(st.notes[it.t]||'')}" placeholder="${st.marks[it.t].includes('X')?'부적합 내용·조치사항':'의견 내용'}">`).join('')}</div>`:'';
       $$('[data-note]',box).forEach(i=>i.oninput=()=>st.notes[i.dataset.note]=i.value)};
-    $$('.wkc',b).forEach(x=>x.onclick=()=>{const a=st.marks[items[+x.dataset.r].t],c=+x.dataset.c;a[c]=NEXT[a[c]];paint()});
-    $$('.wkh',b).forEach(x=>x.onclick=()=>{const c=+x.dataset.col;items.forEach(it=>{if(!st.marks[it.t][c])st.marks[it.t][c]='O'});paint()});
-    if(ro){$$('.wkc,.wkh',b).forEach(x=>x.disabled=true)}else $('#wkAll',b).onclick=()=>{days.forEach((d,c)=>{if(d<=t)items.forEach(it=>{if(!st.marks[it.t][c])st.marks[it.t][c]='O'})});paint()};
+    let dirty=false;
+    $$('.wkc',b).forEach(x=>x.onclick=()=>{const a=st.marks[items[+x.dataset.r].t],c=+x.dataset.c;a[c]=NEXT[a[c]];dirty=true;paint()});
+    $$('.wkh',b).forEach(x=>x.onclick=()=>{const c=+x.dataset.col;items.forEach(it=>{if(!st.marks[it.t][c])st.marks[it.t][c]='O'});dirty=true;paint()});
+    if(ro){$$('.wkc,.wkh',b).forEach(x=>x.disabled=true)}else $('#wkAll',b).onclick=()=>{days.forEach((d,c)=>{if(d<=t)items.forEach(it=>{if(!st.marks[it.t][c])st.marks[it.t][c]='O'})});dirty=true;paint()};
+    if(!ro)MODAL_GUARD=()=>!dirty||confirm('저장하지 않은 점검 내용이 있어요. 닫으면 사라집니다. 닫을까요?');
     paint();if(ro){$('#wkSig',b).innerHTML=prev&&prev.sig?`<div class="small muted">서명</div><img src="${prev.sig}" style="max-width:100%;height:90px">`:'';return}
     const wf=$('#wkF',b);if(wf)wf.onchange=async()=>{if(prev&&!confirm('양식을 바꾸면 이번 주 체크 중 같은 이름의 항목만 남습니다. 바꿀까요?')){wf.value=eqFormOf(e)?eqFormOf(e).k:'base';return}
       await save('equipment',{...e,formK:wf.value});closeModal();toast('점검표 양식을 바꿨습니다');eqWeekForm(eid,mon,true)};
@@ -209,9 +212,11 @@ function eqWeekForm(eid,mon,fresh,tr){
       const bad=items.find(it=>st.marks[it.t].some(v=>v==='X'||v==='E')&&!String(st.notes[it.t]||'').trim());if(bad){toast(`비고를 꼭 적어주세요: ${bad.t}`);const i=$(`[data-note="${CSS.escape(bad.t)}"]`,b);if(i)i.focus();return}
       const by=$('#wkBy').value.trim();if(!by)return toast('점검자 이름을 입력하세요');if(sig.isEmpty())return toast('서명이 필요합니다');
       const notes={};items.forEach(it=>{if(st.marks[it.t].some(v=>v==='X'||v==='E'))notes[it.t]=String(st.notes[it.t]||'').trim()});
-      await save('eqchecks',{id:weekRecId(eid,mon,tr),kind:'week',track:tr,week:mon,equipId:e.id,type:e.type||'',plate:e.plate||'',company:e.company||'',manager:e.manager||'',
-        marks:Object.fromEntries(items.map(it=>[it.t,st.marks[it.t]])),itemList:items.map(it=>it.t),form:eqFormName(e),notes,remark:$('#wkR').value.trim(),inspector:by,sig:sig.data(),created:prev?prev.created:nowLocal(),updated:nowLocal()});
-      closeModal();toast(items.every(it=>st.marks[it.t].every(Boolean))?'주간 점검 완료':items.some(it=>st.marks[it.t].includes('X'))?'저장됨 — 부적합 항목 조치를 확인하세요':'주간 점검표 저장됨');R[cur]();
+      const sv=$('#wkSave',b);let ok;sv.disabled=true;sv.textContent='서버에 저장 중…';
+      try{ok=await saveConfirm('eqchecks',{id:weekRecId(eid,mon,tr),kind:'week',track:tr,week:mon,equipId:e.id,type:e.type||'',plate:e.plate||'',company:e.company||'',manager:e.manager||'',
+        marks:Object.fromEntries(items.map(it=>[it.t,st.marks[it.t]])),itemList:items.map(it=>it.t),form:eqFormName(e),notes,remark:$('#wkR').value.trim(),inspector:by,sig:sig.data(),created:prev?prev.created:nowLocal(),updated:nowLocal()})}
+      catch(x){sv.disabled=false;sv.textContent='다시 저장';return saveRejectedAlert(x)}
+      MODAL_GUARD=null;closeModal();if(!ok)toast('기기에 저장됨 · 인터넷이 연결되면 서버로 보냅니다');else toast(items.every(it=>st.marks[it.t].every(Boolean))?'주간 점검 완료':items.some(it=>st.marks[it.t].includes('X'))?'저장됨 — 부적합 항목 조치를 확인하세요':'주간 점검표 저장됨');R[cur]();
     };
   });
 }
@@ -220,9 +225,9 @@ function eqWeekForm(eid,mon,fresh,tr){
 function eqWeekPhotoForm(eid,mon,tr){
   tr=tr||myTrack();
   const e=E.find(x=>x.id===eid);if(!e)return;const prev=eqWeekPhoto(eid,mon,tr);const slots=eqSlots(e);
-  if(tr!==myTrack()){ // 관리자가 운전원 사진을 볼 때: 보기만
+  if(tr!==myTrack()||!eqCanCheck()){ // 관리자가 운전원 사진을 볼 때, 점검 권한이 없을 때: 보기만
     const ph=((prev&&prev.photos)||[]);
-    return openModal(`운전원 사진 (보기) · ${eqName(e)}`,`<div class="small muted" style="margin-bottom:8px">${weekLabel(mon)} · ${h(prev&&prev.by||'')} ${prev?fmtDT(prev.updated||prev.created):''}</div><div class="photos">${ph.map(p=>`<div class="ph"><a href="${h(p.src)}" target="_blank" rel="noopener"><img src="${h(p.src)}"></a><div class="small muted">${h(p.slot||'')}</div></div>`).join('')||'<div class="empty">사진이 없습니다</div>'}</div>`)}
+    return openModal(`${tr==='drv'?'운전원':'주간'} 사진 (보기) · ${eqName(e)}`,`<div class="small muted" style="margin-bottom:8px">${weekLabel(mon)} · ${h(prev&&prev.by||'')} ${prev?fmtDT(prev.updated||prev.created):''}</div><div class="photos">${ph.map(p=>`<div class="ph"><a href="${h(p.src)}" target="_blank" rel="noopener"><img src="${h(p.src)}"></a><div class="small muted">${h(p.slot||'')}</div></div>`).join('')||'<div class="empty">사진이 없습니다</div>'}</div>`)}
   const st={};for(const p of (prev&&prev.photos)||[])if(p.slot)st[p.slot]=p.src;
   let target=null;
   openModal(`주간 사진 · ${eqName(e)}`,`<div class="card"><b>${weekLabel(mon)}</b> <span class="muted small">(${md(mon)}~${md(addDays(mon,5))})</span>
@@ -241,13 +246,17 @@ function eqWeekPhotoForm(eid,mon,tr){
       $$('[data-gal]',b).forEach(x=>x.onclick=()=>{target=slots[+x.dataset.gal].t;withGalleryConsent(()=>$('#wpGalIn').click())});
       $$('[data-rm]',b).forEach(x=>x.onclick=()=>{delete st[slots[+x.dataset.rm].t];draw()});
     };draw();
-    const take=async ev=>{const fl=ev.target.files[0];ev.target.value='';if(!fl||!target)return;try{st[target]=await compressImg(fl);draw()}catch(x){toast('사진 처리 실패')}};
+    let dirty=false;MODAL_GUARD=()=>!dirty||confirm('저장하지 않은 사진이 있어요. 닫으면 사라집니다. 닫을까요?');
+    $('#wpSlots',b).addEventListener('click',ev=>{if(ev.target.closest('[data-rm]'))dirty=true});
+    const take=async ev=>{const fl=ev.target.files[0];ev.target.value='';if(!fl||!target)return;try{st[target]=await compressImg(fl);dirty=true;draw()}catch(x){toast('사진 처리 실패')}};
     $('#wpCam',b).onchange=take;$('#wpGalIn',b).onchange=take;
     const del=$('#wpDel',b);if(del)del.onclick=async()=>{if(!confirm('이 주의 사진을 모두 삭제할까요?'))return;try{await remove('eqchecks',prev.id);closeModal();R[cur]()}catch(x){toast(x.message)}};
     $('#wpSave',b).onclick=async()=>{const photos=slots.filter(s=>st[s.t]).map(s=>({slot:s.t,cap:s.t,src:st[s.t]}));if(!photos.length)return toast('사진을 1장 이상 올려주세요');
-      await save('eqchecks',{id:weekPhotoId(eid,mon,tr),kind:'weekPhoto',track:tr,week:mon,equipId:e.id,type:e.type||'',plate:e.plate||'',company:e.company||'',manager:e.manager||'',
-        photos,by:S.inspector||'',created:prev?prev.created:nowLocal(),updated:nowLocal()});
-      closeModal();toast(`${weekLabel(mon)} 사진 ${photos.length}/${slots.length} 저장됨`);R[cur]()};
+      const sv=$('#wpSave',b);let ok;sv.disabled=true;sv.textContent='서버에 저장 중…';
+      try{ok=await saveConfirm('eqchecks',{id:weekPhotoId(eid,mon,tr),kind:'weekPhoto',track:tr,week:mon,equipId:e.id,type:e.type||'',plate:e.plate||'',company:e.company||'',manager:e.manager||'',
+        photos,by:S.inspector||'',created:prev?prev.created:nowLocal(),updated:nowLocal()})}
+      catch(x){sv.disabled=false;sv.textContent='다시 저장';return saveRejectedAlert(x)}
+      MODAL_GUARD=null;closeModal();toast(ok?`${weekLabel(mon)} 사진 ${photos.length}/${slots.length} 서버에 저장됨`:`사진 ${photos.length}장 기기에 저장됨 · 인터넷이 연결되면 서버로 보냅니다`);R[cur]()};
   });
 }
 
