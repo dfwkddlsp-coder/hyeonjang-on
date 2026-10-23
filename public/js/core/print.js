@@ -4,7 +4,7 @@
 /* 각 장을 A4 한 장(인쇄 영역 190x277mm)에 맞게 자동 축소 */
 async function printPages(pages){
   const P=$('#print');
-  P.innerHTML=pages.map(p=>`<div class="pg${/class="doc eqw/.test(p)?' land':''}">${p}</div>`).join('');
+  P.innerHTML=pages.map(p=>`<div class="pg${/class="doc eqw/.test(p)?' land':/class="doc psheet/.test(p)?' ps':''}">${p}</div>`).join('');
   P.style.cssText='display:block;position:absolute;left:-10000px;top:0';
   await Promise.all($$('img',P).map(i=>i.complete?0:new Promise(r=>{i.onload=i.onerror=r})));
   /* 내용이 한 장 상자보다 크면(높이·너비) 그 장만 비율 축소 */

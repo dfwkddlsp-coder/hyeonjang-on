@@ -183,15 +183,15 @@ table.t tr.click:hover td{background:#f8fafc}
 .stamp.sm{width:46px;height:46px;font-size:13px;vertical-align:middle}
 .doc.eqw{position:relative}
 .stamp.doc{position:absolute;right:4mm;top:0;width:22mm;height:22mm;font-size:15pt;border-width:.9mm;box-shadow:inset 0 0 0 .7mm #fff,inset 0 0 0 1.2mm #d12a1f}
-/* 사진대지: 칸 크기 고정, 사진은 칸을 꽉 채움 */
+/* 사진대지: 칸 크기 고정, 사진은 칸을 꽉 채움. 칸 높이 53mm = 두 묶음이 출력 상자(258mm)에 줄이지 않고 들어가는 크기 */
 .doc .pst{width:100%;border-collapse:collapse;table-layout:fixed;margin:0 0 4mm}
 .doc .pst td,.doc .pst th{border:1px solid #000;padding:0;width:auto}
-.doc .pst .pc{height:62mm}
-.doc .pst .pw{position:relative;width:100%;height:62mm;overflow:hidden;background:#fff}
+.doc .pst .pc{height:53mm}
+.doc .pst .pw{position:relative;width:100%;height:53mm;overflow:hidden;background:#fff}
 .doc .pst .pw img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .doc .pst tr.cap th{background:#eee;font-size:10.5pt;padding:1.6mm 1mm;text-align:center}
 .doc .pst tr.cap td{padding:1.6mm 2mm;font-size:10.5pt}
-.doc .pst .pempty{height:132mm;text-align:center;font-size:12pt}
+.doc .pst .pempty{height:114mm;text-align:center;font-size:12pt}
 .doc.psheet h1{margin:0 0 2mm}.doc.psheet .pl{margin:0 0 2mm}
 .doc .pgrid>div{position:relative}.doc .pcap{position:absolute;left:0;bottom:0;background:rgba(255,255,255,.85);font-size:8.5pt;padding:.5mm 1.5mm;border-top-right-radius:1.5mm}
 .ecopt{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px}
@@ -328,6 +328,9 @@ body.is-home .card{background:var(--tile);border-radius:22px;box-shadow:none}
    A4 꽉 차게 만들면 오른쪽이 잘리고 다음 장으로 넘어감 → 어느 브라우저 여백에도 들어가는 178×258mm(가로 260×176mm) */
 #print .pg{width:178mm;height:258mm;margin:0 auto;padding:0;box-sizing:border-box;overflow:hidden;background:#fff;position:relative}
 #print .pg.land{width:260mm;height:176mm;page:land}
+/* 사진대지 장: 종이 위아래 가운데 (위 여백 = (297-258)/2). @page margin을 무시하는 브라우저(아이폰 사파리)는 자기 여백 그대로 */
+#print .pg.ps{page:ps}
+@page ps{size:A4;margin:19.5mm 0 0}
 #print .pg>.doc{transform-origin:top left;max-width:none;width:100%}
 @page land{size:A4 landscape;margin:0}
 @media print{
