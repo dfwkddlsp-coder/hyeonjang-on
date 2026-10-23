@@ -6,14 +6,25 @@ const NAV={modal:false,stale:false,skip:false};
 /* 열린 창이 닫혀도 되는지 정함(저장 안 한 사진·점검 등). false를 돌려주면 X·바깥 누르기·뒤로가기로 안 닫힘. 새 창을 열면 지워짐 */
 let MODAL_GUARD=null;
 function openModal(title,html,onMount){MODAL_GUARD=null;if(!NAV.modal){if(!NAV.stale)history.pushState({hj:'m',v:cur},'');NAV.stale=false;NAV.modal=true}document.documentElement.classList.add('no-scroll');$('#mTitle').textContent=title;$('#mBody').innerHTML=html;$('#modal').classList.remove('hidden');onMount&&onMount($('#mBody'))}
-/* 화면을 다시 그리는 검색창: 한글 조합 중에 다시 그리면 입력칸이 새로 만들어져 조합이 끊기고 자모가 따로 쳐짐(ㅇㅣㅇㅗㅏㅇ).
-   그래서 조합 중에는 그리지 않고, 조합이 끝나 잠깐(300ms) 더 안 치면 그림. 조합이 계속 이어져도 1초 동안 안 치면 그림
-   (그때는 글자가 완성된 상태). 그린 뒤 새 입력칸에 커서를 이어 둠 */
-function bindSearch(sel,set,render){const i=$(sel);if(!i)return;let t,composing=false;
-  const go=ms=>{clearTimeout(t);t=setTimeout(()=>{if(!i.isConnected)return;render();const n=$(sel);if(n){n.focus();const L=n.value.length;try{n.setSelectionRange(L,L)}catch(e){}}},ms)};
-  i.addEventListener('compositionstart',()=>{composing=true;clearTimeout(t)});
-  i.addEventListener('compositionend',()=>{composing=false;set(i.value);go(300)});
-  i.addEventListener('input',e=>{set(i.value);go(e.isComposing||composing?1000:300)})}
+/* 검색창이 있는 화면을 검색창은 그대로 둔 채 다시 그림: 새 화면을 보이지 않는 #view에 그린 뒤(이벤트도 그쪽에 연결됨),
+   입력 중인 검색창과 그 바깥 상자들은 남기고 나머지만 새 내용으로 갈아 끼움. 검색창이 한 번도 빠지지 않아
+   키보드가 닫혔다 열리거나 한글 조합이 끊기거나(ㅇㅣㅇㅗㅏㅇ) 화면이 깜빡이지 않음. 구조가 다르면 통째로 바꿈 */
+function softRender(render,sel){const L=V$(),oi=L&&$(sel,L);if(!oi)return render();
+  const N=document.createElement('div');N.id='view';N.className=L.className;N.style.display='none';L.id='';L.parentNode.insertBefore(N,L);
+  try{render()}finally{L.id='view'}
+  const ni=$(sel,N),pa=[],pb=[];for(let x=oi;x&&x!==L;x=x.parentNode)pa.unshift(x);for(let x=ni;x&&x!==N;x=x.parentNode)pb.unshift(x);
+  if(!ni||pa.length!==pb.length||pa.some((x,k)=>x.tagName!==pb[k].tagName)){L.replaceChildren(...N.childNodes);N.remove();return}
+  let A=L,B=N;
+  pa.forEach((a,k)=>{const b=pb[k],kids=[...B.childNodes],j=kids.indexOf(b);
+    if(a!==oi){[...a.attributes].forEach(at=>{if(!b.hasAttribute(at.name))a.removeAttribute(at.name)});[...b.attributes].forEach(at=>a.setAttribute(at.name,at.value))}
+    [...A.childNodes].forEach(c=>{if(c!==a)c.remove()});
+    kids.slice(0,j).forEach(c=>A.insertBefore(c,a));kids.slice(j+1).forEach(c=>A.appendChild(c));
+    A=a;B=b});
+  L.className=N.className;N.remove()}
+/* 화면을 다시 그리는 검색창: 칠 때마다(0.2초 모아서) 결과를 새로 그리되 검색창 자체는 건드리지 않음(softRender) */
+function bindSearch(sel,set,render){const i=$(sel);if(!i)return;let t;
+  const go=()=>{clearTimeout(t);t=setTimeout(()=>{if(i.isConnected)softRender(render,sel)},200)};
+  i.addEventListener('input',()=>{set(i.value);go()});i.addEventListener('compositionend',()=>{set(i.value);go()})}
 function closeModal(fromPop){if(MODAL_GUARD&&!$('#modal').classList.contains('hidden')&&!MODAL_GUARD()){if(fromPop===true)history.pushState({hj:'m',v:cur},'');return}MODAL_GUARD=null;if(fromPop===true){NAV.modal=false;NAV.stale=false}else if(NAV.modal){NAV.modal=false;NAV.stale=true}document.documentElement.classList.remove('no-scroll');$('#modal').classList.add('hidden');$('#mBody').innerHTML=''}
 $('#mClose').onclick=()=>closeModal();
 addEventListener('popstate',e=>{
