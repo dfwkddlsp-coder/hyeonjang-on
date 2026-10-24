@@ -11,7 +11,7 @@ function lockScreen(){return new Promise(res=>{if(!S.pin)return res();const d=do
   if(SERVER){const sv=Object.keys(STORE).join(',');if(await kvGet('storeSet')!==sv){await kvSet('lastSync',0);await kvSet('storeSet',sv)}}
   await lockScreen();
   $('#siteName').textContent=S.site;renderNav();badge();gbFab();pushResync();
-  {const g=$('#gearBtn');g.hidden=!can('set.site');g.onclick=()=>go('settings','site')}
+  {const g=$('#gearBtn');g.hidden=false;g.onclick=()=>go('settings',can('set.site')?'site':'me')} // 설정은 누구나(최소 내 정보). 홈에서는 아래 메뉴가 숨겨져 이 버튼이 유일한 길
   $('#brandHome').onclick=e=>{e.preventDefault();if($('#modal').classList.contains('hidden'))go('home');else{closeModal();go('home')}};
   addEventListener('online',()=>{badge();Sync.run()});addEventListener('offline',badge);
   if(SERVER){purgeVulnIfHidden();Sync.run();setInterval(()=>{if(document.visibilityState==='visible')Sync.run()},30000);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')Sync.run()})}
