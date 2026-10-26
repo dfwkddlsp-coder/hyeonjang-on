@@ -231,7 +231,7 @@ function eqWeekPhotoForm(eid,mon,tr){
   const st={};for(const p of (prev&&prev.photos)||[])if(p.slot)st[p.slot]=p.src;
   let target=null;
   openModal(`주간 사진 · ${eqName(e)}`,`<div class="card"><b>${weekLabel(mon)}</b> <span class="muted small">(${md(mon)}~${md(addDays(mon,5))})</span>
-     <div class="small muted" style="margin-top:4px">장비당 <b>한 주에 한 번</b>, 항목마다 사진 1장. 먼저 <b>점검사진</b>(점검자와 장비가 함께 나온 사진)을 올려주세요.${prev?` · 마지막 저장 ${h(prev.by||'')} ${fmtDT(prev.updated||prev.created)}`:''}</div>
+     <div class="small muted" style="margin-top:4px">장비당 <b>한 주에 한 번</b>, 항목마다 사진 1장. 먼저 <b>점검사진</b>(점검자와 장비가 함께 나온 사진)을 올려주세요.${matchMedia('(hover:hover) and (pointer:fine)').matches?' PC에서는 사진 파일을 항목 칸에 <b>끌어다 놓아도</b> 됩니다.':''}${prev?` · 마지막 저장 ${h(prev.by||'')} ${fmtDT(prev.updated||prev.created)}`:''}</div>
      <div class="small" style="margin-top:6px" id="wpProg"></div></div>
    <div id="wpSlots"></div>
    <input type="file" accept="image/*" capture="environment" hidden id="wpCam"><input type="file" accept="image/*" hidden id="wpGalIn">
@@ -245,6 +245,15 @@ function eqWeekPhotoForm(eid,mon,tr){
       $$('[data-cam]',b).forEach(x=>x.onclick=()=>{target=slots[+x.dataset.cam].t;$('#wpCam',b).click()});
       $$('[data-gal]',b).forEach(x=>x.onclick=()=>{target=slots[+x.dataset.gal].t;withGalleryConsent(()=>$('#wpGalIn').click())});
       $$('[data-rm]',b).forEach(x=>x.onclick=()=>{delete st[slots[+x.dataset.rm].t];draw()});
+      /* PC: 사진 파일을 항목 칸에 끌어다 놓기. 칸마다 1장(여러 장이면 첫 장). 화면 전체 끌어다 놓기(ui.js)보다 먼저 받아서 멈춤 */
+      const hasF=ev=>[...((ev.dataTransfer&&ev.dataTransfer.types)||[])].includes('Files');
+      $$('.wpslot',b).forEach((card,i)=>{
+        card.addEventListener('dragover',ev=>{if(!hasF(ev))return;ev.preventDefault();ev.stopPropagation();ev.dataTransfer.dropEffect='copy';$$('.drop-on').forEach(x=>x!==card&&x.classList.remove('drop-on'));card.classList.add('drop-on')});
+        card.addEventListener('dragleave',ev=>{if(!card.contains(ev.relatedTarget))card.classList.remove('drop-on')});
+        card.addEventListener('drop',async ev=>{if(!hasF(ev))return;ev.preventDefault();ev.stopPropagation();card.classList.remove('drop-on');
+          const fs=[...ev.dataTransfer.files].filter(f=>/^image\//.test(f.type));if(!fs.length)return toast('사진 파일만 넣을 수 있어요');
+          if(fs.length>1)toast('항목마다 사진 1장이라 첫 번째 사진만 넣었어요');
+          try{st[slots[i].t]=await compressImg(fs[0]);dirty=true;draw()}catch(x){toast('사진 처리 실패')}})});
     };draw();
     let dirty=false;MODAL_GUARD=()=>!dirty||confirm('저장하지 않은 사진이 있어요. 닫으면 사라집니다. 닫을까요?');
     $('#wpSlots',b).addEventListener('click',ev=>{if(ev.target.closest('[data-rm]'))dirty=true});
