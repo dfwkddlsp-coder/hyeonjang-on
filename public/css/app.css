@@ -328,9 +328,10 @@ body.is-home .card{background:var(--tile);border-radius:22px;box-shadow:none}
    A4 꽉 차게 만들면 오른쪽이 잘리고 다음 장으로 넘어감 → 어느 브라우저 여백에도 들어가는 178×258mm(가로 260×176mm) */
 #print .pg{width:178mm;height:258mm;margin:0 auto;padding:0;box-sizing:border-box;overflow:hidden;background:#fff;position:relative}
 #print .pg.land{width:260mm;height:176mm;page:land}
-/* 사진대지 장: 종이 위아래 가운데 (위 여백 = (297-258)/2). @page margin을 무시하는 브라우저(아이폰 사파리)는 자기 여백 그대로 */
-#print .pg.ps{page:ps}
-@page ps{size:A4;margin:19.5mm 0 0}
+/* 사진대지 장: 종이 위아래 가운데 — 상자 위에 여백(19.5mm = (297-258)/2)을 붙임. 별도 @page(named page)는 쓰지 않음:
+   가로 용지(주간 점검표)와 섞이면 Chrome 인쇄 미리보기가 멈췄음. 아이폰 사파리는 자기 여백(약 14mm)을 넣어서 위 여백 없이 그대로 */
+#print .pg.ps{height:277.5mm;padding-top:19.5mm}
+@supports (-webkit-touch-callout:none){#print .pg.ps{height:258mm;padding-top:0}}
 #print .pg>.doc{transform-origin:top left;max-width:none;width:100%}
 @page land{size:A4 landscape;margin:0}
 @media print{

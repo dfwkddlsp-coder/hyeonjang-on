@@ -9,7 +9,7 @@ async function printPages(pages){
   await Promise.all($$('img',P).map(i=>i.complete?0:new Promise(r=>{i.onload=i.onerror=r})));
   /* 내용이 한 장 상자보다 크면(높이·너비) 그 장만 비율 축소 */
   $$('.pg',P).forEach(pg=>{const d=pg.firstElementChild;if(!d)return;d.style.zoom='';
-    const z=Math.min(1,(pg.clientHeight-2)/d.scrollHeight,(pg.clientWidth-2)/d.scrollWidth);if(z<1)d.style.zoom=z.toFixed(3)});
+    const pt=parseFloat(getComputedStyle(pg).paddingTop)||0,z=Math.min(1,(pg.clientHeight-pt-2)/d.scrollHeight,(pg.clientWidth-2)/d.scrollWidth);if(z<1)d.style.zoom=z.toFixed(3)});
   P.style.cssText='';setTimeout(()=>window.print(),100);
 }
 const FORM_DEF={
