@@ -63,6 +63,9 @@ keep changes small and behavior-preserving unless the operator asks for more.
 - A `//` comment inside a one-line function swallows the rest of the line. Use `/* */` or its own line.
 - Sync pages hold 300 docs; tests must use the `syncAll` helper.
 - The double-tap guard (`core/ui.js`) must ignore `input,select,textarea,label`, or file pickers don't open.
+- Printing: don't add new named `@page`s (mixing one with `land` crashed Chrome's print preview). Pages are
+  centred by `padding-top` on `#print .pg` (printers can't print the paper edge); iOS Safari gets none (own margins).
+- Search boxes that re-render the view must use `bindSearch` (→ `softRender` keeps the input node), or Korean IME breaks.
 - Stale `workerd` processes cause `SQLITE_BUSY`: kill only this project's wrangler/workerd and restart dev.
 - Browser checks of logged-in screens need the operator to log in (the test password can't be typed by Claude);
   layout can still be checked by injecting markup on the login page.
