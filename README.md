@@ -32,8 +32,9 @@ public/                 the app (static files served by the Worker's assets bind
   js/core/              util · store (IndexedDB, settings) · rules · excel · ui (modal, signature, photo)
                         · print (A4 pages, printed forms) · server (roles, API, sync, login)
   js/app/               nav (router, view registry R) · tabs · boot
-  js/features/          one file per screen: home, strike, alcohol, registers, vuln, equipment,
-                        categories (PDF / 사진대지 / 점검표 / 작성 양식), settings, site-config, users,
+  js/features/          one file per screen: home, strike, alcohol, registers, vuln,
+                        eq-* (rules · setup · check · forms · print), cat-* (rules · records · config · plans:
+                        PDF / 사진대지 / 점검표 / 작성 양식), settings, site-config, users,
                         guide (안내 봇), guest (임시 출입 QR), notify (폰 알림), join (초대·가입 신청), perms (권한)
   sw.js                 offline cache (FILES must match index.html — npm run check)
 worker/

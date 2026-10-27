@@ -1,13 +1,13 @@
 # 현장ON — handoff for the next session
 
 Read this with `CLAUDE.md` (the operator's rules) and `README.md` (architecture, commands).
-State as of 2026-10-13: APP_VER `2026.10.13-4`, live and pushed to `main`. 시범 운영 is in progress, so
+State as of 2026-10-27: APP_VER `2026.10.27-1` (file split, not yet deployed). Next big task: `docs/GENERALIZATION.md`. 시범 운영 is in progress, so
 keep changes small and behavior-preserving unless the operator asks for more.
 
 ## Save tokens
 - Most files are dense (long one-line functions). Don't read whole files: `grep -n` for the function or
   the Korean label shown on screen, then read only those lines (`sed -n A,Bp file | cut -c1-200`).
-- Big files: `features/equipment.js` (43 KB), `features/categories.js` (30 KB), `features/vuln.js`,
+- Big files: `features/vuln.js`, `features/registers.js`,
   `features/settings.js`, `features/registers.js`, `css/app.css` (49 KB). Use the map below to jump in.
 - One task per conversation; batch small UI tweaks into one request, one test run, one deploy.
 
@@ -21,8 +21,8 @@ keep changes small and behavior-preserving unless the operator asks for more.
 | Roles / per-person permissions UI | `features/perms.js` (설정 → 권한 table, `userPermsUI` in the user dialog) | `routes/perms.js`, stored in `settings/shared.perms` (+ `perms._users[userId]`) |
 | Users, invite QR, 가입 신청 | `features/users.js`, `features/join.js` | `routes/users.js`, `routes/join.js` |
 | 임시 출입 QR (guest drivers) | `features/guest.js` | `routes/guest.js` |
-| Equipment checks, weekly photos, eq forms | `features/equipment.js` (mgr ids `wk-`/`wp-`, driver ids `wkd-`/`wpd-`) | `lib/policy.js` (`syncRowFilter`, eqchecks) |
-| 문서함 PDFs, 사진대지, 점검표, categories | `features/categories.js`, `features/site-config.js` | `routes/files.js` |
+| Equipment checks, weekly photos, eq forms | `features/eq-rules.js` (forms, items, record ids: mgr `wk-`/`wp-`, driver `wkd-`/`wpd-`), `eq-setup.js` (quick add, 장비 양식 settings), `eq-check.js` (screen), `eq-forms.js` (weekly check/photo dialogs), `eq-print.js` (print docs, 사진대지) | `lib/policy.js` (`syncRowFilter`, eqchecks) |
+| 문서함 PDFs, 사진대지, 점검표, categories | `features/cat-rules.js`, `cat-records.js`, `cat-config.js`, `cat-plans.js`, `site-config.js`; shared photo picker `core/photo-inputs.js` | `routes/files.js` |
 | Excel import/export | `core/excel.js`, `features/registers.js`, `features/vuln.js` | `routes/docs.js` (`import` flag) |
 | Printing (A4) | `core/print.js` | — |
 | Phone push | `features/notify.js` | `lib/push.js`, `routes/push.js` |
@@ -73,4 +73,5 @@ keep changes small and behavior-preserving unless the operator asks for more.
 ## Open items
 - Operator account security plan (2FA, re-auth for dangerous actions, login log, per-loginId lockout DoS)
   — agreed to do later; details in Claude's memory `security-plan-operator-account`.
-- Optional cleanup if a big file keeps getting edited: split `equipment.js` / `categories.js` by screen.
+- **Generalization (multi-site service)**: plan and next steps in `docs/GENERALIZATION.md` (Korean). One codebase:
+  this site becomes tenant 1; big changes go to a staging Worker first (step 0 of that plan).
