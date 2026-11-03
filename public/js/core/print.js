@@ -7,9 +7,12 @@ async function printPages(pages){
   P.innerHTML=pages.map(p=>`<div class="pg${/class="doc eqw/.test(p)?' land':/class="doc psheet/.test(p)?' ps':''}">${p}</div>`).join('');
   P.style.cssText='display:block;position:absolute;left:-10000px;top:0';
   await Promise.all($$('img',P).map(i=>i.complete?0:new Promise(r=>{i.onload=i.onerror=r})));
-  /* 내용이 한 장 상자보다 크면(높이·너비) 그 장만 비율 축소 */
-  $$('.pg',P).forEach(pg=>{const d=pg.firstElementChild;if(!d)return;d.style.zoom='';
-    const pt=parseFloat(getComputedStyle(pg).paddingTop)||0,z=Math.min(1,(pg.clientHeight-pt-2)/d.scrollHeight,(pg.clientWidth-2)/d.scrollWidth);if(z<1)d.style.zoom=z.toFixed(3)});
+  /* 내용이 한 장 상자보다 크면(높이·너비) 그 장만 비율 축소. CSS zoom은 쓰지 않음: 인쇄할 때 zoom을 무시하는 브라우저가 있어
+     가로 점검표 아래(비고·범례)가 잘렸음 → 어디서나 되는 transform:scale. 축소한 만큼 폭을 넓혀 두고 줄여서 상자 폭을 꽉 채움 */
+  $$('.pg',P).forEach(pg=>{const d=pg.firstElementChild;if(!d)return;d.style.transform=d.style.width='';
+    /* offsetTop = 위 여백(padding) + 상자 밖으로 빠진 제목 위 margin까지 */
+    const z=Math.min(1,(pg.clientHeight-d.offsetTop-4)/d.scrollHeight,(pg.clientWidth-2)/d.scrollWidth);
+    if(z<1){d.style.width=(100/z).toFixed(2)+'%';d.style.transform=`scale(${z.toFixed(4)})`}});
   P.style.cssText='';setTimeout(()=>window.print(),100);
 }
 const FORM_DEF={

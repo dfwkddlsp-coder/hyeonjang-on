@@ -65,6 +65,8 @@ keep changes small and behavior-preserving unless the operator asks for more.
 - The double-tap guard (`core/ui.js`) must ignore `input,select,textarea,label`, or file pickers don't open.
 - Printing: don't add new named `@page`s (mixing one with `land` crashed Chrome's print preview). Pages are
   centred by `padding-top` on `#print .pg` (printers can't print the paper edge); iOS Safari gets none (own margins).
+  Fit-to-page shrinks with `transform:scale` + widened `width`, never CSS `zoom` (some browsers ignore zoom when
+  printing → the bottom of the landscape 점검표 was cut). Measure from `offsetTop` (h1 margin collapses out of `.doc`).
 - Search boxes that re-render the view must use `bindSearch` (→ `softRender` keeps the input node), or Korean IME breaks.
 - Stale `workerd` processes cause `SQLITE_BUSY`: kill only this project's wrangler/workerd and restart dev.
 - Browser checks of logged-in screens need the operator to log in (the test password can't be typed by Claude);
