@@ -96,3 +96,7 @@
 
 ## 6. 진행 기록
 - 2026-10-27: 파일 나누기(1장 참고), 운영 방식 "하나로" 결정. 다음: 0단계 시험용 사이트
+- 2026-10-27: 0단계 코드 준비 — `wrangler.toml` `[env.staging]`, `scripts/staging-1-create.cmd`(D1·R2 만들기),
+  `staging-2-deploy.cmd`(check → 스키마 → 배포), `staging-seed.mjs`(가짜 근로자 10·장비 5, 실서버 주소는 거부).
+  로컬에서 seed 2회(중복 없음)·`npm test` 20/20 확인. 남은 것: 운영자가 .cmd 실행 → database_id 넣기 → 운영자 계정 → seed.
+  주의: 처음 들어온 사람이 운영자가 됨(배포 직후 바로 계정 만들기). 매주 자동 백업 cron도 시험용 R2로 돈다. 다음: 1단계

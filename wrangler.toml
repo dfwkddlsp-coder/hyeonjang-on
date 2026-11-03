@@ -31,3 +31,23 @@ enabled = true
 # 안내 봇(안전온)의 AI 답변 — Cloudflare Workers AI 공개 모델 (worker/routes/guide.js)
 [ai]
 binding = "AI"
+
+# ---------- 시험용 사이트 (docs/GENERALIZATION.md 0단계) ----------
+# 배포: npx.cmd wrangler deploy --env staging → https://hyeonjang-on-staging.lj2.workers.dev
+# 실제 현장 DB·R2를 절대 가리키지 않게 이름이 모두 -staging. 저장소 연결(binding)은 env로 물려받지 않으므로 전부 다시 적는다.
+# 처음 만들기·스키마 적용은 scripts/staging-1-create.cmd → staging-2-deploy.cmd (운영자가 직접 실행)
+[env.staging]
+name = "hyeonjang-on-staging"
+
+[[env.staging.d1_databases]]
+binding = "DB"
+database_name = "hyeonjang-on-staging-db"
+database_id = "6935d0f5-f0e0-48f7-8d7d-0b450187692c"
+migrations_dir = "migrations"
+
+[[env.staging.r2_buckets]]
+binding = "PHOTOS"
+bucket_name = "hyeonjang-on-staging-photos"
+
+[env.staging.ai]
+binding = "AI"
