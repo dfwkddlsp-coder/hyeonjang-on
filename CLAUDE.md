@@ -5,8 +5,8 @@ site's safety manager and the app's **operator (운영자)**; they speak Korean 
 Live: https://hyeonjang-on.lj2.workers.dev (Cloudflare Worker `hyeonjang-on`, D1 `hyeonjang-on-db`,
 R2 `hyeonjang-on-photos`). Architecture and commands: see README.md. **Start with `docs/HANDOFF.md`** (where to change what, patterns,
 checklist, gotchas) and grep for what you need instead of reading whole files — the operator watches token use.
-**In progress: turning this into a multi-site service** in this same codebase (this site = tenant 1, staging Worker
-first). Plan, steps and progress log: `docs/GENERALIZATION.md` — read only the step you are asked to do.
+The multi-site service / app version was split off on 2026-11-04 into its own folder and repo (`Documents/hyeonjang-on-app`,
+dev Worker `hyeonjang-on-staging`). This folder is only the live single-site app; don't add multi-site work here.
 
 ## The operator's rules (the spec — keep them true)
 1. 장비운전원 (driver): only 장비점검, only their own equipment (matched by 운전원 연락처 = login phone).

@@ -78,5 +78,5 @@ keep changes small and behavior-preserving unless the operator asks for more.
 ## Open items
 - Operator account security plan (2FA, re-auth for dangerous actions, login log, per-loginId lockout DoS)
   — agreed to do later; details in Claude's memory `security-plan-operator-account`.
-- **Generalization (multi-site service)**: plan and next steps in `docs/GENERALIZATION.md` (Korean). One codebase:
-  this site becomes tenant 1; big changes go to a staging Worker first (step 0 of that plan).
+- **Multi-site service / app**: split off on 2026-11-04 into `Documents/hyeonjang-on-app` (own repo, dev Worker
+  `hyeonjang-on-staging`). Fixes made here that it also needs are copied there by hand.

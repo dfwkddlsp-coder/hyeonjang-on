@@ -6,8 +6,6 @@
     "db:local": "wrangler d1 execute hyeonjang-on-db --local --file schema.sql",
     "db:remote": "wrangler d1 execute hyeonjang-on-db --remote --file schema.sql",
     "deploy": "wrangler deploy",
-    "deploy:staging": "wrangler deploy --env staging",
-    "seed:staging": "node scripts/staging-seed.mjs",
     "test": "node tests/api.test.mjs",
     "check": "node tests/check.mjs",
     "test:push": "node tests/push-check.mjs"
