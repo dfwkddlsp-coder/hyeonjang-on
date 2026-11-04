@@ -15,7 +15,7 @@ const canDel=o=>!!o&&(!SERVER||(ownRec(o)&&!isAdmin()?can('del.own'):can('del.an
 /* 관리자·운영자: 취약근로자 열람, 파일(대장 엑셀·PDF) 등록 */
 const isStaff=()=>!SERVER||(!!ME&&(ME.role==='admin'||ME.role==='manager'));
 const roleBadge=r=>r==='guest'?'<span class="badge bwarn">임시 운전원</span>':r==='admin'?'<span class="badge">운영자</span>':r==='manager'?'<span class="badge">관리자</span>':r==='driver'?'<span class="badge bgray">장비운전원</span>':'<span class="badge bgray">사용자</span>';
-const SHARED_KEYS=['site','guide','colAlias','joinOpen','periodMonths','vtypes','levels','alcMode','alc','alcMsg','vulnAge','bp','eqItems','eqCheckItems','vulnScope','homeLayout','docCats','forms','eqForms','eqExclude','perms'];
+const SHARED_KEYS=['site','guide','colAlias','joinOpen','periodMonths','vtypes','levels','alcMode','alc','alcMsg','vulnAge','bp','schedPm','eqItems','eqCheckItems','vulnScope','homeLayout','docCats','forms','eqForms','eqExclude','perms'];
 async function api(path,body){
   const r=await fetch('/api/'+path,{method:body!==undefined?'POST':'GET',credentials:'same-origin',headers:body!==undefined?{'content-type':'application/json'}:{},body:body!==undefined?JSON.stringify(body):undefined});
   let j=null;try{j=await r.json()}catch(e){}
@@ -81,7 +81,7 @@ async function saveConfirm(store,obj){await save(store,obj);if(!SERVER||!navigat
 function saveRejectedAlert(x){alert(`저장되지 않았어요: ${x.message}
 
 입력한 내용은 이 화면에 그대로 있어요. 권한이나 장비 정보 문제일 수 있으니 관리자에게 알려 주세요.`)}
-const RJ_NAME={eqchecks:'장비점검',equipment:'장비',workers:'근로자',violations:'삼진아웃',alcohol:'음주측정',records:'기록',vuln:'취약근로자',plans:'문서'};
+const RJ_NAME={eqchecks:'장비점검',equipment:'장비',workers:'근로자',violations:'삼진아웃',alcohol:'음주측정',records:'기록',vuln:'취약근로자',plans:'문서',schedule:'일정'};
 async function showRejected(){const box=(await kvGet('rejected'))||[];
   const ph=x=>(JSON.stringify(x.data||{}).match(/data:image\//g)||[]).length;
   openModal('저장 실패',`<p class="small muted">서버가 받아 주지 않은 기록이에요. 사유를 확인하고, 권한·장비 정보가 고쳐지면 <b>다시 보내기</b>를 누르세요. 필요 없으면 버리세요. 이 기기에만 보관돼요.</p>

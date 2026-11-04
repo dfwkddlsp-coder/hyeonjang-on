@@ -24,6 +24,7 @@ keep changes small and behavior-preserving unless the operator asks for more.
 | Equipment checks, weekly photos, eq forms | `features/eq-rules.js` (forms, items, record ids: mgr `wk-`/`wp-`, driver `wkd-`/`wpd-`), `eq-setup.js` (quick add, 장비 양식 settings), `eq-check.js` (screen), `eq-forms.js` (weekly check/photo dialogs), `eq-print.js` (print docs, 사진대지) | `lib/policy.js` (`syncRowFilter`, eqchecks) |
 | 문서함 PDFs, 사진대지, 점검표, categories | `features/cat-rules.js`, `cat-records.js`, `cat-config.js`, `cat-plans.js`, `site-config.js`; shared photo picker `core/photo-inputs.js` | `routes/files.js` |
 | Excel import/export | `core/excel.js`, `features/registers.js`, `features/vuln.js` | `routes/docs.js` (`import` flag) |
+| 일정표 (홈 맨 위 공지 띠, 빠른 입력, 엑셀 계획서·KOSHA 당직자 명단·당직 달력표) | `features/schedule.js` (screen, banner wraps `R.home`/`R.eqcheck`), pure parsers `core/schedule.js` (`SCHED_TXT`, `SCHED_XL`; ported from 안전게시판; `npm run test:sched`) | store `schedule`, perms `sched.view`/`sched.add` (Excel rows `src:'excel'` also need `file.excel`) |
 | Printing (A4) | `core/print.js` | — |
 | Phone push | `features/notify.js` | `lib/push.js`, `routes/push.js` |
 | 안내 봇, feedback | `features/guide.js` | `routes/guide.js` (Workers AI) |

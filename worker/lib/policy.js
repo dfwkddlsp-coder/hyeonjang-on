@@ -12,13 +12,13 @@ export { can, permsOf };
 export const ROLES = ['admin', 'manager', 'user', 'driver', 'guest'];
 /** 장비운전원처럼 본인 장비만 다루는 역할 (세션·화면 모양에만 씀, 권한은 perms) */
 export const isDriverLike = (u) => u.role === 'driver' || u.role === 'guest';
-export const STORES = new Set(['workers', 'equipment', 'violations', 'alcohol', 'vuln', 'eqchecks', 'plans', 'records', 'settings']);
+export const STORES = new Set(['workers', 'equipment', 'violations', 'alcohol', 'vuln', 'eqchecks', 'plans', 'records', 'schedule', 'settings']);
 export const REGISTER_STORES = new Set(['workers', 'equipment', 'vuln']); // replaced wholesale by Excel uploads
 const SCOPED_STORES = new Set(['plans', 'records']); // carry scope 'all' | 'staff' (운영자·관리자만)
 /** 동기화하지 않는 저장소 (운영자는 각각의 API로 봄) */
 const PRIVATE = "'feedback','aiuse','guestinv','pushkey','pushsub','pushpref','joinreq','rejectlog'";
 /** 저장소마다 보려면 필요한 권한 */
-const VIEW = { violations: 'strike.view', alcohol: 'alc.view', workers: 'workers.view', vuln: 'vuln.view', plans: 'records.view', records: 'records.view' };
+const VIEW = { violations: 'strike.view', alcohol: 'alc.view', workers: 'workers.view', vuln: 'vuln.view', plans: 'records.view', records: 'records.view', schedule: 'sched.view' };
 const DRV_ID = /^(wkd|wpd)-/; // 운전원 점검 기록 (나머지 wk-·wp-·옛 기록은 관리자 점검)
 
 const parse = (s) => { try { return JSON.parse(s); } catch { return null; } };
@@ -85,6 +85,9 @@ export async function checkWrite(env, u, docs, { replace = [], remove = null, is
       case 'workers': if (!P.has('workers.edit') && !(isImport && P.has('file.excel')) && !banOnly(old, d.data, P)) no('근로자 대장 수정 권한이 없습니다'); break;
       case 'vuln': if (!P.has('vuln.view')) no('취약근로자 정보를 다룰 권한이 없습니다'); break;
       case 'plans': if (!P.has('file.pdf')) no('PDF 문서를 올릴 권한이 없습니다'); if (d.data.scope === 'staff' && !P.has('records.staff')) no('운영자·관리자만 항목입니다'); break;
+      case 'schedule':
+        if (!P.has('sched.add')) no('일정을 추가·수정할 권한이 없습니다');
+        if (isNew && d.data.src === 'excel' && !P.has('file.excel')) no('엑셀 파일을 올릴 권한이 없습니다'); break;
       case 'records':
         if (!P.has('records.view')) no('카테고리 기록을 쓸 권한이 없습니다');
         if (d.data.scope === 'staff' && !P.has('records.staff')) no('운영자·관리자만 작성할 수 있는 항목입니다'); break;
@@ -127,7 +130,7 @@ async function checkSettings(env, u, P, d, old) {
 
 /* 적발·음주·카테고리 기록은 쓴 사람(과 운영자)만 고침. 다른 사람이 바꿔도 되는 칸:
    2차 교육 이수(edu), 음주 재측정 결과(follow), 음주→삼진아웃 연결(linkedViolation) */
-const OWN_STORES = new Set(['violations', 'alcohol', 'records']);
+const OWN_STORES = new Set(['violations', 'alcohol', 'records', 'schedule']);
 const SHARED_FIELDS = { violations: ['edu'], alcohol: ['follow', 'linkedViolation'] };
 
 /** Per-document rules that need the stored previous version (`old`, null if new or deleted; `oldBy` = its writer's id; P = 권한). */

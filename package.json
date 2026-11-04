@@ -8,7 +8,8 @@
     "deploy": "wrangler deploy",
     "test": "node tests/api.test.mjs",
     "check": "node tests/check.mjs",
-    "test:push": "node tests/push-check.mjs"
+    "test:push": "node tests/push-check.mjs",
+    "test:sched": "node --test tests/schedule-parse.test.mjs tests/schedule-excel.test.mjs"
   },
   "devDependencies": {
     "wrangler": "^4"

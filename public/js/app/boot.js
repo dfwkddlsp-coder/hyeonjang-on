@@ -1,7 +1,7 @@
 // 현장ON — startup
 'use strict';
 /* ---------- boot ---------- */
-async function loadAll(){[W,E,V,A,VU,EC,PL,RC]=await Promise.all(STORE_NAMES.map(s=>DB.all(s)))}
+async function loadAll(){[W,E,V,A,VU,EC,PL,RC,SC]=await Promise.all(STORE_NAMES.map(s=>DB.all(s)))}
 function lockScreen(){return new Promise(res=>{if(!S.pin)return res();const d=document.createElement('div');d.className='lock';d.innerHTML=`<img src="icon.svg" alt="" style="width:84px;height:84px;border-radius:20px;box-shadow:0 0 0 3px rgba(255,255,255,.25)"><div style="font-size:28px;font-weight:900">현장ON</div><div style="opacity:.8;font-size:14px;margin-top:-6px">습관이 된 노력을 실력이라 한다.</div><div style="margin-top:10px">PIN 입력</div><input class="inp" type="password" inputmode="numeric" maxlength="6" autofocus>`;document.body.appendChild(d);const i=$('input',d);i.focus();i.oninput=()=>{if(i.value===S.pin){d.remove();res()}else if(i.value.length>=S.pin.length){i.value='';i.style.outline='3px solid #f66'}}})}
 
 (async()=>{

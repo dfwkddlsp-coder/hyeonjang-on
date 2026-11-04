@@ -23,6 +23,8 @@ export const PERMS = [
   ['eq.mgr', '장비점검', '관리자 점검 하기', [M, U]],
   ['eq.drv', '장비점검', '운전원 점검 하기', [D, G]],
   ['eq.other', '장비점검', '다른 쪽 점검 보기', [M, U], '관리자 쪽은 운전원 점검을, 운전원 쪽은 관리자 점검을 봄'],
+  ['sched.view', '일정표', '보기 (홈 위 일정 공지 포함)', [M, U, D]],
+  ['sched.add', '일정표', '일정 추가·수정', [M, U], '엑셀로 넣기는 파일 권한(대장 엑셀 올리기)도 필요'],
   ['records.view', '카테고리 기록', '문서함·사진대지·점검표 보기·작성', [M, U]],
   ['records.staff', '카테고리 기록', '"운영자·관리자만" 항목 보기·작성', [M]],
   ['file.excel', '파일', '대장 엑셀 올리기', [M]],
@@ -51,7 +53,7 @@ export const PERM_KEYS = new Set(PERMS.map((p) => p[0]));
 
 /** 공유 설정의 어느 칸을 바꾸려면 어떤 권한이 필요한가 (settings/shared 쓰기 검사) */
 export const SETTING_GROUPS = {
-  'set.site': ['site', 'periodMonths', 'vtypes', 'levels', 'alcMode', 'alc', 'alcMsg', 'vulnAge', 'bp'],
+  'set.site': ['site', 'periodMonths', 'vtypes', 'levels', 'alcMode', 'alc', 'alcMsg', 'vulnAge', 'bp', 'schedPm'],
   'set.forms': ['docCats', 'forms', 'homeLayout'],
   'set.eqform': ['eqItems', 'eqCheckItems', 'eqForms', 'eqExclude'],
   'set.excel': ['colAlias'],

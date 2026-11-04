@@ -112,6 +112,18 @@ await test('staff-only records are hidden from plain users', async () => {
   const ok = 'ra' + tag;
   assert.equal((await U('docs', { docs: [doc('records', ok, { scope: 'all' })] })).s, 200); del('records', ok);
 });
+await test('일정표: everyone sees it, user/manager add, drivers cannot, Excel needs file perm, only the writer edits/deletes', async () => {
+  const s = 'sc' + tag, x = 'sx' + tag;
+  const sd = { date: '2026-11-20', time: '오후', title: '시험 일정' };
+  assert.equal((await U('docs', { docs: [doc('schedule', s, sd)] })).s, 200, 'user adds'); del('schedule', s);
+  assert.equal((await D('docs', { docs: [doc('schedule', s + 'd', sd)] })).s, 403, 'driver cannot add');
+  assert.equal((await syncAll(D)).j.docs.some((d) => d.id === s), true, 'driver sees it');
+  assert.equal((await U('docs', { docs: [doc('schedule', x, { ...sd, src: 'excel' })] })).s, 403, 'user without file perm: no Excel');
+  assert.equal((await M('docs', { docs: [doc('schedule', x, { ...sd, src: 'excel' })] })).s, 200, 'manager Excel'); del('schedule', x);
+  assert.equal((await M('docs', { docs: [doc('schedule', s, { ...sd, title: '고침' })] })).s, 403, 'manager edits other');
+  assert.equal((await M('docs/delete', { store: 'schedule', id: s })).s, 403, 'manager deletes other');
+  assert.equal((await U('docs/delete', { store: 'schedule', id: s })).s, 200, 'writer deletes own');
+});
 await test('only the writer (or operator) edits a record; edu / follow / links stay shared', async () => {
   const v = 'vo' + tag, a = 'ao' + tag;
   const vd = { name: '홍길동', type: '안전모', level: 2, edu: { done: false } }, ad = { name: '홍길동', value: 0.04, follow: '' };
@@ -142,7 +154,7 @@ await test('feedback: anyone sends, only the operator reads; never synced', asyn
 
 await test('driver sees and checks only their own equipment', async () => {
   const live = (await syncAll(D)).j.docs.filter((d) => !d.deleted);
-  assert.deepEqual([...new Set(live.map((d) => d.store))].filter((s) => s !== 'settings'), ['equipment']);
+  assert.deepEqual([...new Set(live.map((d) => d.store))].filter((s) => s !== 'settings' && s !== 'schedule'), ['equipment']); // 일정표는 운전원도 봄
   assert.deepEqual(live.filter((d) => d.store === 'equipment').map((d) => d.id), [eqMine]);
   const wk = 'wkd-' + tag;
   assert.equal((await D('docs', { docs: [doc('eqchecks', wk, { equipId: eqMine })] })).s, 200); del('eqchecks', wk);
