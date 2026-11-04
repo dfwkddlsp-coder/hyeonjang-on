@@ -4,7 +4,9 @@
    → 돌아오면 "메모리가 부족하여 이전 작업을 완료할 수 없습니다"와 함께 사진이 사라짐. 앱 안에서 찍으면 브라우저를 떠나지 않음.
    모든 카메라 칸(input[capture])을 한 곳에서 가로챔: 찍은 사진을 그 칸에 넣고 change를 보내서 각 화면 코드는 그대로.
    카메라를 못 쓰면(권한 거부·지원 안 함) 원래대로 카메라 앱을 엶. PC·아이폰은 원래대로 */
-const CAM_INAPP=/Android/i.test(navigator.userAgent)&&!!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia)&&typeof DataTransfer==='function';
+/* 시험 스위치: 주소에 ?camtest=1 → 이 기기(아이폰·PC 포함)에서도 앱 안 카메라, ?camtest=0 → 끔 (기기에 기억) */
+const CAM_TEST=(()=>{try{const q=new URLSearchParams(location.search).get('camtest');if(q!=null)localStorage.setItem('camtest',q);return localStorage.getItem('camtest')==='1'}catch(e){return false}})();
+const CAM_INAPP=(CAM_TEST||/Android/i.test(navigator.userAgent))&&!!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia)&&typeof DataTransfer==='function';
 let camNative=false,camPop=null; // 이번 한 번은 카메라 앱으로 (화면의 "카메라 앱으로 찍기" 또는 앱 안 카메라 실패)
 document.addEventListener('click',ev=>{
   const inp=ev.target;
