@@ -67,6 +67,9 @@ keep changes small and behavior-preserving unless the operator asks for more.
   centred by `padding-top` on `#print .pg` (printers can't print the paper edge); iOS Safari gets none (own margins).
   Fit-to-page shrinks with `transform:scale` + widened `width`, never CSS `zoom` (some browsers ignore zoom when
   printing → the bottom of the landscape 점검표 was cut). Measure from `offsetTop` (h1 margin collapses out of `.doc`).
+- Camera on Android: `core/camera.js` intercepts every `input[capture]` click and shoots in-app (getUserMedia), then
+  puts the File into that input and fires `change` — screens need no camera code. Loaded before `ui.js` so its popstate
+  (back = close camera only) runs first. Native camera app on Android got the browser killed (Samsung "메모리가 부족").
 - Search boxes that re-render the view must use `bindSearch` (→ `softRender` keeps the input node), or Korean IME breaks.
 - Stale `workerd` processes cause `SQLITE_BUSY`: kill only this project's wrangler/workerd and restart dev.
 - Browser checks of logged-in screens need the operator to log in (the test password can't be typed by Claude);

@@ -441,3 +441,11 @@ body:has(.set-dim.on) .gb-fab{display:none} /* 설정 메뉴가 열려 있으면
 .pm-urow select{width:auto;max-width:150px;min-height:38px;padding:4px 8px;font-size:14px}
 /* 파일 끌어다 놓기: 놓으면 들어갈 버튼·칸 표시 */
 .drop-on{outline:3px dashed #2f80ed;outline-offset:3px;border-radius:10px}
+/* 앱 안 카메라 (core/camera.js): 전체 화면, 아래 막대에 닫기 · 찍기 · 카메라 앱 */
+.cam{position:fixed;inset:0;z-index:95;background:#000;display:flex;flex-direction:column}
+.cam video{flex:1;min-height:0;width:100%;object-fit:contain;background:#000}
+.cam-bar{display:flex;align-items:center;justify-content:space-between;padding:14px 22px calc(18px + env(safe-area-inset-bottom));background:#000}
+.cam-x,.cam-nat{background:none;border:0;color:#fff;font:inherit;cursor:pointer;min-width:72px;min-height:48px}
+.cam-x{font-size:26px;text-align:left}.cam-nat{font-size:12px;line-height:1.3;text-align:right;opacity:.85}
+.cam-shot{width:74px;height:74px;border-radius:50%;border:5px solid #fff;background:#fff;box-shadow:inset 0 0 0 3px #000;cursor:pointer;padding:0}
+.cam-shot:active{transform:scale(.94)}.cam-shot:disabled{opacity:.5}
