@@ -30,6 +30,9 @@ function eqItemsFor(e){const f=eqFormOf(e);return f?parseItems(f.items):eqItems(
 const eqFormName=e=>{const f=eqFormOf(e);return f?f.name:'기본 (굴착기 등)'};
 const eqExcluded=e=>!e.formK&&kwList(S.eqExclude===undefined?EQ_EXCLUDE_DEF:S.eqExclude).some(k=>String(e.type||'').replace(/\s/g,'').includes(k));
 const eqTargets=()=>E.filter(e=>!e.outDate&&!eqExcluded(e));
+/* 주차별 장비점검 화면의 장비: 반입중 전부 + 반출 장비는 반출한 주 이전까지. 반출한 주 이후라도 그 주에 기록이 있으면 보임 (기록이 화면에서 사라지지 않게) */
+const eqHasWeek=(eid,mon)=>{const end=addDays(mon,6);return EC.some(c=>c.equipId===eid&&!c.void&&(c.week===mon||(!c.kind&&c.date>=mon&&c.date<=end)))};
+const eqWeekTargets=mon=>E.filter(e=>{if(eqExcluded(e))return false;if(!e.outDate)return true;const d=parseDate(e.outDate);return (d&&mon<weekMon(ymd(d)))||eqHasWeek(e.id,mon)});
 /* 저장된 주간 기록은 그때의 항목으로 출력 (양식을 나중에 바꿔도 지난 점검표는 그대로) */
 const eqWeekItems=(e,w)=>{const ks=w&&(Array.isArray(w.itemList)&&w.itemList.length?w.itemList:w.marks&&Object.keys(w.marks).length?Object.keys(w.marks):null);return ks?ks.map(t=>{const cur=eqItemsFor(e).find(i=>i.t===t);return {t,d:cur?cur.d:''}}):eqItemsFor(e)};
 
