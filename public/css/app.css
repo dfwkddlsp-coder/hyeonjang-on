@@ -499,6 +499,11 @@ body:has(.set-dim.on) .gb-fab{display:none} /* 설정 메뉴가 열려 있으면
 .sch-cd.today .n{color:var(--bad);font-weight:800}
 .sch-cd.sel .n{background:var(--ink);color:#fff;font-weight:800}.sch-cd.sel.today .n{background:var(--bad);color:#fff}
 .sch-cd .dots{display:flex;gap:3px;height:5px}.sch-cd .dots span{width:5px;height:5px;border-radius:50%;background:var(--sub)}
+.sch-seg{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
+.sch-seg .chip{text-align:center}.sch-seg .chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.sch-st{display:flex;gap:8px;align-items:flex-start;font-size:15px;margin-bottom:8px}
+.sch-st b{flex:none;width:22px;height:22px;line-height:22px;border-radius:50%;background:var(--chip);text-align:center;font-size:13px}
+.sch-subre{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}.sch-subre .btn{flex:none}
 .sch-dl{border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px}
 .sch-cal-d{margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
 .sch-line{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:15px}

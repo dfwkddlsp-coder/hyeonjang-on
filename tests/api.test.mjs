@@ -124,6 +124,39 @@ await test('일정표: everyone sees it, user/manager add, drivers cannot, Excel
   assert.equal((await M('docs/delete', { store: 'schedule', id: s })).s, 403, 'manager deletes other');
   assert.equal((await U('docs/delete', { store: 'schedule', id: s })).s, 200, 'writer deletes own');
 });
+await test('휴대폰 달력 구독: 사람별 주소, 당직 선택, 삭제 반영, 재발급·비활성 시 멈춤, 임시 운전원 불가, 동기화 안 됨', async () => {
+  const raw = (u) => fetch(u.replace(/^https?:\/\/[^/]+/, BASE));
+  const s = 'cf' + tag, dd = 'cd' + tag, far = new Date(Date.now() + 864e5).toISOString().slice(0, 10);
+  assert.equal((await M('docs', { docs: [doc('schedule', s, { date: far, time: '14:00', title: '구독시험' }), doc('schedule', dd, { date: far, time: '', title: '안전활동 일일당직자 : 구독자' })] })).s, 200); del('schedule', dd);
+  const X = client();
+  assert.equal((await X('cal/link', {})).s, 401, 'login needed to get an address');
+  const a = await U('cal/link', {});
+  assert.equal(a.s, 200);
+  assert.equal((await U('cal/link', {})).j.url, a.j.url, 'same address until renewed');
+  assert.equal((await U('cal/status')).j.seen, false);
+  let r = await raw(a.j.url), t = await r.text();
+  assert.equal(r.status, 200);
+  assert.match(r.headers.get('content-type'), /text\/calendar/);
+  assert.ok(t.includes('구독시험') && !t.includes('구독자'), 'duty left out by default');
+  assert.equal((await U('cal/status')).j.seen, true, 'first read recorded');
+  assert.equal((await U('cal/link', { duty: true })).j.duty, true);
+  assert.ok((await (await raw(a.j.url)).text()).includes('구독자'), 'duty included when chosen');
+  assert.equal((await M('docs/delete', { store: 'schedule', id: s })).s, 200);
+  assert.ok(!(await (await raw(a.j.url)).text()).includes('구독시험'), 'deleted schedule disappears');
+  const b = await U('cal/renew', {});
+  assert.notEqual(b.j.url, a.j.url);
+  assert.equal((await raw(a.j.url)).status, 404, 'old address stops');
+  assert.equal((await raw(b.j.url)).status, 200);
+  assert.equal((await raw(BASE + '/api/cal/' + '0'.repeat(32) + '.ics')).status, 404);
+  assert.equal((await syncAll(A)).j.docs.some((d) => d.store === 'calsub'), false, 'never synced');
+  const lid = 'cu' + tag, made = await A('users', { loginId: lid, name: '구독해제', password: 'init-pass-9' });
+  const V = client(); await V('login', { loginId: lid, password: 'init-pass-9' });
+  await V('me/password', { current: 'init-pass-9', next: 'next-pass-9' });
+  const v = await V('cal/link', {});
+  assert.equal((await raw(v.j.url)).status, 200);
+  await A(`users/${made.j.user.id}`, { active: false });
+  assert.equal((await raw(v.j.url)).status, 404, 'deactivated account stops');
+});
 await test('only the writer (or operator) edits a record; edu / follow / links stay shared', async () => {
   const v = 'vo' + tag, a = 'ao' + tag;
   const vd = { name: '홍길동', type: '안전모', level: 2, edu: { done: false } }, ad = { name: '홍길동', value: 0.04, follow: '' };
@@ -303,6 +336,12 @@ await test('설정 → 권한: the operator changes role permissions and the ser
     assert.equal((await setPerms(M, { ...p3, _users: { ...p3._users, [mid]: { 'set.perms': true, 'del.any': true } } })).s, 403, 'cannot raise own permissions');
     assert.equal((await setPerms(M, { ...p3, _users: { [mid]: { 'set.perms': true } } })).s, 200, 'can change other people');
     assert.ok((await U('sync?since=0')).j.perms.includes('vuln.view'), 'override removed');
+    // 휴대폰 달력 연결 권한을 끄면 만들어 둔 주소도 멈춤
+    const sub = (await U('cal/link', {})).j.url.replace(/^https?:\/\/[^/]+/, BASE);
+    assert.equal((await fetch(sub)).status, 200);
+    assert.equal((await setPerms(A, { ...t, 'sched.subscribe': { ...t['sched.subscribe'], user: false } })).s, 200);
+    assert.equal((await fetch(sub)).status, 404, 'permission off stops the feed');
+    assert.equal((await U('cal/link', {})).s, 403, 'permission off blocks getting an address');
   } finally { await setPerms(A, (base.perms) || {}); }
   assert.equal((await M('users')).s, 403, 'restored');
 });

@@ -24,7 +24,7 @@ keep changes small and behavior-preserving unless the operator asks for more.
 | Equipment checks, weekly photos, eq forms | `features/eq-rules.js` (forms, items, record ids: mgr `wk-`/`wp-`, driver `wkd-`/`wpd-`), `eq-setup.js` (quick add, 장비 양식 settings), `eq-check.js` (screen), `eq-forms.js` (weekly check/photo dialogs), `eq-print.js` (print docs, 사진대지) | `lib/policy.js` (`syncRowFilter`, eqchecks) |
 | 문서함 PDFs, 사진대지, 점검표, categories | `features/cat-rules.js`, `cat-records.js`, `cat-config.js`, `cat-plans.js`, `site-config.js`; shared photo picker `core/photo-inputs.js` | `routes/files.js` |
 | Excel import/export | `core/excel.js`, `features/registers.js`, `features/vuln.js` | `routes/docs.js` (`import` flag) |
-| 일정표 (홈 맨 위 공지 띠, 빠른 입력, 엑셀 계획서·KOSHA 당직자 명단·당직 달력표) | `features/schedule.js` (screen, banner wraps `R.home`/`R.eqcheck`), pure parsers `core/schedule.js` (`SCHED_TXT`, `SCHED_XL`; ported from 안전게시판; `npm run test:sched`) | store `schedule`, perms `sched.view`/`sched.add` (Excel rows `src:'excel'` also need `file.excel`) |
+| 일정표 (홈 공지 띠, 월간 달력, 월별 .ics 받기, 빠른 입력, 엑셀 계획서·KOSHA 당직자 명단·당직 달력표) | `features/sched-rules.js` (공통: 조회·일정 한 줄), `sched-banner.js` (`R.home`/`R.eqcheck` 감쌈), `sched-screen.js` (`R.schedule`), `sched-cal.js` (달력·받기), `sched-sub.js` + 서버 `routes/calfeed.js` (휴대폰 달력 구독, 사람별 비밀 주소), `sched-forms.js` (입력 창), `sched-excel.js` (엑셀 넣기); 순수 함수 `core/sched-text.js` · `sched-excel.js` · `sched-ics.js` (`npm run test:sched`) | `lib/policy.js` (`schedule`), 권한 `sched.view` · `sched.add` · `sched.export` |
 | Printing (A4) | `core/print.js` | — |
 | Phone push | `features/notify.js` | `lib/push.js`, `routes/push.js` |
 | 안내 봇, feedback | `features/guide.js` | `routes/guide.js` (Workers AI) |

@@ -30,6 +30,11 @@ test('특수문자 처리, 긴 줄은 75바이트로 접고 한글을 자르지 
   assert.ok(!s.includes('\uFFFD'));
   assert.ok(unfold(s).includes('SUMMARY:안전\\, 점검\\; 가\\\\나 '));
 });
+test('구독 달력 이름과 새로고침 주기, 파일 받기에는 없음', () => {
+  const it = [{ id: 'a', date: '2026-11-09', time: '', title: 'x' }];
+  assert.match(buildIcs(it, STAMP, { name: '현장ON 일정' }), /X-WR-CALNAME:현장ON 일정\r\nREFRESH-INTERVAL;VALUE=DURATION:PT1H/);
+  assert.ok(!buildIcs(it, STAMP).includes('X-WR-CALNAME'));
+});
 test('구조: 전체 틀과 일정마다 고유 UID, CRLF', () => {
   const s = buildIcs([{ id: 'a', date: '2026-11-09', time: '', title: 'x' }, { id: 'b', date: '2026-11-10', time: '', title: 'y' }], STAMP);
   assert.ok(s.startsWith('BEGIN:VCALENDAR\r\nVERSION:2.0\r\n'));

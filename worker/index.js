@@ -19,8 +19,9 @@ import guest from './routes/guest.js';
 import push from './routes/push.js';
 import join from './routes/join.js';
 import perms from './routes/perms.js';
+import calfeed from './routes/calfeed.js';
 
-const ROUTES = [...auth, ...users, ...docs, ...files, ...admin, ...guide, ...guest, ...push, ...join, ...perms];
+const ROUTES = [...auth, ...users, ...docs, ...files, ...admin, ...guide, ...guest, ...push, ...join, ...perms, ...calfeed];
 
 function match(method, path) {
   for (const [m, p, handler] of ROUTES) {
