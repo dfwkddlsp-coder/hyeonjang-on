@@ -14,6 +14,9 @@ const scMD=ds=>{const d=new Date(ds+'T00:00');return `${d.getMonth()+1}월 ${d.g
 const scCanEdit=o=>can('sched.add')&&ownRec(o);
 const scKey=x=>x.date+'|'+String(x.title).replace(/\s+/g,'');
 
+/* 달력 파일 내려받기 (이 기기에 이미 있는 일정으로 만듦) */
+function scDownload(name,text,type){const u=URL.createObjectURL(new Blob([text],{type})),a=document.createElement('a');a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),60000)}
+
 /* ---------- 홈 맨 위 공지 띠 ---------- */
 function schedBanner(){
   if(!can('sched.view'))return '';
@@ -69,15 +72,25 @@ R.schedule=(arg)=>{
     const [y,m]=st.m.split('-').map(Number),lead=new Date(y,m-1,1).getDay(),last=new Date(y,m,0).getDate(),nowY=+t.slice(0,4);
     const box=$('#schCal',W$),cell=i=>{const d=`${st.m}-${pad(i)}`,wd=(lead+i-1)%7,n=Math.min(3,scDay(d).filter(x=>!scIsDuty(x)).length);
       return `<button type="button" class="sch-cd${wd===0?' sun':wd===6?' sat':''}${d===t?' today':''}${d===st.sel?' sel':''}" data-d="${d}" aria-label="${scMD(d)}"><span class="n">${i}</span><span class="dots">${'<span></span>'.repeat(n)}</span></button>`};
-    const list=scDay(st.sel);
+    const list=scDay(st.sel),mAll=scDated().filter(x=>x.date.startsWith(st.m)),mNo=mAll.filter(x=>!scIsDuty(x)),mDn=mAll.length-mNo.length,mPick=()=>(st.dlDuty?mAll:mNo).slice().sort(scSort);
     box.innerHTML=`<div class="sch-cal-t"><b>월간 계획 보기</b>${st.m===now?'':'<button type="button" class="btn sm ghost" id="schNow">오늘</button>'}</div>
     <div class="sch-cal-h"><button type="button" class="btn sm line" id="schPrev" aria-label="전월">◀</button><div class="sch-cal-m">${y===nowY?'':y+'년 '}${m}월</div><button type="button" class="btn sm line" id="schNext" aria-label="다음 달">▶</button></div>
+    ${can('sched.export')?`<button type="button" class="btn sm line" id="schDl" style="width:100%;margin-bottom:10px"><i class="i i-records"></i> ${m}월 달력 받기</button>
+    ${st.dlOpen?`<div class="sch-dl"><b>${m}월 달력 받기</b><div class="small muted" style="margin:4px 0 8px">일정 ${mPick().length}건을 파일로 받습니다${st.dlDuty&&mDn?` (당직 ${mDn}건 포함)`:''}</div>
+      <label class="sch-ck" style="border:0;padding:0 0 8px"><input type="checkbox" id="schDlD"${st.dlDuty?' checked':''}> <span>당직자 포함</span></label>
+      <div class="small muted" style="margin-bottom:10px">휴대폰 달력에 복사본으로 들어갑니다. 받은 뒤 바뀐 일정은 따라오지 않고, 같은 달을 다시 넣으면 중복될 수 있습니다.</div>
+      <button type="button" class="btn" id="schDlGo" style="width:100%">파일 받기</button><div class="hint" id="schDlOk" style="margin-top:10px" hidden></div></div>`:''}`:''}
     <div class="sch-cg">${[...WD].map(x=>`<div class="sch-cw">${x}</div>`).join('')}${'<div class="sch-ce"></div>'.repeat(lead)}${Array.from({length:last},(_,i)=>cell(i+1)).join('')}</div>
     <div class="sch-dh sch-cal-d">${scMD(st.sel)}${st.sel===t?' · <b>오늘</b>':''}</div>
     <div class="list">${list.map(item).join('')||'<div class="empty small">일정 없음</div>'}</div>
     ${can('sched.add')?'<button type="button" class="btn sm ghost" id="schDay" style="margin-top:8px"><i class="i i-plus"></i> 이 날 일정 추가</button>':''}`;
     const mv=n=>{const k=ymd(new Date(y,m-1+n,1)).slice(0,7);st.m=k;st.sel=k===now?t:k+'-01';cal()};
     $('#schPrev',box).onclick=()=>mv(-1);$('#schNext',box).onclick=()=>mv(1);
+    const dl=$('#schDl',box);if(dl)dl.onclick=()=>{st.dlOpen=!st.dlOpen;cal()};
+    const dd=$('#schDlD',box);if(dd)dd.onchange=()=>{st.dlDuty=dd.checked;cal()};
+    const dg=$('#schDlGo',box);if(dg)dg.onclick=()=>{const p=mPick();if(!p.length)return toast('받을 일정이 없습니다');const name=`현장ON_일정_${st.m}.ics`;
+      scDownload(name,SCHED_ICS.buildIcs(p,Date.now()),'text/calendar;charset=utf-8');
+      const ok=$('#schDlOk',box);ok.hidden=false;ok.textContent=`${name} 파일을 받았습니다. 아이폰은 "모두 추가", 갤럭시는 파일을 삼성 캘린더로 열어 저장하세요.`};
     const nw=$('#schNow',box);if(nw)nw.onclick=()=>{st.m=now;st.sel=t;cal()};
     $$('[data-d]',box).forEach(x=>x.onclick=()=>{st.sel=x.dataset.d;cal()});
     $$('.sch-it',box).forEach(r=>r.onclick=()=>{const o=SC.find(x=>x.id===r.dataset.id);if(o&&scCanEdit(o))schedOne(o)});

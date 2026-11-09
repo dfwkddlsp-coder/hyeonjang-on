@@ -355,3 +355,25 @@ function todayDutyName(scheduleItems) {
 }
 return {todayDutyName,splitItems,parsePlanSheet,monthFromFileName,dutyTitle,exportDateFromFileName,parseDutyRoster,parseDutyCalendar,isDutyItem};
 })();
+
+/* 달력 파일(.ics): 휴대폰 기본 달력(아이폰·갤럭시)에 한 달 일정을 넣는 복사본. 시각 있는 일정은 1시간(한국 시각 기준), 나머지는 종일 + 제목 앞에 오전·오후 등 */
+const SCHED_ICS=(()=>{
+const p2=n=>String(n).padStart(2,'0');
+const esc=s=>String(s??'').replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\r?\n/g,'\\n');
+const utc=ms=>{const d=new Date(ms);return d.getUTCFullYear()+p2(d.getUTCMonth()+1)+p2(d.getUTCDate())+'T'+p2(d.getUTCHours())+p2(d.getUTCMinutes())+'00Z'};
+/* 한 줄은 75바이트까지, 넘으면 줄을 접음 (한글 글자 중간에서 자르지 않음) */
+const fold=line=>{const out=[];let cur='',n=0;for(const ch of line){const b=new TextEncoder().encode(ch).length;if(n+b>(out.length?74:75)){out.push(cur);cur='';n=0}cur+=ch;n+=b}out.push(cur);return out.join('\r\n ')};
+function buildIcs(items,stampMs){
+  const L=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//hyeonjang-on//schedule//KO','CALSCALE:GREGORIAN','METHOD:PUBLISH'];
+  for(const x of items){
+    const [y,m,d]=x.date.split('-').map(Number),t=String(x.time||''),c=/^(\d{1,2}):(\d{2})$/.exec(t);
+    L.push('BEGIN:VEVENT','UID:'+esc(x.id)+'@hyeonjang-on','DTSTAMP:'+utc(stampMs));
+    if(c){const s=Date.UTC(y,m-1,d,+c[1]-9,+c[2]);L.push('DTSTART:'+utc(s),'DTEND:'+utc(s+36e5))}
+    else{const e=new Date(Date.UTC(y,m-1,d+1));L.push('DTSTART;VALUE=DATE:'+y+p2(m)+p2(d),'DTEND;VALUE=DATE:'+e.getUTCFullYear()+p2(e.getUTCMonth()+1)+p2(e.getUTCDate()))}
+    L.push('SUMMARY:'+esc((t&&!c&&t!=='종일'?t+' ':'')+x.title),'END:VEVENT');
+  }
+  L.push('END:VCALENDAR');
+  return L.map(fold).join('\r\n')+'\r\n';
+}
+return {buildIcs};
+})();

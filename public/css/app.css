@@ -499,6 +499,7 @@ body:has(.set-dim.on) .gb-fab{display:none} /* 설정 메뉴가 열려 있으면
 .sch-cd.today .n{color:var(--bad);font-weight:800}
 .sch-cd.sel .n{background:var(--ink);color:#fff;font-weight:800}.sch-cd.sel.today .n{background:var(--bad);color:#fff}
 .sch-cd .dots{display:flex;gap:3px;height:5px}.sch-cd .dots span{width:5px;height:5px;border-radius:50%;background:var(--sub)}
+.sch-dl{border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px}
 .sch-cal-d{margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
 .sch-line{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:15px}
 .sch-line .sch-t{min-width:0}

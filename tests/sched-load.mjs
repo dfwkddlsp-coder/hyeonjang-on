@@ -6,5 +6,5 @@ const pad = (n) => String(n).padStart(2, '0');
 export async function load() {
   const ymd = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   return vm.runInThisContext(`(function(ymd){${code}
-return {...SCHED_TXT,...SCHED_XL};})`)(ymd);
+return {...SCHED_TXT,...SCHED_XL,...SCHED_ICS};})`)(ymd);
 }
