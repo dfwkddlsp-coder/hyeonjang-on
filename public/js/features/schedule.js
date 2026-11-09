@@ -53,6 +53,7 @@ R.schedule=(arg)=>{
   ${can('sched.add')&&can('file.excel')?`<div class="small muted sch-drop-h">PC에서는 엑셀 계획서·당직자 명단을 이 화면에 끌어다 놓아도 됩니다.</div>`:''}
   ${fold('yr',`<i class="i i-folder"></i> 연간 예정 일정표 (${yr.length}건)`,`<div class="list">${yr.map(x=>`<div class="it sch-it${scCanEdit(x)?'':' ro'}" data-id="${h(x.id)}"><span class="sch-t">${h(x.period)}</span><div class="m">${h(x.title)}</div>${scCanEdit(x)?'<i class="i i-pen"></i>':''}</div>`).join('')||'<div class="empty small">없습니다</div>'}</div>
     ${can('sched.add')?'<button class="btn sm ghost" id="schYr" style="margin-top:8px"><i class="i i-plus"></i> 연간 일정 추가</button>':''}`)}
+  <div class="card sch-cal" id="schCal"></div>
   <div class="small muted" style="margin:14px 0 4px">오늘부터의 일정</div>
   <div class="card">${shown.map(day).join('')||'<div class="empty">다가오는 일정이 없습니다</div>'}
   ${fut.length>n?`<button class="btn sm line" id="schMore" style="width:100%;margin-top:10px">일정 더보기 (${fut.length-n}일 남음)</button>`:''}</div>
@@ -62,6 +63,27 @@ R.schedule=(arg)=>{
   $$('details.sch-fold',W$).forEach(d=>d.ontoggle=()=>{d.open?O.add(d.dataset.k):O.delete(d.dataset.k)});
   $$('.sch-it',W$).forEach(r=>r.onclick=()=>{const o=SC.find(x=>x.id===r.dataset.id);if(o&&scCanEdit(o))schedOne(o)});
   const b=(id,fn)=>{const e=$('#'+id,W$);if(e)e.onclick=fn};
+  /* 월간 달력: 일요일 시작, 점은 그 날 일정 수(당직 제외, 최대 3개). 날짜를 누르면 아래에 그 날 일정. 이 칸만 다시 그려서 화면이 튀지 않음 */
+  const cal=()=>{
+    const st=R.schedule,now=t.slice(0,7);if(!st.m){st.m=now;st.sel=t}
+    const [y,m]=st.m.split('-').map(Number),lead=new Date(y,m-1,1).getDay(),last=new Date(y,m,0).getDate(),nowY=+t.slice(0,4);
+    const box=$('#schCal',W$),cell=i=>{const d=`${st.m}-${pad(i)}`,wd=(lead+i-1)%7,n=Math.min(3,scDay(d).filter(x=>!scIsDuty(x)).length);
+      return `<button type="button" class="sch-cd${wd===0?' sun':wd===6?' sat':''}${d===t?' today':''}${d===st.sel?' sel':''}" data-d="${d}" aria-label="${scMD(d)}"><span class="n">${i}</span><span class="dots">${'<span></span>'.repeat(n)}</span></button>`};
+    const list=scDay(st.sel);
+    box.innerHTML=`<div class="sch-cal-t"><b>월간 계획 보기</b>${st.m===now?'':'<button type="button" class="btn sm ghost" id="schNow">오늘</button>'}</div>
+    <div class="sch-cal-h"><button type="button" class="btn sm line" id="schPrev" aria-label="전월">◀</button><div class="sch-cal-m">${y===nowY?'':y+'년 '}${m}월</div><button type="button" class="btn sm line" id="schNext" aria-label="다음 달">▶</button></div>
+    <div class="sch-cg">${[...WD].map(x=>`<div class="sch-cw">${x}</div>`).join('')}${'<div class="sch-ce"></div>'.repeat(lead)}${Array.from({length:last},(_,i)=>cell(i+1)).join('')}</div>
+    <div class="sch-dh sch-cal-d">${scMD(st.sel)}${st.sel===t?' · <b>오늘</b>':''}</div>
+    <div class="list">${list.map(item).join('')||'<div class="empty small">일정 없음</div>'}</div>
+    ${can('sched.add')?'<button type="button" class="btn sm ghost" id="schDay" style="margin-top:8px"><i class="i i-plus"></i> 이 날 일정 추가</button>':''}`;
+    const mv=n=>{const k=ymd(new Date(y,m-1+n,1)).slice(0,7);st.m=k;st.sel=k===now?t:k+'-01';cal()};
+    $('#schPrev',box).onclick=()=>mv(-1);$('#schNext',box).onclick=()=>mv(1);
+    const nw=$('#schNow',box);if(nw)nw.onclick=()=>{st.m=now;st.sel=t;cal()};
+    $$('[data-d]',box).forEach(x=>x.onclick=()=>{st.sel=x.dataset.d;cal()});
+    $$('.sch-it',box).forEach(r=>r.onclick=()=>{const o=SC.find(x=>x.id===r.dataset.id);if(o&&scCanEdit(o))schedOne(o)});
+    const ad=$('#schDay',box);if(ad)ad.onclick=()=>schedOne({date:st.sel,time:'',title:''});
+  };
+  cal();
   b('schAdd',()=>schedQuick());b('schYr',()=>schedOne({period:''}));b('schMore',()=>{R.schedule.n=n+SC_DAYS;R.schedule()});
   if(can('sched.add')&&can('file.excel')){
     W$.ondragover=e=>{if([...(e.dataTransfer.types||[])].includes('Files')){e.preventDefault();W$.classList.add('sch-drag')}};

@@ -486,6 +486,20 @@ body:has(.set-dim.on) .gb-fab{display:none} /* 설정 메뉴가 열려 있으면
 .sch-ck input{margin-top:3px;flex:none;width:18px;height:18px}
 .sch-ck.dup{color:var(--sub)}
 .sch-ck.warn{background:#fff0cc;border:0;border-radius:10px;padding:10px;margin-top:8px;font-weight:700}
+.sch-cal{margin-top:12px}
+.sch-cal-t{display:flex;align-items:center;justify-content:space-between;min-height:32px}
+.sch-cal-h{display:flex;align-items:center;justify-content:center;gap:14px;margin:6px 0 10px}
+.sch-cal-m{min-width:96px;text-align:center;font-size:20px;font-weight:800}
+.sch-cg{display:grid;grid-template-columns:repeat(7,minmax(0,1fr))}
+.sch-cw{text-align:center;font-size:12px;color:var(--sub);padding:0 0 6px}
+.sch-cd{display:flex;flex-direction:column;align-items:center;gap:3px;height:56px;padding:6px 0 0;border:0;border-top:1px solid var(--line);background:none;color:var(--ink);font:inherit;cursor:pointer;min-width:0}
+.sch-ce{border-top:1px solid var(--line)}
+.sch-cd .n{width:32px;height:32px;line-height:32px;border-radius:50%;font-size:17px;text-align:center}
+.sch-cd.sun .n{color:var(--bad)}.sch-cd.sat .n{color:#2b63b8}
+.sch-cd.today .n{color:var(--bad);font-weight:800}
+.sch-cd.sel .n{background:var(--ink);color:#fff;font-weight:800}.sch-cd.sel.today .n{background:var(--bad);color:#fff}
+.sch-cd .dots{display:flex;gap:3px;height:5px}.sch-cd .dots span{width:5px;height:5px;border-radius:50%;background:var(--sub)}
+.sch-cal-d{margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
 .sch-line{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:15px}
 .sch-line .sch-t{min-width:0}
 .sch-note .sch-h{margin-bottom:2px}
