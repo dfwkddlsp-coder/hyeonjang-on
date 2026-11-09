@@ -54,10 +54,10 @@ const eqWeekRec=(eid,mon,tr)=>EC.find(c=>c.id===weekRecId(eid,mon,tr)&&!c.void);
 const eqWeekPhoto=(eid,mon,tr)=>EC.find(c=>c.id===weekPhotoId(eid,mon,tr)&&!c.void);
 /* 예전 방식(하루 1건) 기록도 같이 읽음 */
 const eqLegacyDay=(eid,ds)=>EC.filter(c=>!c.kind&&c.equipId===eid&&c.date===ds&&!c.void).sort((a,b)=>(b.created||'').localeCompare(a.created||''))[0];
-/* 특정 날짜 칸의 표시: 'O' 양호 · 'X' 불량 있음 · 'P' 일부만 체크 · '' 미점검 */
+/* 특정 날짜 칸의 표시: 'O' 양호 · 'X' 불량 있음 · 'P' 일부만 체크 · 'R' 휴무(전부 해당없음) · '' 미점검 */
 function eqDayMark(eid,ds,tr){
   const mon=weekMon(ds),i=weekDays(mon).indexOf(ds),w=eqWeekRec(eid,mon,tr);
-  if(w){const vals=Object.values(w.marks||{}).map(a=>a[i]||'');if(vals.some(v=>v)){if(vals.includes('X'))return 'X';return vals.every(v=>v)?'O':'P'}}
+  if(w){const vals=Object.values(w.marks||{}).map(a=>a[i]||'');if(vals.some(v=>v)){if(vals.every(v=>v==='N'))return 'R';if(vals.includes('X'))return 'X';return vals.every(v=>v)?'O':'P'}}
   const c=(tr||myTrack())==='mgr'&&eqLegacyDay(eid,ds);if(c)return c.items.some(x=>x.v==='X')?'X':'O';
   return '';
 }

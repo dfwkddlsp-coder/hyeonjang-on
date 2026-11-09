@@ -11,16 +11,22 @@ function eqWeekForm(eid,mon,fresh,tr){
   openModal(`${drvT?'운전원 점검':'주간 점검표'}${ro?' (보기)':''} · ${eqName(e)}`,`<div class="card"><dl class="kv"><dt>소속협력사</dt><dd>${h(e.company||'-')}</dd><dt>장비</dt><dd>${h(eqName(e))}</dd><dt>전담관리자</dt><dd>${h(e.manager||'미지정')}</dd><dt>점검표 양식</dt><dd>${!can('equip.add')||ro?h(eqFormName(e)):`<select class="inp" id="wkF" style="padding:4px 6px;width:auto">${eqForms().map(f=>`<option value="${h(f.k)}" ${eqFormOf(e)===f?'selected':''}>${h(f.name)}</option>`).join('')}<option value="base" ${eqFormOf(e)?'':'selected'}>기본 (굴착기 등)</option></select>`}</dd></dl>
      <div style="margin-top:8px"><b>${weekLabel(mon)}</b> <span class="muted small">(${md(days[0])}~${md(days[5])})</span> <span id="wkStamp"></span></div></div>
    ${items.some(it=>it.d)?'':'<!--'}<details class="card small"><summary><b>점검 방법 보기</b> (${h(eqFormName(e))})</summary>${items.map((it,i)=>`<div style="margin-top:8px"><b>${i+1}. ${h(it.t)}</b><div class="muted">${h(it.d)}</div></div>`).join('')}</details>${items.some(it=>it.d)?'':'-->'}
-   <div class="row" style="margin-bottom:8px"><span class="grow small muted">칸을 누르면 ○적합 ×부적합 -해당없음 △기타 순으로 바뀜</span>${ro?'':'<button class="btn sm ghost" id="wkAll">오늘까지 모두 ○</button>'}</div>
-   <div class="wkwrap"><table class="wkt"><tr><th class="it">점검 항목</th>${days.map((d,i)=>`<th><button type="button" class="wkh" data-col="${i}" ${d>t?'disabled':''}>${WD6[i]}<br><small>${md(d)}</small></button></th>`).join('')}</tr>
+   <div class="row" style="margin-bottom:8px"><span class="grow small muted">칸을 누르면 ○적합 ×부적합 -해당없음 △기타 순으로 바뀜</span>${ro?'':'<button class="btn sm ghost" id="wkAll">오늘까지 모두 ○</button><button class="btn sm ghost" id="wkRest">휴무일 표시</button>'}</div>
+   ${ro?'':`<div class="card wk-rp" id="wkRP" hidden><div class="small" style="margin-bottom:8px">토요일·연차 등 일하지 않은 날을 누르세요 · 다시 누르면 취소</div>
+     <div class="wk-rc">${days.map((d,i)=>`<button type="button" class="btn sm line" data-rc="${i}">${WD6[i]}<br><small>${md(d)}</small></button>`).join('')}</div>
+     <div class="hint" id="wkRQ" style="margin-top:10px" hidden></div></div>`}
+   <div class="wkwrap"><table class="wkt"><tr><th class="it">점검 항목</th>${days.map((d,i)=>`<th><button type="button" class="wkh" data-col="${i}" ${d>t?'disabled':''}>${WD6[i]}<br><small>${md(d)}</small><small class="wkrest">휴무</small></button></th>`).join('')}</tr>
      ${items.map((it,r)=>`<tr><td class="it">${r+1}. ${h(it.t)}</td>${days.map((d,c)=>`<td><button type="button" class="wkc" data-r="${r}" data-c="${c}" ${d>t?'disabled':''}></button></td>`).join('')}</tr>`).join('')}</table></div>
    <div id="wkNotes"></div>
    <div class="card"><label class="f">비고</label><textarea class="inp" id="wkR" placeholder="특이사항">${h(prev&&prev.remark||'')}</textarea>
      <div class="grid g2"><div><label class="f">점검자 (${drvT?'운전원':'전담관리자'})</label><input class="inp" id="wkBy" ${ro?'readonly':''} value="${h(prev&&prev.inspector||(ro?'':S.inspector)||'')}"></div></div><div id="wkSig" style="margin-top:10px"></div></div>
    ${ro?'':`<div class="grid g2"><button class="btn xl" id="wkSave">저장</button>${prev&&canDel(prev)?'<button class="btn xl line" id="wkDel">이 주 점검표 삭제</button>':''}</div>`}`,b=>{
+    /* 휴무일 표시: 그 날 세로줄 전체를 -(해당없음)로. 아직 안 온 날도 가능(○·×는 오늘까지만). 이미 입력한 날은 물어본 뒤에만 바꿈. 취소하면 창을 닫기 전 값으로 되돌림 */
+    const isRest=c=>items.length>0&&items.every(it=>st.marks[it.t][c]==='N'),restBak={};
     const paint=()=>{
       $$('.wkc',b).forEach(x=>{const v=st.marks[items[+x.dataset.r].t][+x.dataset.c];x.textContent=SYM[v];x.className='wkc'+(v?' v'+v:'')});
       const bad=items.filter(it=>st.marks[it.t].some(v=>v==='X'||v==='E'));
+      $$('.wkh',b).forEach(x=>x.classList.toggle('rest',isRest(+x.dataset.col)));$$('[data-rc]',b).forEach(x=>x.classList.toggle('on',isRest(+x.dataset.rc)));
       $('#wkStamp',b).innerHTML=items.every(it=>st.marks[it.t].every(Boolean))?stampHtml('sm'):'';
       const box=$('#wkNotes',b);const keep={};$$('[data-note]',box).forEach(i=>keep[i.dataset.note]=i.value);Object.assign(st.notes,keep);
       box.innerHTML=bad.length?`<div class="card"><b style="color:var(--bad)">비고 (부적합 조치사항 · 기타의견) — 필수</b>${bad.map(it=>`<label class="f">${items.indexOf(it)+1}. ${h(it.t)} (${st.marks[it.t].map((v,i)=>v==='X'||v==='E'?WD6[i]+' '+MARK_TXT[v]:'').filter(Boolean).join(', ')})</label><input class="inp" data-note="${h(it.t)}" value="${h(st.notes[it.t]||'')}" placeholder="${st.marks[it.t].includes('X')?'부적합 내용·조치사항':'의견 내용'}">`).join('')}</div>`:'';
@@ -29,6 +35,17 @@ function eqWeekForm(eid,mon,fresh,tr){
     $$('.wkc',b).forEach(x=>x.onclick=()=>{const a=st.marks[items[+x.dataset.r].t],c=+x.dataset.c;a[c]=NEXT[a[c]];dirty=true;paint()});
     $$('.wkh',b).forEach(x=>x.onclick=()=>{const c=+x.dataset.col;items.forEach(it=>{if(!st.marks[it.t][c])st.marks[it.t][c]='O'});dirty=true;paint()});
     if(ro){$$('.wkc,.wkh',b).forEach(x=>x.disabled=true)}else $('#wkAll',b).onclick=()=>{days.forEach((d,c)=>{if(d<=t)items.forEach(it=>{if(!st.marks[it.t][c])st.marks[it.t][c]='O'})});dirty=true;paint()};
+    if(!ro){
+      const rq=$('#wkRQ',b),rp=$('#wkRP',b),hideQ=()=>{rq.hidden=true;rq.innerHTML=''};
+      const setRest=c=>{restBak[c]=items.map(it=>st.marks[it.t][c]);items.forEach(it=>st.marks[it.t][c]='N');dirty=true;hideQ();paint()};
+      $('#wkRest',b).onclick=()=>{rp.hidden=!rp.hidden;if(rp.hidden)hideQ()};
+      $$('[data-rc]',b).forEach(x=>x.onclick=()=>{const c=+x.dataset.rc;
+        if(isRest(c)){const k=restBak[c];items.forEach((it,i)=>st.marks[it.t][c]=k?k[i]:'');delete restBak[c];dirty=true;hideQ();return paint()}
+        const vals=items.map(it=>st.marks[it.t][c]),n=vals.filter(v=>v&&v!=='N').length,xn=vals.filter(v=>v==='X').length;
+        if(!n)return setRest(c);
+        rq.hidden=false;rq.innerHTML=`<div style="margin-bottom:8px">${WD6[c]} ${md(days[c])}에 이미 입력한 칸이 ${n}칸 있습니다${xn?` (부적합 ${xn}칸 포함)`:''}. 모두 - 로 바꿀까요?</div><div class="row"><button type="button" class="btn sm" id="wkRY">바꾸기</button><button type="button" class="btn sm line" id="wkRN">그대로 두기</button></div>`;
+        $('#wkRY',b).onclick=()=>setRest(c);$('#wkRN',b).onclick=hideQ});
+    }
     if(!ro)MODAL_GUARD=()=>!dirty||confirm('저장하지 않은 점검 내용이 있어요. 닫으면 사라집니다. 닫을까요?');
     paint();if(ro){$('#wkSig',b).innerHTML=prev&&prev.sig?`<div class="small muted">서명</div><img src="${prev.sig}" style="max-width:100%;height:90px">`:'';return}
     const wf=$('#wkF',b);if(wf)wf.onchange=async()=>{if(prev&&!confirm('양식을 바꾸면 이번 주 체크 중 같은 이름의 항목만 남습니다. 바꿀까요?')){wf.value=eqFormOf(e)?eqFormOf(e).k:'base';return}
