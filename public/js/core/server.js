@@ -16,8 +16,8 @@ const canDel=o=>!!o&&(!SERVER||(ownRec(o)&&!isAdmin()?can('del.own'):can('del.an
 const isStaff=()=>!SERVER||(!!ME&&(ME.role==='admin'||ME.role==='manager'));
 const roleBadge=r=>r==='guest'?'<span class="badge bwarn">임시 운전원</span>':r==='admin'?'<span class="badge">운영자</span>':r==='manager'?'<span class="badge">관리자</span>':r==='driver'?'<span class="badge bgray">장비운전원</span>':'<span class="badge bgray">사용자</span>';
 const SHARED_KEYS=['site','guide','colAlias','joinOpen','periodMonths','vtypes','levels','alcMode','alc','alcMsg','vulnAge','bp','schedPm','eqItems','eqCheckItems','vulnScope','homeLayout','docCats','forms','eqForms','eqExclude','perms'];
-async function api(path,body){
-  const r=await fetch('/api/'+path,{method:body!==undefined?'POST':'GET',credentials:'same-origin',headers:body!==undefined?{'content-type':'application/json'}:{},body:body!==undefined?JSON.stringify(body):undefined});
+async function api(path,body,signal){
+  const r=await fetch('/api/'+path,{signal,method:body!==undefined?'POST':'GET',credentials:'same-origin',headers:body!==undefined?{'content-type':'application/json'}:{},body:body!==undefined?JSON.stringify(body):undefined});
   let j=null;try{j=await r.json()}catch(e){}
   if(!r.ok||!j){const e=new Error((j&&j.error)||('HTTP '+r.status));e.status=r.status;throw e}
   return j;
@@ -53,8 +53,8 @@ const Sync={busy:false,again:false,t:null,state:'',
     return true},
   /* 서버가 거절한 기록(권한 없음 등)이 전송 대기열을 영영 막지 않게: 묶음이 거절되면 하나씩 다시 보내고,
      그래도 거절된 기록은 대기열에서 빼고 알린 뒤 서버 내용으로 다시 받음 */
-  async send(chunk,strict){let r;
-    try{r=await api('docs',{docs:chunk.map(o=>({store:o.store,id:o.id,data:o.data}))})}
+  async send(chunk,strict,signal){let r;
+    try{r=await api('docs',{docs:chunk.map(o=>({store:o.store,id:o.id,data:o.data}))},signal)}
     catch(e){if(![400,403,413].includes(e.status))throw e;
       if(chunk.length>1){for(const o of chunk)await this.send([o]);return}
       const o=chunk[0];await DB.del('outbox',o.k);await keepRejected(o,e.message);if(STORE[o.store]){await DB.del(o.store,o.id);memDel(o.store,o.id)}await kvSet('lastSync',0);badge();
@@ -74,10 +74,13 @@ const Sync={busy:false,again:false,t:null,state:'',
 async function keepRejected(o,msg){const box=(await kvGet('rejected'))||[];const it={k:o.k,store:o.store,id:o.id,data:o.data,msg,at:nowLocal()};
   const i=box.findIndex(x=>x.k===o.k);if(i>=0)box[i]=it;else box.push(it);await kvSet('rejected',box)}
 /* 사진·점검처럼 다시 만들기 어려운 기록: 인터넷이 되면 서버 저장까지 기다림 → true. 연결이 안 되면 기기에 두고 나중에 보냄 → false.
+   통신이 멈춘 채 응답이 없을 때 버튼이 계속 '저장 중'에 머물지 않게 SAVE_WAIT_MS까지만 기다리고 기기 저장으로 넘어감 (뒤에서 다시 보냄, 같은 id라 중복 없음).
    서버가 거절하면 예외 → 화면을 닫지 말고 사유를 보여 줄 것 (기록은 '저장 실패'에도 보관됨) */
+const SAVE_WAIT_MS=10000;
 async function saveConfirm(store,obj){await save(store,obj);if(!SERVER||!navigator.onLine)return false;clearTimeout(Sync.t);
-  try{const o=await DB.req(DB.st('outbox','readonly').get(store+'|'+obj.id));if(!o)return true;await Sync.send([o],true);return true}
-  catch(e){if(e.status)throw e;return false}finally{Sync.soon()}}
+  const ac=new AbortController(),tm=setTimeout(()=>ac.abort(),SAVE_WAIT_MS);
+  try{const o=await DB.req(DB.st('outbox','readonly').get(store+'|'+obj.id));if(!o)return true;await Sync.send([o],true,ac.signal);return true}
+  catch(e){if(e.status)throw e;return false}finally{clearTimeout(tm);Sync.soon()}}
 function saveRejectedAlert(x){alert(`저장되지 않았어요: ${x.message}
 
 입력한 내용은 이 화면에 그대로 있어요. 권한이나 장비 정보 문제일 수 있으니 관리자에게 알려 주세요.`)}

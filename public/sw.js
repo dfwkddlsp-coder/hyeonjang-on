@@ -5,7 +5,7 @@
 //   fonts  — cache first, never change
 //   photos — cache first (immutable), but only the most recent PHOTO_MAX are kept
 //            so the phone's storage does not keep growing week after week.
-const C='fieldsafety-v42';
+const C='fieldsafety-v43';
 const FONTS='fieldsafety-fonts';
 const PHOTOS='fieldsafety-photos';
 const PHOTO_MAX=250; // ≈ 30MB at ~120KB per photo

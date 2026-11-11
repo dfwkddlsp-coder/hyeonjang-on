@@ -63,7 +63,7 @@ function eqWeekForm(eid,mon,fresh,tr){
       try{ok=await saveConfirm('eqchecks',{id:weekRecId(eid,mon,tr),kind:'week',track:tr,week:mon,equipId:e.id,type:e.type||'',plate:e.plate||'',company:e.company||'',manager:e.manager||'',
         marks:Object.fromEntries(items.map(it=>[it.t,st.marks[it.t]])),itemList:items.map(it=>it.t),form:eqFormName(e),notes,remark:$('#wkR').value.trim(),inspector:by,sig:sig.data(),created:prev?prev.created:nowLocal(),updated:nowLocal()})}
       catch(x){sv.disabled=false;sv.textContent='다시 저장';return saveRejectedAlert(x)}
-      MODAL_GUARD=null;closeModal();if(!ok)toast('기기에 저장됨 · 인터넷이 연결되면 서버로 보냅니다');else toast(items.every(it=>st.marks[it.t].every(Boolean))?'주간 점검 완료':items.some(it=>st.marks[it.t].includes('X'))?'저장됨 — 부적합 항목 조치를 확인하세요':'주간 점검표 저장됨');R[cur]();
+      MODAL_GUARD=null;closeModal();if(!ok)toast('기기에 저장됨 · 연결되면 자동으로 서버에 보냅니다');else toast(items.every(it=>st.marks[it.t].every(Boolean))?'주간 점검 완료':items.some(it=>st.marks[it.t].includes('X'))?'저장됨 — 부적합 항목 조치를 확인하세요':'주간 점검표 저장됨');R[cur]();
     };
   });
 }
@@ -112,7 +112,7 @@ function eqWeekPhotoForm(eid,mon,tr){
       try{ok=await saveConfirm('eqchecks',{id:weekPhotoId(eid,mon,tr),kind:'weekPhoto',track:tr,week:mon,equipId:e.id,type:e.type||'',plate:e.plate||'',company:e.company||'',manager:e.manager||'',
         photos,by:S.inspector||'',created:prev?prev.created:nowLocal(),updated:nowLocal()})}
       catch(x){sv.disabled=false;sv.textContent='다시 저장';return saveRejectedAlert(x)}
-      MODAL_GUARD=null;closeModal();toast(ok?`${weekLabel(mon)} 사진 ${photos.length}/${slots.length} 서버에 저장됨`:`사진 ${photos.length}장 기기에 저장됨 · 인터넷이 연결되면 서버로 보냅니다`);R[cur]()};
+      MODAL_GUARD=null;closeModal();toast(ok?`${weekLabel(mon)} 사진 ${photos.length}/${slots.length} 서버에 저장됨`:`사진 ${photos.length}장 기기에 저장됨 · 연결되면 자동으로 서버에 보냅니다`);R[cur]()};
   });
 }
 
