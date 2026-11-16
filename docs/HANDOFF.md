@@ -77,6 +77,12 @@ keep changes small and behavior-preserving unless the operator asks for more.
   layout can still be checked by injecting markup on the login page.
 
 ## Open items
+- **Removed on 2026-11-16: 기기 잠금 PIN** (설정 → 내 정보 → 잠금, 기기마다 숫자 4~6자리, 앱을 열 때 PIN 화면).
+  Nobody used it and it switched on by accident (it saved with the 내 정보 save button). It only hid the screen on
+  one device, never real security (login is). To bring it back, see commit `fd2a63a`: `lockScreen()` in
+  `app/boot.js`, the 잠금 card and `S.pin` in `features/settings.js`, `pin` in `DEF` (`core/store.js`). `.lock` CSS stays (the login and join screens use it).
+  `app/boot.js` now deletes an old `S.pin` right after `loadSettings()`.
+  If re-added, give it its own save button and hash the PIN.
 - Operator account security plan (2FA, re-auth for dangerous actions, login log, per-loginId lockout DoS)
   — agreed to do later; details in Claude's memory `security-plan-operator-account`.
 - **Multi-site service / app**: split off on 2026-11-04 into `Documents/hyeonjang-on-app` (own repo, dev Worker

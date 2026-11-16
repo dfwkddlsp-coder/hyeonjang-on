@@ -24,7 +24,7 @@ async function save(store,obj){if(SERVER&&ME&&!obj.byId&&STORE[store]){const old
 async function remove(store,id){if(SERVER){if(!navigator.onLine){toast('삭제는 인터넷 연결이 필요합니다');throw new Error('offline')}await api('docs/delete',{store,id})}await DB.del(store,id);memDel(store,id)}
 
 const DEF={
-  site:'',inspectorOrg:'',inspector:'',periodMonths:0,pin:'',
+  site:'',inspectorOrg:'',inspector:'',periodMonths:0,
   vtypes:['안전모 미착용 / 턱끈 미체결','안전대 미체결','지정 통로 외 이동','출입금지구역 무단 출입','개인보호구 미착용','신호수·유도자 없이 장비작업','작업절차 미준수','흡연구역 외 흡연','음주 후 출근·작업','기타'],
   levels:[
     {name:'1차 적발',sticker:'노란색',act:'위반 스티커 부착(노란색)\n근로자 관리대장 기록\n현장지도 및 교육'},

@@ -2,14 +2,13 @@
 'use strict';
 /* ---------- boot ---------- */
 async function loadAll(){[W,E,V,A,VU,EC,PL,RC,SC]=await Promise.all(STORE_NAMES.map(s=>DB.all(s)))}
-function lockScreen(){return new Promise(res=>{if(!S.pin)return res();const d=document.createElement('div');d.className='lock';d.innerHTML=`<img src="icon.svg" alt="" style="width:84px;height:84px;border-radius:20px;box-shadow:0 0 0 3px rgba(255,255,255,.25)"><div style="font-size:28px;font-weight:900">현장ON</div><div style="opacity:.8;font-size:14px;margin-top:-6px">습관이 된 노력을 실력이라 한다.</div><div style="margin-top:10px">PIN 입력</div><input class="inp" type="password" inputmode="numeric" maxlength="6" autofocus>`;document.body.appendChild(d);const i=$('input',d);i.focus();i.oninput=()=>{if(i.value===S.pin){d.remove();res()}else if(i.value.length>=S.pin.length){i.value='';i.style.outline='3px solid #f66'}}})}
 
 (async()=>{
   try{await DB.open()}catch(e){V$().innerHTML='<div class="card">이 브라우저에서 저장소를 열 수 없습니다. 시크릿 모드가 아닌 일반 창에서 열어주세요.</div>';return}
-  await loadSettings();await loadAll();
+  await loadSettings();if('pin' in S){delete S.pin;saveSettings()} // 기기 잠금 PIN 기능을 뺌 (2026-11-16): 예전에 켜 둔 기기도 값을 지움
+  await loadAll();
   if(location.protocol.startsWith('http')&&await authGate())await loadAll();
   if(SERVER){const sv=Object.keys(STORE).join(',');if(await kvGet('storeSet')!==sv){await kvSet('lastSync',0);await kvSet('storeSet',sv)}}
-  await lockScreen();
   $('#siteName').textContent=S.site;renderNav();badge();gbFab();pushResync();
   {const g=$('#gearBtn');g.hidden=false;g.onclick=()=>go('settings',can('set.site')?'site':'me')} // 설정은 누구나(최소 내 정보). 홈에서는 아래 메뉴가 숨겨져 이 버튼이 유일한 길
   $('#brandHome').onclick=e=>{e.preventDefault();if($('#modal').classList.contains('hidden'))go('home');else{closeModal();go('home')}};
